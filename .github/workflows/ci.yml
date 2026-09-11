@@ -1,0 +1,43 @@
+name: CI Pipeline - Verificación de Estructura y Tests CAG
+
+on:
+  push:
+    branches: [ main, master, "session_*" ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  validate-and-test:
+    name: Validar Estructura y Endpoints FastAPI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias del proyecto
+        run: |
+          uv sync --extra dev
+
+      - name: Verificar que .env no esté trackeado en git
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "ERROR: El archivo .env está siendo trackeado en git!"
+            exit 1
+          fi
+          echo "OK: .env no está trackeado en git."
+
+      - name: Ejecutar suite de pruebas (Validación de estructura y endpoints)
+        run: |
+          uv run pytest -v

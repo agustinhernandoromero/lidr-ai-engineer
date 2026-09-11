@@ -1,0 +1,13 @@
+Reunión de Requerimientos - Proyecto Hub Marketing & Blog
+Fecha: 10 de Septiembre
+Participantes: Carlos (Product Owner Cliente), Laura (Lead Marketing), Andrés (Tech Lead)
+
+Transcripción resumida de la reunión:
+"En la reunión con el equipo de marketing, el cliente explicó que necesita una landing page con formulario de contacto, integración con su CRM actual (HubSpot), y una sección de blog con editor WYSIWYG. El plazo ideal sería tenerlo listo en 4 semanas. El diseño ya existe en Figma.
+
+Puntos clave discutidos:
+- Landing page responsive de alta conversión con optimización SEO y métricas Core Web Vitals.
+- Formulario de captura de leads conectado directamente a la API de HubSpot con validación anti-spam (Cloudflare Turnstile o reCAPTCHA v3).
+- Sección de blog autogestionable con soporte para Markdown/WYSIWYG, etiquetas, categorías y suscripción a newsletter.
+- Infraestructura ligera y coste eficiente en Cloud (Vercel / AWS Amplify).
+- Testing básico de formularios y entrega de documentación para el equipo de marketing."
