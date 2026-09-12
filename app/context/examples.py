@@ -9,7 +9,7 @@ ESTIMATION_EXAMPLES: List[Dict[str, Any]] = [
             "empresas. Requiere autenticación de usuarios con roles (admin, operador, auditor), un CRUD "
             "completo de productos y categorías con carga masiva vía CSV, un dashboard analítico con "
             "gráficos de stock bajo y rotación de inventario, y un sistema de alertas por email. "
-            "El cliente no tiene diseño previo pero sí wireframes básicos."
+            "El cliente no tiene diseño previo pero sí wireframes básicos. *******"
         ),
         "estimation": """## Estimación: Plataforma Web de Gestión de Inventario
 
