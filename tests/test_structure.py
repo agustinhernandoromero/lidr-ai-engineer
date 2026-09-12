@@ -48,6 +48,6 @@ def test_examples_context_structure():
 
     for idx, example in enumerate(ESTIMATION_EXAMPLES):
         assert "meeting_summary" in example, f"Ejemplo {idx} debe contener 'meeting_summary'"
-        assert "estimation" in example, f"Ejemplo {idx} debe contener 'estimation'"
+        assert "estimation" in example, f"Ejemplo {idx} debe contener la 'estimation'"
         assert len(example["meeting_summary"]) > 20, f"Resumen del ejemplo {idx} demasiado corto"
         assert len(example["estimation"]) > 50, f"Estimación del ejemplo {idx} demasiado corta"

@@ -47,5 +47,5 @@ async def health_check():
 
 @app.get("/", include_in_schema=False)
 async def root():
-    """Redirect root path to interactive Swagger documentation."""
+    """Redirect root path to interactive Swagger documentationn."""
     return RedirectResponse(url="/docs")
