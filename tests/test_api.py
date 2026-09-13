@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.config import Settings
 from app.services.llm_service import build_cag_system_prompt
 
 client = TestClient(app)
@@ -40,9 +41,16 @@ def test_cag_system_prompt_builder():
     assert "Estimación" in prompt
 
 
+@patch("app.services.llm_service.get_settings")
 @patch("app.services.llm_service.call_openai")
-def test_estimate_endpoint_openai_mock(mock_call_openai):
-    """Verify POST /api/v1/estimate with mocked OpenAI call."""
+def test_estimate_endpoint_openai_mock(mock_call_openai, mock_get_settings):
+    """Verify POST /api/v1/estimate with mocked OpenAI call.
+
+    Settings are overridden to force the 'openai' provider regardless of the
+    developer's local .env, so this test never depends on ambient config and
+    never risks invoking a real LLM provider.
+    """
+    mock_get_settings.return_value = Settings(LLM_PROVIDER="openai")
     mock_call_openai.return_value = {
         "estimation": "## Estimación: Landing Page con HubSpot\n- Total: 60 horas",
         "model": "gpt-4o-mini",

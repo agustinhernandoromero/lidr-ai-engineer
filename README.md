@@ -78,11 +78,7 @@ Edita `.env`:
 
 ```ini
 # Proveedor activo: 'openai' o 'anthropic'
-LLM_PROVIDER=openai
-
-# Configuración OpenAI (por defecto gpt-4o-mini)
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o-mini
+LLM_PROVIDER=anthropic 
 
 # Configuración Anthropic (opcional si usas Claude)
 ANTHROPIC_API_KEY=sk-ant-...

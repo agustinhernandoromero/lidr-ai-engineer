@@ -78,7 +78,6 @@ def call_anthropic(system_prompt: str, transcription: str, settings) -> Dict[str
         messages=[
             {"role": "user", "content": f"Transcripción de la reunión:\n\n{transcription}"}
         ],
-        temperature=0.3,
     )
     # Extract text from content blocks
     estimation_text = "".join(
