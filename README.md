@@ -2,10 +2,6 @@
 
 Repositorio del programa. Cada sesión se entrega en su propia rama; `main` contiene solo este índice.
 
-## Proyecto
-
-Servicio que recibe transcripciones de reuniones de requerimientos técnicos y devuelve estimaciones de software estructuradas generadas por LLM. Arranca con arquitectura **CAG** (contexto inyectado en el prompt del sistema) y evoluciona hacia **RAG** y agentes en los módulos posteriores.
-
 ## Organización del repositorio
 
 - `main` — índice, documentación general y convenciones. No contiene código de sesiones.
