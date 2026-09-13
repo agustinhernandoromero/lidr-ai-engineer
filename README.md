@@ -16,19 +16,4 @@ Cada entrega se revisa desde el enlace de su propia rama.
 | 01 | — | — | Sin entrega |
 | 02 | Estimador de software con arquitectura CAG (FastAPI) | [`sesion-02-cag`](../../tree/sesion-02-cag) | Entregada |
 | 03 | — | — | Pendiente |
-
-## Stack
-
-Python 3.11+ · FastAPI · uv · Pydantic · pytest · GitHub Actions
-
-## Convenciones
-
-- **Ramas**: `sesion-NN-tema-en-kebab-case`, numeración a dos dígitos, sin acentos ni mayúsculas.
-- Una sesión que continúa el proyecto parte de la rama de la sesión anterior; un ejercicio independiente parte de `main`.
-- Una vez entregada y revisada, la rama de una sesión no se reescribe.
-- Secretos siempre en `.env` (ignorado por Git); `.env.example` documenta las variables necesarias.
-- CI en `.github/workflows/ci.yml` dentro de cada rama de sesión.
-
-## Histórico
-
-El repositorio [`Mi-proyecto-remoto-S1`](https://github.com/agustinhernandoromero/Mi-proyecto-remoto-S1) se conserva como backup de la primera versión de esta entrega.
+........
