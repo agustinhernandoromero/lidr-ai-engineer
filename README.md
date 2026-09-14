@@ -1,15 +1,17 @@
-# 🚀 Proyecto 1: Estimador de Software con Arquitectura CAG (FastAPI)
+# 🚀 Sesion 02: Estimador de Software con Arquitectura CAG (FastAPI)
 
-Servicio backend en **FastAPI** que procesa transcripciones de reuniones de requerimientos técnicos y genera estimaciones de proyectos de software estructuradas mediante Modelos de Lenguaje (LLMs) aplicando **CAG (Context-Augmented Generation)**.
+Este es el inicio del proyecto que ejecutaremos a lo largo del programa.
+
+La arquitectura inicial es CAG: todo el contexto que necesita el modelo viaja en cada llamada — no hay base de datos, no hay recuperación, no hay persistencia.
+
 
 ---
 
 ## 💡 ¿Por qué Arquitectura CAG (Context-Augmented Generation)?
 
-En esta etapa inicial del proyecto, los datos históricos de referencia (estimaciones previas, estándares de horas y roles) son un conjunto acotado y de alta calidad que cabe holgadamente en la ventana de contexto de los modelos modernos (`gpt-4o-mini`, `claude-3-5-haiku`).
+¿Por qué CAG? Porque los datos de referencia (unas pocas estimaciones de ejemplo) caben perfectamente en la ventana de contexto del modelo. No necesitamos infraestructura adicional. Esta simplicidad nos permite centrarnos en la lógica de negocio y en la calidad del rápido antes de evolucionar hacia RAG en módulos posteriores.
 
-- **Sin base de datos ni indexación vectorial innecesaria**: Todo el contexto necesario viaja directamente inyectado en el prompt de sistema.
-- **Simplicidad operativa y determinismo**: Permite iterar velozmente en el prompt engineering y la calidad de las respuestas antes de evolucionar a arquitecturas RAG en módulos posteriores.
+En esta etapa inicial del proyecto, los datos históricos de referencia (estimaciones previas, estándares de horas y roles) son un conjunto acotado y de alta calidad que cabe holgadamente en la ventana de contexto de los modelos modernos (`claude-haiku-4-5`).
 
 ---
 
@@ -53,7 +55,7 @@ estimador-cag/
 
 - **Python 3.11+**
 - **uv** como gestor de paquetes moderno y ultrarrápido ([Instalación de uv](https://docs.astral.sh/uv/getting-started/installation/))
-- Clave de API de **OpenAI** (`OPENAI_API_KEY`) y/o **Anthropic** (`ANTHROPIC_API_KEY`).
+- Clave de API de  **Anthropic** (`ANTHROPIC_API_KEY`).
 
 ---
 
@@ -82,7 +84,7 @@ LLM_PROVIDER=anthropic
 
 # Configuración Anthropic (opcional si usas Claude)
 ANTHROPIC_API_KEY=sk-ant-...
-ANTHROPIC_MODEL=claude-3-5-haiku-20241022
+ANTHROPIC_MODEL=claude-haiku-4-5-20251001
 
 # Configuración de la App
 APP_NAME="CAG Software Estimator API"
@@ -116,17 +118,6 @@ El servicio estará disponible en:
 ```bash
 curl -X GET http://localhost:8000/health
 ```
-
-**Respuesta:**
-```json
-{
-  "status": "ok",
-  "app_name": "CAG Software Estimator API",
-  "environment": "development",
-  "provider": "openai"
-}
-```
-
 ---
 
 ### 2. Generar Estimación (`POST /api/v1/estimate`)
@@ -141,26 +132,13 @@ curl -X POST http://localhost:8000/api/v1/estimate \
   }'
 ```
 
-#### Usando el archivo de ejemplo incluido:
+#### Usando el archivo incluido:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/estimate \
   -H "Content-Type: application/json" \
   -d @data/sample_transcription.json
 ```
-
-**Ejemplo de Respuesta JSON:**
-
-```json
-{
-  "estimation": "## Estimación: Landing Page y Blog con Integración HubSpot\n\n### 1. Resumen Ejecutivo\nDesarrollo de landing page de alta conversión integrada con HubSpot CRM y blog autogestionable...\n\n### 2. Desglose de Tareas y Horas:\n1. **Frontend Landing & Blog**: 35 horas\n2. **Integración HubSpot API**: 15 horas\n3. **Módulo Blog & WYSIWYG**: 20 horas\n4. **QA y Despliegue**: 10 horas\n\n**Total estimado**: 80 horas\n**Equipo recomendado**: 1 Desarrollador Full-stack Senior + 1 QA\n**Duración estimada**: 3 - 4 semanas",
-  "model": "gpt-4o-mini",
-  "provider": "openai",
-  "created_at": "2026-09-12T00:00:00.000000+00:00"
-}
-```
-
----
 
 ## 🧪 Pipeline Automatizado y Pruebas
 
@@ -191,5 +169,4 @@ El archivo `.github/workflows/ci.yml` ejecuta automáticamente en cada push o pu
 - [x] Endpoint `POST /api/v1/estimate` con validaciones de schemas Pydantic.
 - [x] Endpoint `GET /health` y documentación OpenAPI/Swagger en `/docs`.
 - [x] `.env` incluido en `.gitignore` y archivo `.env.example` documentado.
-- [x] Pipeline CI automatizado y tests en `tests/`.
-- [x] Archivos de transcripción de ejemplo en `data/`.
+

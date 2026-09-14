@@ -20,7 +20,7 @@ class Settings(BaseSettings):
 
     # Anthropic Configuration
     ANTHROPIC_API_KEY: Optional[str] = None
-    ANTHROPIC_MODEL: str = "claude-3-5-haiku-20241022"
+    ANTHROPIC_MODEL: str = "claude-haiku-4-5-20251001"
 
     model_config = SettingsConfigDict(
         env_file=".env",
