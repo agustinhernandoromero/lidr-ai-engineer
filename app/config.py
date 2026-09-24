@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # Versión de prompt por defecto
     PROMPT_VERSION: str = "v1"
 
+    # Caché de respuestas del LLM (Redis)
+    REDIS_URL: str = "redis://localhost:6379/0"
+    CACHE_TTL: int = 86_400  # 24h
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

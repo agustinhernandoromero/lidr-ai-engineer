@@ -12,9 +12,9 @@ from typing import Any, Dict, Iterator
 import structlog
 
 from app.config import get_settings
+from app.dependencies import get_cache
 from app.prompts.loader import DEFAULT_VERSION, render_estimation_prompt
 from app.schemas import EstimationRequest
-from app.services import cache
 
 logger = structlog.get_logger(__name__)
 
@@ -184,6 +184,7 @@ async def generate_estimation(
 
     system, user = render_estimation_prompt(request, version=prompt_version)
 
+    cache = get_cache()
     key = cache.make_key(system, user, model, provider)
     hit = cache.get(key)
     if hit is not None:

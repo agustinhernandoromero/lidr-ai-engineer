@@ -1,54 +1,72 @@
-"""Caché de coincidencia exacta para respuestas del LLM.
+"""Caché de coincidencia exacta para respuestas del LLM, respaldada por Redis.
 
-Deliberadamente simple: un diccionario en memoria del proceso. No sobrevive a un
-reinicio ni se comparte entre workers. El cacheo semántico llega en la sesión 04.
+Sigue siendo "exact-match": la clave depende de todo lo que influye en la
+respuesta (proveedor, modelo, system y user prompt). A diferencia de la
+versión anterior (un diccionario en memoria del proceso), este almacén vive
+en Redis: sobrevive a reinicios del servicio y se comparte entre workers.
+
+Si Redis no está disponible, la caché degrada a "siempre cache miss" en vez
+de tumbar la petición: el LLM se sigue llamando con normalidad, solo que sin
+aprovechar la caché.
 """
 
 from __future__ import annotations
 
 import hashlib
-from collections import OrderedDict
+import json
 from typing import Any, Optional
 
+import redis
 import structlog
 
 logger = structlog.get_logger(__name__)
 
-MAX_ENTRIES = 128
-
-_store: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+DEFAULT_TTL = 86_400  # 24h
 
 
-def make_key(system: str, user: str, model: str, provider: str) -> str:
-    """Clave determinista a partir de todo lo que influye en la respuesta."""
-    raw = "\x00".join((provider, model, system, user))
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+class EstimationCache:
+    """Wrapper fino sobre un cliente Redis."""
 
+    def __init__(self, client: "redis.Redis", ttl: int = DEFAULT_TTL) -> None:
+        self._client = client
+        self._ttl = ttl
 
-def get(key: str) -> Optional[dict[str, Any]]:
-    """Devuelve la entrada cacheada y la marca como usada recientemente."""
-    hit = _store.get(key)
-    if hit is not None:
-        _store.move_to_end(key)
+    @classmethod
+    def from_url(cls, url: str, ttl: int = DEFAULT_TTL) -> "EstimationCache":
+        """Factory a partir de una REDIS_URL (``redis://host:port/db``)."""
+        client = redis.Redis.from_url(url, decode_responses=True)
+        return cls(client, ttl=ttl)
+
+    @staticmethod
+    def make_key(system: str, user: str, model: str, provider: str) -> str:
+        """Clave determinista a partir de todo lo que influye en la respuesta."""
+        payload = {
+            "provider": provider,
+            "model": model,
+            "system_prompt": system,
+            "user_message": user,
+        }
+        raw = json.dumps(payload, sort_keys=True)
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    def get(self, key: str) -> Optional[dict[str, Any]]:
+        """Lee de Redis. Si Redis falla, se trata como cache miss."""
+        try:
+            raw = self._client.get(key)
+        except redis.RedisError as exc:
+            logger.warning("cache_unavailable", operation="get", error=str(exc))
+            return None
+
+        if raw is None:
+            logger.info("cache_miss", key=key[:12])
+            return None
+
         logger.info("cache_hit", key=key[:12])
-        return hit
-    logger.info("cache_miss", key=key[:12])
-    return None
+        return json.loads(raw)
 
-
-def set(key: str, value: dict[str, Any]) -> None:
-    """Guarda una entrada, desalojando la menos usada si se supera el límite."""
-    _store[key] = value
-    _store.move_to_end(key)
-    while len(_store) > MAX_ENTRIES:
-        evicted, _ = _store.popitem(last=False)
-        logger.info("cache_evicted", key=evicted[:12])
-
-
-def clear() -> None:
-    """Vacía la caché. Usado por los tests."""
-    _store.clear()
-
-
-def size() -> int:
-    return len(_store)
+    def set(self, key: str, value: dict[str, Any]) -> None:
+        """Escribe en Redis con TTL. Si Redis falla, la escritura se ignora."""
+        try:
+            self._client.set(key, json.dumps(value), ex=self._ttl)
+        except redis.RedisError as exc:
+            logger.warning("cache_unavailable", operation="set", error=str(exc))
