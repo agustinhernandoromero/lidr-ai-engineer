@@ -1,7 +1,7 @@
 [project]
 name = "estimador-cag"
-version = "0.1.0"
-description = "FastAPI Software Estimation Service using CAG (Context-Augmented Generation) architecture"
+version = "0.2.0"
+description = "FastAPI Software Estimation Service with versioned Jinja2 prompts and a typed client contract"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -12,7 +12,10 @@ dependencies = [
     "openai>=1.30.0",
     "anthropic>=0.28.0",
     "python-dotenv>=1.0.1",
-    "streamlit>=1.64.0",
+    "streamlit>=1.40.0",
+    "jinja2>=3.1.4",
+    "structlog>=24.1.0",
+    "requests>=2.32.0",
 ]
 
 [project.optional-dependencies]
@@ -28,3 +31,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -52,25 +52,36 @@ def test_estimate_endpoint_openai_mock(mock_call_openai, mock_get_settings):
     """
     mock_get_settings.return_value = Settings(LLM_PROVIDER="openai")
     mock_call_openai.return_value = {
-        "estimation": "## Estimación: Landing Page con HubSpot\n- Total: 60 horas",
+        "text": "## Estimación: Landing Page con HubSpot\n- Total: 60 horas",
         "model": "gpt-4o-mini",
         "provider": "openai",
     }
 
     payload = {
-        "transcription": "En la reunión con el equipo de marketing se pidió una landing page con HubSpot."
+        "description": "En la reunión con el equipo de marketing se pidió una landing page con HubSpot para captar leads.",
+        "project_type": "web_saas",
+        "detail_level": "summary",
+        "output_format": "narrative",
     }
 
     response = client.post("/api/v1/estimate", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert "estimation" in data
+    assert "text" in data
     assert data["provider"] == "openai"
     assert data["model"] == "gpt-4o-mini"
-    assert "Landing Page con HubSpot" in data["estimation"]
+    assert "Landing Page con HubSpot" in data["text"]
 
 
 def test_estimate_endpoint_validation_error():
-    """Verify validation error when transcription is too short."""
-    response = client.post("/api/v1/estimate", json={"transcription": "hola"})
+    """Verify validation error when description is too short."""
+    response = client.post(
+        "/api/v1/estimate",
+        json={
+            "description": "hola",
+            "project_type": "web_saas",
+            "detail_level": "summary",
+            "output_format": "narrative",
+        },
+    )
     assert response.status_code == 422

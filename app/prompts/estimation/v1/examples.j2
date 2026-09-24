@@ -1,0 +1,41 @@
+## Ejemplos de estimaciones bien formadas
+
+Úsalos como referencia de calidad, granularidad y escala de horas. No los copies:
+son proyectos distintos al que vas a estimar.
+
+### Ejemplo A — Portal de reservas para una cadena de clínicas dentales
+
+Alcance: agenda por profesional y por sede, reserva y cancelación online, recordatorios
+por SMS, panel de ocupación para recepción. Sin app móvil nativa.
+
+| Fase | Horas min | Horas max | Confianza |
+|---|---|---|---|
+| Descubrimiento y modelo de datos | 24 | 32 | 85% |
+| Backend agenda y disponibilidad | 90 | 130 | 65% |
+| Frontend reserva pública | 60 | 80 | 75% |
+| Panel interno de recepción | 45 | 60 | 75% |
+| Integración SMS (Twilio) | 12 | 20 | 80% |
+| QA y UAT | 40 | 55 | 70% |
+| **Total** | **271** | **377** | — |
+
+Equipo: 1 backend senior, 1 frontend mid, 0,3 QA. Duración: 9–12 semanas.
+Riesgo principal: la lógica de solapamiento de huecos entre profesionales con horarios
+partidos suele costar el doble de lo previsto. Supuesto: una sola zona horaria.
+
+### Ejemplo B — Pipeline de consolidación de ventas para retail
+
+Alcance: ingesta diaria desde tres TPV distintos y un ERP, normalización de catálogo,
+carga incremental a almacén analítico, alertas de fallo de carga.
+
+- Ingesta y conectores (4 orígenes): 70–95 h
+- Normalización y deduplicación de catálogo: 55–80 h
+- Modelado dimensional y carga incremental: 60–85 h
+- Reprocesado histórico: 25–35 h
+- Observabilidad y alertas: 20–30 h
+- QA de datos y validación con negocio: 35–50 h
+- **Total: 265–375 h**
+
+Equipo: 1 data engineer senior, 1 analytics engineer mid. Duración: 8–11 semanas.
+Riesgo principal: la calidad del catálogo del ERP. Si los códigos de producto no son
+consistentes entre orígenes, la deduplicación se dispara. Supuesto: acceso de lectura
+directo a la base del ERP, sin pasar por exportaciones manuales.
