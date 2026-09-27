@@ -11,9 +11,9 @@ Cada entrega se revisa desde el enlace de su propia rama.
 
 ## Sesiones
 
-| # | Tema | Rama | Estado |
-|---|------|------|--------|
-| 01 | — | — | Sin entrega |
-| 02 | Estimador de software con arquitectura CAG (FastAPI) | [`sesion-02-cag`](../../tree/sesion-02-cag) | Entregada |
-| 03 | — | — | Pendiente |
+# | Sesión | Tema | Rama | Estado |
+|---|---|---|
+| 02 | CAG | [session-02-cag](https://github.com/<usuario>/<repo>/tree/session-02-cag) | Entregada |
+| 03 | Streamlit | [session-03-streamlit](https://github.com/<usuario>/<repo>/tree/session-03-streamlit) | Entregada |
+| 04 | Chat vs producto | [session-04-chat-vs-producto](https://github.com/<usuario>/<repo>/tree/session-04-chat-vs-producto) | Entregada |
 ........
