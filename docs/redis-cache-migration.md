@@ -117,22 +117,14 @@ se haga `docker rm`).
   y compartida)"*, en `infra/redis-cache-fallback`.
 - La rama `sesion-04-chat-vs-producto` (la entrega del curso) no se tocó.
 
-## Pendiente (siguiente sesión)
+## Qué vino después
 
-De la comparativa original con la referencia del curso, quedan dos puntos
-relacionados entre sí:
-
-1. **Fallback entre proveedores LLM**: la referencia envuelve LiteLLM con
-   un `Router` que hace fallback automático de modelo primario a
-   secundario, reintentos configurables y tracking de coste en USD. Hoy
-   `llm_service.py` llama directo al SDK de OpenAI o Anthropic según un
-   único proveedor configurado — si esa API falla, no hay red de
-   seguridad.
-2. **DI del LLM wrapper**: seguir el mismo patrón que `get_cache()` para
-   inyectar el wrapper del LLM, en vez de las funciones sueltas actuales
-   (`call_openai`, `call_anthropic`, etc.).
-
-Puntos ya identificados pero no abordados todavía: `description` limitado
-a 2000 caracteres (vs 80000 en la referencia — una transcripción real de
-reunión podría no caber), y la cobertura de tests de `llm_service.py` más
-allá del único endpoint mockeado.
+Todo lo que en su momento quedó pendiente aquí (fallback entre
+proveedores, DI del LLM wrapper, límite de `description`, cobertura de
+tests de `llm_service.py`) se hizo en la misma sesión, a continuación de
+esto. Detalle completo en
+[docs/gemini-fallback-y-limpieza.md](gemini-fallback-y-limpieza.md) y en
+la tabla de estado de
+[docs/comparativa-vs-referencia.md](comparativa-vs-referencia.md). El
+resumen de cómo quedó todo fusionado en la rama de entrega está en
+[docs/entrega-y-ramas.md](entrega-y-ramas.md).
