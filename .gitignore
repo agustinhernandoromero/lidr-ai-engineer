@@ -63,3 +63,7 @@ setup_sesion3.ps1
 
 uvicorn_*.log
 uvicorn_pid.txt
+
+# Notas de trabajo personales — no van al repo del curso.
+# docs/screenshots/ SÍ se sube (es el entregable); solo se ignoran los .md sueltos.
+docs/*.md
