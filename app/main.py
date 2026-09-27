@@ -73,7 +73,7 @@ async def health_check():
         "status": "ok",
         "app_name": settings.APP_NAME,
         "environment": settings.APP_ENV,
-        "provider": settings.LLM_PROVIDER,
+        "provider": "anthropic",
     }
 
 

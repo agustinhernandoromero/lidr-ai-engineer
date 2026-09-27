@@ -29,7 +29,7 @@ app/
 ├── routers/
 │   └── estimations.py       # POST /estimate, POST /estimate/stream, GET /prompt-versions
 ├── services/
-│   ├── llm_service.py       # Wrapper OpenAI/Anthropic + orquestación
+│   ├── llm_service.py       # Wrapper de Anthropic (+ fallback a Gemini) + orquestación
 │   └── cache.py             # Caché de coincidencia exacta (LRU en memoria)
 ├── prompts/
 │   ├── loader.py            # render_estimation_prompt(request, version) -> (system, user)
@@ -51,9 +51,10 @@ uv sync --extra dev
 `.env` en la raíz (ignorado por Git):
 
 ```env
-LLM_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
 ANTHROPIC_MODEL=claude-haiku-4-5-20251001
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-flash-latest
 API_BASE_URL=http://localhost:8000/api/v1
 PROMPT_VERSION=v1
 ```
@@ -132,16 +133,24 @@ contenido renderizado), `llm_call_completed`, `cache_hit` / `cache_miss`.
 El hash del prompt renderizado es lo que permite responder a "¿qué texto exacto vio
 el modelo en esta petición?" sin guardar el prompt entero en los logs.
 
-## 🗃️ Caché
+## 🗃️ Caché y fallback
 
-Coincidencia exacta sobre `sha256(provider + model + system + user)`, LRU en memoria
-del proceso con 128 entradas. No sobrevive a un reinicio ni se comparte entre workers.
-El endpoint de streaming no cachea: el cuerpo se consume una sola vez.
+Coincidencia exacta sobre `sha256(provider + model + system + user)`, respaldada por
+Redis (`REDIS_URL`, `CACHE_TTL`). Sobrevive a reinicios y se comparte entre workers; si
+Redis no está disponible, degrada a "siempre cache miss" sin romper la petición.
+
+Si Anthropic falla, `LLMWrapper` reintenta automáticamente con Gemini (gratuito) como
+red de seguridad. Esa respuesta de fallback **no se cachea**, para no seguir sirviendo
+una respuesta vieja de Gemini durante el TTL una vez que Anthropic se recupera.
+
+El endpoint de streaming no cachea ni hace fallback: el cuerpo se consume una sola vez
+y no hay forma limpia de reintentar a mitad de una respuesta sin mezclar texto de dos
+modelos.
 
 ## 📝 Notas
 
 - El SDK de `anthropic` fijado en este proyecto no acepta `temperature` en
-  `messages.stream()`. Las llamadas en streaming van sin ese parámetro a propósito;
-  las bloqueantes sí lo usan en OpenAI.
+  `messages.stream()`. Ninguna llamada a Anthropic (bloqueante ni streaming) lo usa
+  por eso; Gemini (el fallback) sí fija `temperature=0.3`.
 - La respuesta sigue siendo **texto libre**. Salida JSON estructurada, guardarraíles y
   cacheo semántico quedan para el directo.

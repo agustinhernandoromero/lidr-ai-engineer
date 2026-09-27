@@ -38,7 +38,7 @@ class EstimationRequest(BaseModel):
 
     description: str = Field(
         min_length=20,
-        max_length=2000,
+        max_length=20_000,
         description="Descripción del proyecto o notas de la reunión de requerimientos.",
     )
     project_type: ProjectType
@@ -58,3 +58,4 @@ class EstimationResponse(BaseModel):
     model: str
     provider: str
     cached: bool = False
+    fallback_used: bool = False

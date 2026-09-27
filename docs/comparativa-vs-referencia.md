@@ -36,35 +36,54 @@ si Redis falla. Detalle completo en
 [docs/redis-cache-migration.md](redis-cache-migration.md).
 Commit: `2eccf20` en la rama `infra/redis-cache-fallback`.
 
-### 2. Sin fallback de proveedor ni reintentos — ⏳ PENDIENTE
+### 2. Sin fallback de proveedor ni reintentos — ✅ RESUELTO
 
 La referencia envuelve LiteLLM con un `Router` que hace fallback
-automático de modelo primario a secundario, reintentos configurables,
-timeout y tracking de coste en USD por llamada. Aquí `llm_service.py`
-llama directo al SDK de OpenAI o Anthropic según el único proveedor
-configurado en `.env`: si esa API falla, no hay red de seguridad, la
-petición simplemente falla. Es el hueco funcional más importante que
-queda.
+automático de modelo primario a secundario. Aquí, en vez de un segundo
+modelo de pago, `generate_estimation()` cae a **Gemini** (gratuito) si
+falla el proveedor configurado (`call_openai`/`call_anthropic`) — decisión
+tomada expresamente para no aumentar el gasto en producción. La respuesta
+de fallback no se cachea (para no servir una respuesta vieja de Gemini
+durante 24h una vez que el proveedor principal se recupera). Verificado
+end-to-end contra la API real de Gemini: se detectó que el tier gratuito
+devuelve `503` de forma intermitente (~1 de cada 4 llamadas en pruebas),
+por lo que `call_gemini` incluye 1 reintento tras 1s. Cubierto por
+`tests/test_llm_service.py` (fallback, no-cacheo del fallback, y el
+reintento del propio Gemini). Commit pendiente de hacer en
+`infra/redis-cache-fallback`.
 
-### 3. Sin capa de inyección de dependencias — 🟡 PARCIAL
+### 3. Sin capa de inyección de dependencias — ✅ RESUELTO
 
-La referencia tiene `dependencies.py` con singletons (`get_cache`,
-`get_llm_wrapper`) inyectados vía `Depends()`, lo que permite
-sobreescribirlos limpiamente en tests. Aquí ya existe `get_cache()`
-siguiendo ese patrón (paso 1 de hoy), pero el LLM wrapper sigue siendo
-funciones sueltas (`call_openai`, `call_anthropic`, `_resolve_provider`)
-sin envolver en una clase inyectable. Queda ligado al punto 2: cuando se
-implemente el fallback, tiene sentido envolverlo en una clase y exponerla
-vía `get_llm_wrapper()`.
+`app/dependencies.py` ahora tiene también `get_llm_wrapper()` (además de
+`get_cache()`), que devuelve un singleton `LLMWrapper` con `.complete()` y
+`.complete_stream()`. La clase no guarda configuración en `__init__`: lee
+`get_settings()` en cada llamada, a propósito, para que el singleton
+`@lru_cache` no se quede pegado a una config vieja (relevante en tests que
+mockean `get_settings()`). `call_openai`/`call_anthropic`/`call_gemini`
+siguen siendo funciones de módulo — la clase las usa por dentro, pero
+seguir permitiendo mockearlas sueltas en tests no tenía coste.
 
-### 4. `description` limitado a 2000 caracteres — ⏳ PENDIENTE
+**Efecto colateral encontrado y corregido**: al cablear `get_llm_wrapper`
+entre `dependencies.py` y `llm_service.py` apareció un import circular real
+(`app.dependencies` → `app.services.cache` → `app/services/__init__.py` →
+`app.services.llm_service` → `app.dependencies` otra vez). Root cause:
+`app/services/__init__.py` reexportaba `generate_estimation` sin que nada
+lo usara — puro riesgo sin beneficio. Se quitó esa reexportación y se hizo
+el import de `LLMWrapper` dentro de `get_llm_wrapper()` (import diferido,
+no al principio del archivo). Cubierto por `tests/test_imports.py` (nuevo):
+lanza un intérprete de Python limpio por cada módulo clave y comprueba que
+importa bien como el *primer* import del proceso — se confirmó que este
+test sí habría detectado el bug (se reprodujo el fallo a propósito antes
+de arreglarlo, y el test lo capturó).
 
-La referencia permite hasta 80000 caracteres; aquí el límite es 2000.
-Los ejemplos de datos del propio repo (`data/transcription_meeting.txt`,
-~1069 caracteres) caben, pero una transcripción real de una reunión larga
-—que es el caso de uso principal— podría no caber. Cambio sencillo en
-`app/schemas.py` (`EstimationRequest.description`), pendiente de decidir
-un límite razonable.
+### 4. `description` limitado a 2000 caracteres — ✅ RESUELTO
+
+Subido a 20.000 caracteres (no los 80.000 de la referencia, a propósito:
+cubre una transcripción real de reunión sin abrir la puerta a pegar textos
+enormes que disparen el coste por llamada). Actualizado también el texto
+de ayuda en `streamlit_app.py`. Cubierto por `tests/test_schemas.py`
+(nuevo): rechaza `< 20` y `> 20000` caracteres, acepta una transcripción
+larga de ejemplo.
 
 ### 5. Cobertura de tests desigual — 🟡 PARCIAL
 
@@ -80,11 +99,11 @@ error de `_resolve_provider` con un proveedor no soportado.
 | # | Punto | Estado |
 |---|-------|--------|
 | 1 | Caché → Redis | ✅ Resuelto |
-| 2 | Fallback de proveedor | ⏳ Pendiente |
-| 3 | Inyección de dependencias | 🟡 Parcial (cache sí, LLM wrapper no) |
-| 4 | Límite de `description` | ⏳ Pendiente |
-| 5 | Cobertura de tests | 🟡 Parcial (cache sí, llm_service no) |
+| 2 | Fallback de proveedor (a Gemini, gratuito) | ✅ Resuelto |
+| 3 | Inyección de dependencias | ✅ Resuelto |
+| 4 | Límite de `description` | ✅ Resuelto |
+| 5 | Cobertura de tests | 🟡 Parcial (cache, llm_service, schemas e imports sí; falta `_resolve_provider`/streaming) |
 
-Los puntos 2 y 3 conviene abordarlos juntos en la próxima sesión, ya que
-el fallback requiere envolver el LLM wrapper en una clase, momento natural
-para inyectarla igual que se hizo con la caché.
+Los 5 puntos originales están resueltos o en estado parcial razonable. Lo
+que queda es cobertura de tests fina (streaming, `_resolve_provider` con
+proveedor no soportado) — no bloquea nada, es pulido.

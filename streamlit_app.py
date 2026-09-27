@@ -51,10 +51,10 @@ st.set_page_config(page_title="Estimador de Software", page_icon="🧮", layout=
 
 settings = get_settings()
 
-if not settings.ANTHROPIC_API_KEY and not settings.OPENAI_API_KEY:
+if not settings.ANTHROPIC_API_KEY:
     st.error(
-        "No hay ninguna API key configurada. Define ANTHROPIC_API_KEY u OPENAI_API_KEY "
-        "en tu archivo .env (no las escribas en el código)."
+        "No hay ninguna API key configurada. Define ANTHROPIC_API_KEY "
+        "en tu archivo .env (no la escribas en el código)."
     )
     st.stop()
 
@@ -64,6 +64,8 @@ if "last_metrics" not in st.session_state:
     st.session_state.last_metrics = None
 if "last_estimation" not in st.session_state:
     st.session_state.last_estimation = None
+if "last_fallback" not in st.session_state:
+    st.session_state.last_fallback = None
 
 
 # --------------------------------------------------------------------------- #
@@ -72,12 +74,7 @@ if "last_estimation" not in st.session_state:
 
 with st.sidebar:
     st.header("Configuración")
-    model = (
-        settings.ANTHROPIC_MODEL
-        if settings.LLM_PROVIDER == "anthropic"
-        else settings.OPENAI_MODEL
-    )
-    st.caption(f"Proveedor: `{settings.LLM_PROVIDER}` · Modelo: `{model}`")
+    st.caption(f"Proveedor: `anthropic` · Modelo: `{settings.ANTHROPIC_MODEL}`")
 
     try:
         versions = available_versions()
@@ -113,6 +110,7 @@ with st.sidebar:
         st.session_state.messages = []
         st.session_state.last_metrics = None
         st.session_state.last_estimation = None
+        st.session_state.last_fallback = None
         st.rerun()
 
 
@@ -139,7 +137,7 @@ with tab_form:
                 "Plataforma web para que una red de gimnasios gestione altas de socios, "
                 "reservas de clases y cobros mensuales…"
             ),
-            help="Entre 20 y 2000 caracteres.",
+            help="Entre 20 y 20.000 caracteres.",
         )
 
         col1, col2, col3 = st.columns(3)
@@ -210,10 +208,18 @@ with tab_form:
                     "Caché": "hit" if data["cached"] else "miss",
                     "Tiempo": f"{elapsed:.2f} s",
                 }
+                st.session_state.last_fallback = (
+                    data["model"] if data.get("fallback_used") else None
+                )
                 st.rerun()
 
     if st.session_state.last_estimation:
         st.divider()
+        if st.session_state.last_fallback:
+            st.warning(
+                f"El proveedor principal falló: esta respuesta la generó el "
+                f"modelo de respaldo (`{st.session_state.last_fallback}`)."
+            )
         st.markdown(st.session_state.last_estimation)
 
 
@@ -227,8 +233,8 @@ with tab_chat:
         "prompt CAG, sin pasar por el servicio ni por el contrato tipado."
     )
 
-    if settings.LLM_PROVIDER != "anthropic" or not settings.ANTHROPIC_API_KEY:
-        st.info("El modo chat requiere `LLM_PROVIDER=anthropic` y una ANTHROPIC_API_KEY.")
+    if not settings.ANTHROPIC_API_KEY:
+        st.info("El modo chat requiere una ANTHROPIC_API_KEY.")
     else:
         client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
         system_prompt = build_cag_system_prompt()

@@ -1,7 +1,8 @@
-"""Wrapper de proveedores LLM y orquestación de la estimación.
+"""Wrapper de Anthropic (proveedor principal) y orquestación de la estimación.
 
 El prompt ya no se construye aquí: vive en ``app/prompts/estimation/<version>/``
-y lo renderiza el loader. Este módulo solo sabe hablar con OpenAI y con Anthropic.
+y lo renderiza el loader. Este módulo solo sabe hablar con Anthropic y, como
+red de seguridad gratuita si Anthropic falla, con Gemini.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from typing import Any, Dict, Iterator
 import structlog
 
 from app.config import get_settings
-from app.dependencies import get_cache
+from app.dependencies import get_cache, get_llm_wrapper
 from app.prompts.loader import DEFAULT_VERSION, render_estimation_prompt
 from app.schemas import EstimationRequest
 
@@ -66,31 +67,6 @@ def build_cag_system_prompt() -> str:
 # Wrapper de proveedores
 # --------------------------------------------------------------------------- #
 
-def call_openai(system: str, user: str, settings) -> Dict[str, Any]:
-    """Llamada bloqueante a OpenAI con system y user como mensajes separados."""
-    from openai import OpenAI
-
-    if not settings.OPENAI_API_KEY:
-        raise ValueError(
-            "OPENAI_API_KEY no está configurada. Por favor define la variable en el archivo .env"
-        )
-
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    response = client.chat.completions.create(
-        model=settings.OPENAI_MODEL,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        temperature=0.3,
-    )
-    return {
-        "text": response.choices[0].message.content or "",
-        "model": settings.OPENAI_MODEL,
-        "provider": "openai",
-    }
-
-
 def call_anthropic(system: str, user: str, settings) -> Dict[str, Any]:
     """Llamada bloqueante a Anthropic. El system va en su parámetro propio."""
     from anthropic import Anthropic
@@ -115,27 +91,45 @@ def call_anthropic(system: str, user: str, settings) -> Dict[str, Any]:
     }
 
 
-def stream_openai(system: str, user: str, settings) -> Iterator[str]:
-    """Deltas de texto desde OpenAI."""
-    from openai import OpenAI
+def call_gemini(system: str, user: str, settings) -> Dict[str, Any]:
+    """Llamada bloqueante a Gemini. Se usa solo como red de seguridad gratuita
+    cuando Anthropic falla.
+    """
+    from google import genai
+    from google.genai import errors, types
 
-    if not settings.OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY no está configurada.")
+    if not settings.GEMINI_API_KEY:
+        raise ValueError(
+            "GEMINI_API_KEY no está configurada. Por favor define la variable en el archivo .env"
+        )
 
-    client = OpenAI(api_key=settings.OPENAI_API_KEY)
-    stream = client.chat.completions.create(
-        model=settings.OPENAI_MODEL,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    config = types.GenerateContentConfig(
+        system_instruction=system,
         temperature=0.3,
-        stream=True,
+        max_output_tokens=MAX_TOKENS,
     )
-    for chunk in stream:
-        delta = chunk.choices[0].delta.content
-        if delta:
-            yield delta
+
+    # El tier gratuito de Gemini devuelve 503 "high demand" de forma intermitente
+    # (~1 de cada 4 llamadas en pruebas reales). Al ser nuestra propia red de
+    # seguridad, un único reintento tras 1s basta para absorber esos picos
+    # puntuales sin añadir latencia relevante a un flujo que ya viene de un
+    # fallo del proveedor principal.
+    try:
+        response = client.models.generate_content(
+            model=settings.GEMINI_MODEL, contents=user, config=config
+        )
+    except errors.ServerError:
+        time.sleep(1)
+        response = client.models.generate_content(
+            model=settings.GEMINI_MODEL, contents=user, config=config
+        )
+
+    return {
+        "text": response.text or "",
+        "model": settings.GEMINI_MODEL,
+        "provider": "gemini",
+    }
 
 
 def stream_anthropic(system: str, user: str, settings) -> Iterator[str]:
@@ -156,17 +150,50 @@ def stream_anthropic(system: str, user: str, settings) -> Iterator[str]:
             yield text
 
 
-def _resolve_provider(settings) -> str:
-    provider = settings.LLM_PROVIDER.lower()
-    if provider not in ("openai", "anthropic"):
-        raise ValueError(
-            f"Proveedor de LLM no soportado: '{provider}'. Usa 'openai' o 'anthropic'."
+# --------------------------------------------------------------------------- #
+# Wrapper inyectable: punto único para hablar con los proveedores LLM
+# --------------------------------------------------------------------------- #
+
+class LLMWrapper:
+    """Envuelve las llamadas a Anthropic, con fallback a Gemini.
+
+    No guarda configuración en el constructor: cada método llama a
+    ``get_settings()`` en el momento de usarla. Es deliberado — si guardara la
+    configuración en ``__init__``, el singleton de ``get_llm_wrapper()``
+    (``@lru_cache``) se quedaría pegado a la primera configuración que viera
+    para siempre, lo que rompería los tests que mockean ``get_settings()``.
+    """
+
+    def complete(self, system: str, user: str) -> Dict[str, Any]:
+        """Llama a Anthropic; si falla, cae a Gemini (gratuito)."""
+        settings = get_settings()
+
+        try:
+            result = call_anthropic(system, user, settings)
+            return {**result, "fallback_used": False}
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "llm_primary_failed_falling_back",
+                provider="anthropic",
+                model=settings.ANTHROPIC_MODEL,
+                error=str(exc),
+            )
+            result = call_gemini(system, user, settings)
+            return {**result, "fallback_used": True}
+
+    def complete_stream(self, system: str, user: str) -> Iterator[str]:
+        """Streaming de Anthropic. Sin fallback (ver docstring de
+        ``stream_estimation``) y sin cachear.
+        """
+        settings = get_settings()
+
+        logger.info(
+            "llm_stream_started",
+            provider="anthropic",
+            model=settings.ANTHROPIC_MODEL,
         )
-    return provider
 
-
-def _model_for(provider: str, settings) -> str:
-    return settings.OPENAI_MODEL if provider == "openai" else settings.ANTHROPIC_MODEL
+        yield from stream_anthropic(system, user, settings)
 
 
 # --------------------------------------------------------------------------- #
@@ -177,36 +204,42 @@ async def generate_estimation(
     request: EstimationRequest,
     prompt_version: str = DEFAULT_VERSION,
 ) -> Dict[str, Any]:
-    """Renderiza el prompt, consulta la caché y llama al proveedor configurado."""
+    """Renderiza el prompt, consulta la caché y llama a Anthropic.
+
+    Si Anthropic falla (rate limit, timeout, caída del servicio),
+    ``LLMWrapper`` reintenta automáticamente con Gemini como red de
+    seguridad gratuita. La respuesta de fallback deliberadamente NO se
+    cachea: si se cacheara bajo la clave de Anthropic, seguiría sirviéndose
+    durante el TTL aunque Anthropic ya se hubiera recuperado.
+    """
     settings = get_settings()
-    provider = _resolve_provider(settings)
-    model = _model_for(provider, settings)
 
     system, user = render_estimation_prompt(request, version=prompt_version)
 
     cache = get_cache()
-    key = cache.make_key(system, user, model, provider)
+    key = cache.make_key(system, user, settings.ANTHROPIC_MODEL, "anthropic")
     hit = cache.get(key)
     if hit is not None:
-        return {**hit, "prompt_version": prompt_version, "cached": True}
+        return {**hit, "prompt_version": prompt_version, "cached": True, "fallback_used": False}
 
+    llm = get_llm_wrapper()
     started = time.perf_counter()
-    if provider == "openai":
-        result = call_openai(system, user, settings)
-    else:
-        result = call_anthropic(system, user, settings)
+    result = llm.complete(system, user)
     elapsed = time.perf_counter() - started
 
     logger.info(
         "llm_call_completed",
-        provider=provider,
-        model=model,
+        provider=result["provider"],
+        model=result["model"],
         prompt_version=prompt_version,
         elapsed_s=round(elapsed, 3),
         response_chars=len(result["text"]),
+        fallback_used=result["fallback_used"],
     )
 
-    cache.set(key, result)
+    if not result["fallback_used"]:
+        cache.set(key, {"text": result["text"], "model": result["model"], "provider": result["provider"]})
+
     return {**result, "prompt_version": prompt_version, "cached": False}
 
 
@@ -214,20 +247,10 @@ def stream_estimation(
     request: EstimationRequest,
     prompt_version: str = DEFAULT_VERSION,
 ) -> Iterator[str]:
-    """Versión en streaming. No cachea: el cuerpo se consume una sola vez."""
-    settings = get_settings()
-    provider = _resolve_provider(settings)
-
+    """Versión en streaming. No cachea, y tampoco hace fallback a Gemini: si
+    Anthropic falla a mitad de la respuesta, no hay forma limpia de
+    reintentar sin mezclar texto de dos modelos en la misma respuesta.
+    """
     system, user = render_estimation_prompt(request, version=prompt_version)
-
-    logger.info(
-        "llm_stream_started",
-        provider=provider,
-        model=_model_for(provider, settings),
-        prompt_version=prompt_version,
-    )
-
-    if provider == "openai":
-        yield from stream_openai(system, user, settings)
-    else:
-        yield from stream_anthropic(system, user, settings)
+    llm = get_llm_wrapper()
+    yield from llm.complete_stream(system, user)

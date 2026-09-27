@@ -39,6 +39,7 @@ async def create_estimation(
             model=result["model"],
             provider=result["provider"],
             cached=result["cached"],
+            fallback_used=result["fallback_used"],
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))

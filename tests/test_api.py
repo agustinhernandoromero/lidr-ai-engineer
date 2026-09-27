@@ -42,19 +42,18 @@ def test_cag_system_prompt_builder():
 
 
 @patch("app.services.llm_service.get_settings")
-@patch("app.services.llm_service.call_openai")
-def test_estimate_endpoint_openai_mock(mock_call_openai, mock_get_settings):
-    """Verify POST /api/v1/estimate with mocked OpenAI call.
+@patch("app.services.llm_service.call_anthropic")
+def test_estimate_endpoint_anthropic_mock(mock_call_anthropic, mock_get_settings):
+    """Verify POST /api/v1/estimate with mocked Anthropic call.
 
-    Settings are overridden to force the 'openai' provider regardless of the
-    developer's local .env, so this test never depends on ambient config and
+    Settings are overridden so this test never depends on ambient config and
     never risks invoking a real LLM provider.
     """
-    mock_get_settings.return_value = Settings(LLM_PROVIDER="openai")
-    mock_call_openai.return_value = {
+    mock_get_settings.return_value = Settings()
+    mock_call_anthropic.return_value = {
         "text": "## Estimación: Landing Page con HubSpot\n- Total: 60 horas",
-        "model": "gpt-4o-mini",
-        "provider": "openai",
+        "model": "claude-haiku-4-5-20251001",
+        "provider": "anthropic",
     }
 
     payload = {
@@ -68,8 +67,8 @@ def test_estimate_endpoint_openai_mock(mock_call_openai, mock_get_settings):
     assert response.status_code == 200
     data = response.json()
     assert "text" in data
-    assert data["provider"] == "openai"
-    assert data["model"] == "gpt-4o-mini"
+    assert data["provider"] == "anthropic"
+    assert data["model"] == "claude-haiku-4-5-20251001"
     assert "Landing Page con HubSpot" in data["text"]
 
 

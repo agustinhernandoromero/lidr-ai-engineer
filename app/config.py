@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Literal, Optional
+from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -15,16 +15,13 @@ class Settings(BaseSettings):
     # URL base del servicio IA, usada por el cliente Streamlit
     API_BASE_URL: str = "http://localhost:8000/api/v1"
 
-    # LLM Provider Configuration ('openai' | 'anthropic')
-    LLM_PROVIDER: Literal["openai", "anthropic"] = "openai"
-
-    # OpenAI Configuration
-    OPENAI_API_KEY: Optional[str] = None
-    OPENAI_MODEL: str = "gpt-4o-mini"
-
-    # Anthropic Configuration
+    # Anthropic: proveedor principal (único; no hay switch de proveedor)
     ANTHROPIC_API_KEY: Optional[str] = None
     ANTHROPIC_MODEL: str = "claude-haiku-4-5-20251001"
+
+    # Gemini: proveedor de respaldo gratuito si el proveedor principal falla
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-flash-latest"
 
     # Versión de prompt por defecto
     PROMPT_VERSION: str = "v1"
