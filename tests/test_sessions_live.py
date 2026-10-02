@@ -35,7 +35,8 @@ TURNS = [
 
 @pytest.mark.asyncio
 async def test_three_real_turns_keep_project_name():
-    app.dependency_overrides[get_session_store] = lambda: SessionStore(max_turns=6)
+    store = SessionStore(max_turns=6)  # una sola instancia para toda la conversación
+    app.dependency_overrides[get_session_store] = lambda: store
     try:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test", timeout=180) as c:
