@@ -59,3 +59,40 @@ class EstimationResponse(BaseModel):
     provider: str
     cached: bool = False
     fallback_used: bool = False
+
+
+# --------------------------------------------------------------------------- #
+# Sesión 05: conversación multiturno
+# --------------------------------------------------------------------------- #
+
+from app.services.sessions import ProjectMetadata  # noqa: E402
+
+
+class SessionCreatedResponse(BaseModel):
+    session_id: str
+
+
+class SessionStateResponse(BaseModel):
+    """Estado de una sesión: memoria (metadata) e historial, por separado."""
+
+    session_id: str
+    turn_count: int
+    history_turns: int
+    max_turns: int
+    project_metadata: ProjectMetadata
+    history: list[dict[str, str]]
+
+
+class SessionEstimationResponse(BaseModel):
+    """``EstimationResponse`` ampliada con el estado conversacional."""
+
+    text: str
+    prompt_version: str
+    model: str
+    provider: str
+    fallback_used: bool = False
+    session_id: str
+    turn: int
+    history_turns: int = Field(description="Pares de historial enviados al LLM en este turno.")
+    project_metadata: ProjectMetadata
+    warnings: list[str] = Field(default_factory=list)

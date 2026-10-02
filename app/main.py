@@ -11,6 +11,7 @@ from fastapi.responses import RedirectResponse
 from app.config import get_settings
 from app.observability import configure_logging
 from app.routers.estimations import router as estimations_router
+from app.routers.sessions import router as sessions_router
 
 settings = get_settings()
 configure_logging(settings.APP_ENV)
@@ -64,6 +65,7 @@ async def log_requests(request: Request, call_next):
 
 # Include API Routers
 app.include_router(estimations_router, prefix="/api/v1")
+app.include_router(sessions_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"], summary="Health check del servicio")
