@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     CACHE_TTL: int = 86_400  # 24h
 
+    # Memoria conversacional (sesión 05)
+    MAX_TURNS: int = 6  # pares user+assistant que conserva la ventana deslizante
+    SESSION_PROMPT_VERSION: str = "v1"  # versión de app/prompts/session5/
+
+    # Adjuntos (camino B: extracción local de texto)
+    MAX_ATTACHMENT_BYTES: int = 3_000_000
+    MAX_ATTACHMENT_CHARS: int = 20_000
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

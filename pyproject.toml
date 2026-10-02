@@ -17,6 +17,9 @@ dependencies = [
     "requests>=2.32.0",
     "redis>=5.0.0",
     "google-genai>=1.0.0",
+    "pypdf>=6.19.0",
+    "python-docx>=1.2.0",
+    "python-multipart>=0.0.32",
 ]
 
 [project.optional-dependencies]
@@ -37,3 +40,6 @@ packages = ["app"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "live: llama a la API real de Anthropic; solo corre con RUN_LIVE_TESTS=1",
+]
