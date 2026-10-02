@@ -1,0 +1,17 @@
+<hechos_previos>
+{{ previous | tojson }}
+</hechos_previos>
+
+<mensaje_cliente>
+{{ transcript }}
+</mensaje_cliente>
+{% if attachments_text %}
+
+<adjuntos>
+{{ attachments_text }}
+</adjuntos>
+{% endif %}
+
+<respuesta_estimador>
+{{ answer }}
+</respuesta_estimador>

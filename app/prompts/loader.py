@@ -90,3 +90,69 @@ def render_estimation_prompt(
     )
 
     return system, user
+
+
+def _render_pair(base: str, version: str, context: dict) -> tuple[str, str]:
+    """Renderiza ``<base>/<version>/{system,user}.j2``; ``ValueError`` si no existe."""
+    try:
+        system = _env.get_template(f"{base}/{version}/system.j2").render(**context)
+        user = _env.get_template(f"{base}/{version}/user.j2").render(**context)
+    except TemplateNotFound as exc:
+        raise ValueError(f"Versión de prompt desconocida para '{base}': '{version}'.") from exc
+    return system, user
+
+
+def render_session_prompt(
+    *,
+    transcript: str,
+    project_type: str,
+    detail_level: str,
+    output_format: str,
+    metadata: dict,
+    attachments_text: str,
+    version: str,
+) -> tuple[str, str]:
+    """Par (system, user) de un turno conversacional (sesión 05).
+
+    El system se regenera en cada turno con la ``metadata`` actual del proyecto;
+    vive en ``prompts/session5/`` y no en ``prompts/estimation/`` para que el
+    selector de versiones de ``/estimate`` no ofrezca plantillas que esperan
+    otras variables.
+    """
+    context = {
+        "transcript": transcript,
+        "project_type": project_type,
+        "detail_level": detail_level,
+        "output_format": output_format,
+        "project_metadata": metadata,
+        "attachments_text": attachments_text,
+    }
+    system, user = _render_pair("session5", version, context)
+
+    logger.info(
+        "session_prompt_rendered",
+        prompt_version=version,
+        has_metadata=any(metadata.values()),
+        attachments_chars=len(attachments_text),
+        system_hash=_fingerprint(system),
+        user_hash=_fingerprint(user),
+    )
+    return system, user
+
+
+def render_extraction_prompt(
+    *,
+    previous: dict,
+    transcript: str,
+    attachments_text: str,
+    answer: str,
+    version: str = "v1",
+) -> tuple[str, str]:
+    """Par (system, user) del extractor de ``project_metadata``."""
+    context = {
+        "previous": previous,
+        "transcript": transcript,
+        "attachments_text": attachments_text,
+        "answer": answer,
+    }
+    return _render_pair("extraction", version, context)

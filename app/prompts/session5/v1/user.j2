@@ -1,0 +1,16 @@
+Nuevo mensaje del cliente en esta conversación.
+
+<transcript>
+{{ transcript }}
+</transcript>
+{% if attachments_text %}
+
+Documentación adjunta en este turno:
+
+<attachments>
+{{ attachments_text }}
+</attachments>
+{% endif %}
+
+Formato `{{ output_format }}`, detalle `{{ detail_level }}`. Los huecos se declaran
+como supuestos; no se rellenan con requisitos inventados.
