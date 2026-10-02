@@ -75,6 +75,10 @@ if "conv_turns" not in st.session_state:
     st.session_state.conv_turns = []
 if "conv_notice" not in st.session_state:
     st.session_state.conv_notice = None
+# Cambiar este número da claves nuevas al texto y a los adjuntos, que así se
+# vacían; los selectores conservan su valor entre turnos.
+if "conv_form_nonce" not in st.session_state:
+    st.session_state.conv_form_nonce = 0
 
 
 def create_session(base_url: str) -> str | None:
@@ -337,12 +341,14 @@ with tab_conv:
                 f"{turn['history_turns']} pares de historial enviados · {turn['elapsed']:.1f} s"
             )
 
-    with st.form("conversation_form", clear_on_submit=True):
+    nonce = st.session_state.conv_form_nonce
+    with st.form("conversation_form"):
         conv_transcript = st.text_area(
             "Mensaje / transcripción",
             height=150,
             placeholder="Proyecto Hotelia: portal de reservas para hoteles pequeños…",
             help="Entre 20 y 20.000 caracteres.",
+            key=f"conv_transcript_{nonce}",
         )
         c1, c2, c3 = st.columns(3)
         conv_project_type = c1.selectbox(
@@ -368,7 +374,7 @@ with tab_conv:
             "Adjuntos (PDF o Word, máx. 3 MB cada uno)",
             type=["pdf", "docx"],
             accept_multiple_files=True,
-            key="conv_files",
+            key=f"conv_files_{nonce}",
         )
         conv_submitted = st.form_submit_button("Enviar turno", type="primary")
 
@@ -403,7 +409,7 @@ with tab_conv:
                         conv_base_url,
                         notice=(
                             "La sesión expiró (el servicio se reinició). "
-                            "Se ha creado una nueva; reenvía el mensaje."
+                            "Se ha creado una nueva: pulsa «Enviar turno» de nuevo."
                         ),
                     )
                     st.rerun()
@@ -429,6 +435,7 @@ with tab_conv:
                         **data,
                     }
                 )
+                st.session_state.conv_form_nonce += 1
                 st.rerun()
 
 
