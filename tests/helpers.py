@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 
 
 def make_pdf(text: str) -> bytes:
@@ -50,3 +51,54 @@ def make_docx(paragraphs: list[str], table: list[list[str]] | None = None) -> by
     buffer = io.BytesIO()
     document.save(buffer)
     return buffer.getvalue()
+
+
+KNOWN_TECHNOLOGIES = ["React", "FastAPI", "PostgreSQL", "Kubernetes"]
+
+
+class FakeLLM:
+    """Sustituto de ``LLMWrapper``: graba cada ``messages`` y responde sin red.
+
+    - Si el system es el del extractor, devuelve un JSON con los hechos que
+      encuentra por palabras clave en el último mensaje (o ``extractor_text``
+      literal, para simular respuestas rotas).
+    - Si no, devuelve una "estimación" que nombra las tecnologías presentes en
+      el último mensaje, para que el contenido de un adjunto influya en la salida.
+    """
+
+    def __init__(self, extractor_text: str | None = None, fail_estimator: bool = False):
+        self.calls: list[list[dict]] = []
+        self.extractor_text = extractor_text
+        self.fail_estimator = fail_estimator
+
+    @staticmethod
+    def _is_extractor(messages: list[dict]) -> bool:
+        return "extractor de hechos" in messages[0]["content"]
+
+    @property
+    def estimator_calls(self) -> list[list[dict]]:
+        return [c for c in self.calls if not self._is_extractor(c)]
+
+    def complete(self, messages: list[dict], max_tokens: int = 4000) -> dict:
+        self.calls.append(messages)
+        last = messages[-1]["content"]
+        base = {"model": "fake-model", "provider": "fake", "fallback_used": False}
+
+        if self._is_extractor(messages):
+            if self.extractor_text is not None:
+                return {**base, "text": self.extractor_text}
+            # Solo mira el mensaje del cliente y los adjuntos, no los hechos previos.
+            relevant = last.split("<respuesta_estimador>")[0].split("</hechos_previos>")[-1]
+            facts = {
+                "project_name": "Hotelia" if "Hotelia" in relevant else None,
+                "assumed_team_size": 4 if "seremos 4" in relevant.lower() else None,
+                "mentioned_technologies": [t for t in KNOWN_TECHNOLOGIES if t in relevant],
+                "agreed_scope": None,
+            }
+            return {**base, "text": json.dumps(facts)}
+
+        if self.fail_estimator:
+            raise RuntimeError("proveedor caído")
+        techs = [t for t in KNOWN_TECHNOLOGIES if t in last] or ["sin stack definido"]
+        n = len(self.estimator_calls)
+        return {**base, "text": f"Estimación #{n}. Stack: {', '.join(techs)}."}
