@@ -1,10 +1,13 @@
 """Cliente Streamlit del estimador de software.
 
-Dos modos:
+Tres modos:
 
 - **Formulario** (sesión 04): formulario tipado que construye un ``EstimationRequest``
   y hace ``POST /estimate`` contra el servicio IA. El prompt se renderiza en el
   servidor desde una plantilla Jinja2 versionada.
+- **Conversación** (sesión 05): sesión con ``session_id`` contra el servicio IA.
+  Varios turnos sobre el mismo proyecto, adjuntos PDF/Word, y un panel lateral
+  con el ``project_metadata`` (memoria) separado del historial.
 - **Chat** (sesión 03): chat conversacional con streaming, que llama al LLM
   directamente con el system prompt CAG. Se conserva para no perder la entrega anterior.
 
@@ -66,6 +69,48 @@ if "last_estimation" not in st.session_state:
     st.session_state.last_estimation = None
 if "last_fallback" not in st.session_state:
     st.session_state.last_fallback = None
+if "conv_session_id" not in st.session_state:
+    st.session_state.conv_session_id = None
+if "conv_turns" not in st.session_state:
+    st.session_state.conv_turns = []
+if "conv_notice" not in st.session_state:
+    st.session_state.conv_notice = None
+
+
+def create_session(base_url: str) -> str | None:
+    """POST /sessions. ``None`` si el servicio no responde."""
+    try:
+        response = requests.post(f"{base_url}/sessions", timeout=10)
+        response.raise_for_status()
+        return response.json()["session_id"]
+    except requests.exceptions.RequestException:
+        return None
+
+
+def reset_conversation(base_url: str, notice: str | None = None) -> None:
+    st.session_state.conv_session_id = create_session(base_url)
+    st.session_state.conv_turns = []
+    st.session_state.conv_notice = notice
+
+
+def fetch_session_state(base_url: str, session_id: str) -> dict | None:
+    """GET /sessions/{id}. Si la sesión ya no existe (backend reiniciado),
+    crea una nueva, avisa y devuelve su estado. ``None`` si no hay servicio.
+    """
+    try:
+        response = requests.get(f"{base_url}/sessions/{session_id}", timeout=10)
+    except requests.exceptions.RequestException:
+        return None
+    if response.status_code == 404:
+        reset_conversation(
+            base_url,
+            notice="La sesión anterior expiró (el servicio se reinició). Se ha creado una nueva.",
+        )
+        new_id = st.session_state.conv_session_id
+        return fetch_session_state(base_url, new_id) if new_id else None
+    if not response.ok:
+        return None
+    return response.json()
 
 
 # --------------------------------------------------------------------------- #
@@ -89,6 +134,44 @@ with st.sidebar:
     )
 
     api_base_url = st.text_input("URL del servicio IA", settings.API_BASE_URL)
+
+    conv_base_url = api_base_url.rstrip("/")
+    if st.session_state.conv_session_id is None:
+        st.session_state.conv_session_id = create_session(conv_base_url)
+
+    st.divider()
+    st.subheader("Memoria de la conversación")
+    conv_state = (
+        fetch_session_state(conv_base_url, st.session_state.conv_session_id)
+        if st.session_state.conv_session_id
+        else None
+    )
+    if conv_state is None:
+        st.caption("Servicio no disponible: no se pudo crear la sesión.")
+    else:
+        st.caption(
+            f"Sesión `{conv_state['session_id'][:8]}` · {conv_state['turn_count']} turnos en total"
+        )
+        st.metric(
+            "Turnos en la ventana (historial)",
+            f"{conv_state['history_turns']}/{conv_state['max_turns']}",
+        )
+        md = conv_state["project_metadata"]
+        st.markdown("**project_metadata** (memoria, va en el system prompt)")
+        st.table(
+            {
+                "Campo": ["Proyecto", "Equipo asumido", "Tecnologías", "Alcance acordado"],
+                "Valor": [
+                    md["project_name"] or "—",
+                    f"{md['assumed_team_size']} personas" if md["assumed_team_size"] else "—",
+                    ", ".join(md["mentioned_technologies"]) or "—",
+                    md["agreed_scope"] or "—",
+                ],
+            }
+        )
+    if st.button("Nueva conversación", use_container_width=True):
+        reset_conversation(conv_base_url)
+        st.rerun()
 
     st.divider()
     st.subheader("Última llamada")
@@ -116,7 +199,9 @@ with st.sidebar:
 
 st.title("🧮 Estimador de Software")
 
-tab_form, tab_chat = st.tabs(["Formulario tipado", "Chat libre (sesión 03)"])
+tab_form, tab_conv, tab_chat = st.tabs(
+    ["Formulario tipado", "Conversación (sesión 05)", "Chat libre (sesión 03)"]
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -221,6 +306,130 @@ with tab_form:
                 f"modelo de respaldo (`{st.session_state.last_fallback}`)."
             )
         st.markdown(st.session_state.last_estimation)
+
+
+# --------------------------------------------------------------------------- #
+# Modo conversación (sesión 05): memoria + adjuntos contra el servicio IA
+# --------------------------------------------------------------------------- #
+
+with tab_conv:
+    st.caption(
+        "Conversación de varios turnos sobre el mismo proyecto. El servicio guarda el "
+        "historial (ventana deslizante) y extrae los hechos del proyecto al panel lateral."
+    )
+    if st.session_state.conv_notice:
+        st.info(st.session_state.conv_notice)
+        st.session_state.conv_notice = None
+
+    for turn in st.session_state.conv_turns:
+        with st.chat_message("user"):
+            st.markdown(turn["transcript"])
+            if turn["files"]:
+                st.caption("📎 " + ", ".join(turn["files"]))
+        with st.chat_message("assistant"):
+            for warning in turn["warnings"]:
+                st.warning(warning)
+            if turn["fallback_used"]:
+                st.warning(f"Respuesta generada por el modelo de respaldo (`{turn['model']}`).")
+            st.markdown(turn["text"])
+            st.caption(
+                f"Turno {turn['turn']} · {turn['provider']} · `{turn['model']}` · "
+                f"{turn['history_turns']} pares de historial enviados · {turn['elapsed']:.1f} s"
+            )
+
+    with st.form("conversation_form", clear_on_submit=True):
+        conv_transcript = st.text_area(
+            "Mensaje / transcripción",
+            height=150,
+            placeholder="Proyecto Hotelia: portal de reservas para hoteles pequeños…",
+            help="Entre 20 y 20.000 caracteres.",
+        )
+        c1, c2, c3 = st.columns(3)
+        conv_project_type = c1.selectbox(
+            "Tipo de proyecto",
+            list(ProjectType),
+            format_func=lambda x: PROJECT_TYPE_LABELS[x],
+            key="conv_project_type",
+        )
+        conv_detail_level = c2.selectbox(
+            "Nivel de detalle",
+            list(DetailLevel),
+            index=1,
+            format_func=lambda x: DETAIL_LEVEL_LABELS[x],
+            key="conv_detail_level",
+        )
+        conv_output_format = c3.selectbox(
+            "Formato de salida",
+            list(OutputFormat),
+            format_func=lambda x: OUTPUT_FORMAT_LABELS[x],
+            key="conv_output_format",
+        )
+        conv_files = st.file_uploader(
+            "Adjuntos (PDF o Word, máx. 3 MB cada uno)",
+            type=["pdf", "docx"],
+            accept_multiple_files=True,
+            key="conv_files",
+        )
+        conv_submitted = st.form_submit_button("Enviar turno", type="primary")
+
+    if conv_submitted:
+        sid = st.session_state.conv_session_id
+        if not sid:
+            st.error("No hay sesión: comprueba que el servicio IA está levantado.")
+        elif len(conv_transcript.strip()) < 20:
+            st.error("El mensaje debe tener al menos 20 caracteres.")
+        else:
+            files = [
+                ("attachments", (f.name, f.getvalue(), f.type or "application/octet-stream"))
+                for f in conv_files or []
+            ]
+            started = time.time()
+            data = None
+            try:
+                with st.spinner("Estimando (2 llamadas: estimación + extracción de memoria)…"):
+                    response = requests.post(
+                        f"{conv_base_url}/sessions/{sid}/estimate",
+                        data={
+                            "transcript": conv_transcript.strip(),
+                            "project_type": conv_project_type.value,
+                            "detail_level": conv_detail_level.value,
+                            "output_format": conv_output_format.value,
+                        },
+                        files=files or None,
+                        timeout=REQUEST_TIMEOUT,
+                    )
+                if response.status_code == 404:
+                    reset_conversation(
+                        conv_base_url,
+                        notice=(
+                            "La sesión expiró (el servicio se reinició). "
+                            "Se ha creado una nueva; reenvía el mensaje."
+                        ),
+                    )
+                    st.rerun()
+                response.raise_for_status()
+                data = response.json()
+            except requests.exceptions.HTTPError as exc:
+                try:
+                    detail = exc.response.json().get("detail", "")
+                except Exception:  # noqa: BLE001
+                    detail = exc.response.text
+                st.error(f"El servicio devolvió {exc.response.status_code}: {detail}")
+            except requests.exceptions.ConnectionError:
+                st.error(f"No se pudo conectar con el servicio en {conv_base_url}.")
+            except requests.exceptions.Timeout:
+                st.error("El servicio tardó demasiado en responder.")
+
+            if data:
+                st.session_state.conv_turns.append(
+                    {
+                        "transcript": conv_transcript.strip(),
+                        "files": [f.name for f in conv_files or []],
+                        "elapsed": time.time() - started,
+                        **data,
+                    }
+                )
+                st.rerun()
 
 
 # --------------------------------------------------------------------------- #
