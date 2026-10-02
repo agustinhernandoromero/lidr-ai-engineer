@@ -11,12 +11,17 @@ import pytest
 
 from app.config import Settings
 from app.schemas import DetailLevel, EstimationRequest, OutputFormat, ProjectType
-from app.services.llm_service import call_gemini, generate_estimation
+from app.services.llm_service import call_anthropic, call_gemini, generate_estimation
 
 DESCRIPTION = (
     "Plataforma web para que una red de gimnasios gestione altas de socios, "
     "reservas de clases y cobros mensuales por domiciliación bancaria."
 )
+
+MESSAGES = [
+    {"role": "system", "content": "system"},
+    {"role": "user", "content": "user"},
+]
 
 
 def build_request() -> EstimationRequest:
@@ -149,7 +154,7 @@ def test_call_gemini_retries_once_on_server_error(mock_client_cls, mock_sleep):
         Mock(text="Hola de respaldo"),
     ]
 
-    result = call_gemini("system", "user", settings)
+    result = call_gemini(MESSAGES, settings)
 
     assert result == {
         "text": "Hola de respaldo",
@@ -176,7 +181,63 @@ def test_call_gemini_propagates_error_after_failed_retry(mock_client_cls, mock_s
     )
 
     with pytest.raises(errors.ServerError):
-        call_gemini("system", "user", settings)
+        call_gemini(MESSAGES, settings)
 
     assert mock_client.models.generate_content.call_count == 2
     mock_sleep.assert_called_once_with(1)
+
+
+@patch("google.genai.Client")
+def test_call_gemini_translates_roles_and_system(mock_client_cls):
+    """Gemini usa 'model' en vez de 'assistant' y el system va aparte."""
+    settings = Settings(GEMINI_API_KEY="fake-key")
+    mock_client = Mock()
+    mock_client_cls.return_value = mock_client
+    mock_client.models.generate_content.return_value = Mock(text="ok")
+
+    call_gemini(
+        [
+            {"role": "system", "content": "Eres un estimador"},
+            {"role": "user", "content": "turno 1"},
+            {"role": "assistant", "content": "respuesta 1"},
+            {"role": "user", "content": "turno 2"},
+        ],
+        settings,
+        max_tokens=500,
+    )
+
+    kwargs = mock_client.models.generate_content.call_args.kwargs
+    assert kwargs["contents"] == [
+        {"role": "user", "parts": [{"text": "turno 1"}]},
+        {"role": "model", "parts": [{"text": "respuesta 1"}]},
+        {"role": "user", "parts": [{"text": "turno 2"}]},
+    ]
+    assert kwargs["config"].system_instruction == "Eres un estimador"
+    assert kwargs["config"].max_output_tokens == 500
+
+
+@patch("anthropic.Anthropic")
+def test_call_anthropic_sends_system_apart_and_history_as_messages(mock_client_cls):
+    settings = Settings(ANTHROPIC_API_KEY="fake-key")
+    mock_client = Mock()
+    mock_client_cls.return_value = mock_client
+    mock_client.messages.create.return_value = Mock(content=[Mock(text="hola")])
+
+    result = call_anthropic(
+        [
+            {"role": "system", "content": "S"},
+            {"role": "user", "content": "u1"},
+            {"role": "assistant", "content": "a1"},
+            {"role": "user", "content": "u2"},
+        ],
+        settings,
+    )
+
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert kwargs["system"] == "S"
+    assert kwargs["messages"] == [
+        {"role": "user", "content": "u1"},
+        {"role": "assistant", "content": "a1"},
+        {"role": "user", "content": "u2"},
+    ]
+    assert result["text"] == "hola"

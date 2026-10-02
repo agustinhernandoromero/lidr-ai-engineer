@@ -8,7 +8,7 @@ red de seguridad gratuita si Anthropic falla, con Gemini.
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterator, List
 
 import structlog
 
@@ -20,6 +20,15 @@ from app.schemas import EstimationRequest
 logger = structlog.get_logger(__name__)
 
 MAX_TOKENS = 4000
+
+Messages = List[Dict[str, str]]
+
+
+def _split_system(messages: Messages) -> tuple[str, Messages]:
+    """Separa el system prompt del resto: ambos SDK lo reciben aparte."""
+    system = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
+    chat = [m for m in messages if m["role"] != "system"]
+    return system, chat
 
 
 # --------------------------------------------------------------------------- #
@@ -67,7 +76,7 @@ def build_cag_system_prompt() -> str:
 # Wrapper de proveedores
 # --------------------------------------------------------------------------- #
 
-def call_anthropic(system: str, user: str, settings) -> Dict[str, Any]:
+def call_anthropic(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -> Dict[str, Any]:
     """Llamada bloqueante a Anthropic. El system va en su parámetro propio."""
     from anthropic import Anthropic
 
@@ -76,12 +85,13 @@ def call_anthropic(system: str, user: str, settings) -> Dict[str, Any]:
             "ANTHROPIC_API_KEY no está configurada. Por favor define la variable en el archivo .env"
         )
 
+    system, chat = _split_system(messages)
     client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
     response = client.messages.create(
         model=settings.ANTHROPIC_MODEL,
-        max_tokens=MAX_TOKENS,
+        max_tokens=max_tokens,
         system=system,
-        messages=[{"role": "user", "content": user}],
+        messages=chat,
     )
     text = "".join(block.text for block in response.content if hasattr(block, "text"))
     return {
@@ -91,9 +101,9 @@ def call_anthropic(system: str, user: str, settings) -> Dict[str, Any]:
     }
 
 
-def call_gemini(system: str, user: str, settings) -> Dict[str, Any]:
+def call_gemini(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -> Dict[str, Any]:
     """Llamada bloqueante a Gemini. Se usa solo como red de seguridad gratuita
-    cuando Anthropic falla.
+    cuando Anthropic falla. Gemini llama ``model`` al rol ``assistant``.
     """
     from google import genai
     from google.genai import errors, types
@@ -103,11 +113,20 @@ def call_gemini(system: str, user: str, settings) -> Dict[str, Any]:
             "GEMINI_API_KEY no está configurada. Por favor define la variable en el archivo .env"
         )
 
+    system, chat = _split_system(messages)
+    contents = [
+        {
+            "role": "model" if m["role"] == "assistant" else "user",
+            "parts": [{"text": m["content"]}],
+        }
+        for m in chat
+    ]
+
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
     config = types.GenerateContentConfig(
         system_instruction=system,
         temperature=0.3,
-        max_output_tokens=MAX_TOKENS,
+        max_output_tokens=max_tokens,
     )
 
     # El tier gratuito de Gemini devuelve 503 "high demand" de forma intermitente
@@ -117,12 +136,12 @@ def call_gemini(system: str, user: str, settings) -> Dict[str, Any]:
     # fallo del proveedor principal.
     try:
         response = client.models.generate_content(
-            model=settings.GEMINI_MODEL, contents=user, config=config
+            model=settings.GEMINI_MODEL, contents=contents, config=config
         )
     except errors.ServerError:
         time.sleep(1)
         response = client.models.generate_content(
-            model=settings.GEMINI_MODEL, contents=user, config=config
+            model=settings.GEMINI_MODEL, contents=contents, config=config
         )
 
     return {
@@ -132,19 +151,20 @@ def call_gemini(system: str, user: str, settings) -> Dict[str, Any]:
     }
 
 
-def stream_anthropic(system: str, user: str, settings) -> Iterator[str]:
+def stream_anthropic(messages: Messages, settings) -> Iterator[str]:
     """Deltas de texto desde Anthropic."""
     from anthropic import Anthropic
 
     if not settings.ANTHROPIC_API_KEY:
         raise ValueError("ANTHROPIC_API_KEY no está configurada.")
 
+    system, chat = _split_system(messages)
     client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
     with client.messages.stream(
         model=settings.ANTHROPIC_MODEL,
         max_tokens=MAX_TOKENS,
         system=system,
-        messages=[{"role": "user", "content": user}],
+        messages=chat,
     ) as stream:
         for text in stream.text_stream:
             yield text
@@ -164,12 +184,16 @@ class LLMWrapper:
     para siempre, lo que rompería los tests que mockean ``get_settings()``.
     """
 
-    def complete(self, system: str, user: str) -> Dict[str, Any]:
-        """Llama a Anthropic; si falla, cae a Gemini (gratuito)."""
+    def complete(self, messages: Messages, max_tokens: int = MAX_TOKENS) -> Dict[str, Any]:
+        """Llama a Anthropic; si falla, cae a Gemini (gratuito).
+
+        ``messages`` usa el formato neutral ``{"role", "content"}`` con un
+        mensaje ``system`` opcional al principio; cada proveedor lo traduce.
+        """
         settings = get_settings()
 
         try:
-            result = call_anthropic(system, user, settings)
+            result = call_anthropic(messages, settings, max_tokens)
             return {**result, "fallback_used": False}
         except Exception as exc:  # noqa: BLE001
             logger.warning(
@@ -178,10 +202,10 @@ class LLMWrapper:
                 model=settings.ANTHROPIC_MODEL,
                 error=str(exc),
             )
-            result = call_gemini(system, user, settings)
+            result = call_gemini(messages, settings, max_tokens)
             return {**result, "fallback_used": True}
 
-    def complete_stream(self, system: str, user: str) -> Iterator[str]:
+    def complete_stream(self, messages: Messages) -> Iterator[str]:
         """Streaming de Anthropic. Sin fallback (ver docstring de
         ``stream_estimation``) y sin cachear.
         """
@@ -193,7 +217,7 @@ class LLMWrapper:
             model=settings.ANTHROPIC_MODEL,
         )
 
-        yield from stream_anthropic(system, user, settings)
+        yield from stream_anthropic(messages, settings)
 
 
 # --------------------------------------------------------------------------- #
@@ -224,7 +248,9 @@ async def generate_estimation(
 
     llm = get_llm_wrapper()
     started = time.perf_counter()
-    result = llm.complete(system, user)
+    result = llm.complete(
+        [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    )
     elapsed = time.perf_counter() - started
 
     logger.info(
@@ -253,4 +279,6 @@ def stream_estimation(
     """
     system, user = render_estimation_prompt(request, version=prompt_version)
     llm = get_llm_wrapper()
-    yield from llm.complete_stream(system, user)
+    yield from llm.complete_stream(
+        [{"role": "system", "content": system}, {"role": "user", "content": user}]
+    )
