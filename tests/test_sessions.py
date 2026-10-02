@@ -186,3 +186,18 @@ async def test_scanned_pdf_returns_warning_not_error(client):
     )
     assert response.status_code == 200
     assert any("escaneado.pdf" in w for w in response.json()["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_empty_llm_answer_is_502_and_not_stored_in_history(client):
+    """Un texto vacío en el historial haría que Anthropic rechazara todos los
+    turnos siguientes: el turno se rechaza sin tocar la sesión."""
+    app.dependency_overrides[get_llm_wrapper] = lambda: FakeLLM(estimator_text="   ")
+    sid = await new_session(client)
+
+    response = await estimate(client, sid, "Proyecto Hotelia: portal de reservas en React.")
+
+    assert response.status_code == 502
+    state = (await client.get(f"/api/v1/sessions/{sid}")).json()
+    assert state["turn_count"] == 0
+    assert state["history"] == []

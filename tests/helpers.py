@@ -66,10 +66,16 @@ class FakeLLM:
       el último mensaje, para que el contenido de un adjunto influya en la salida.
     """
 
-    def __init__(self, extractor_text: str | None = None, fail_estimator: bool = False):
+    def __init__(
+        self,
+        extractor_text: str | None = None,
+        fail_estimator: bool = False,
+        estimator_text: str | None = None,
+    ):
         self.calls: list[list[dict]] = []
         self.extractor_text = extractor_text
         self.fail_estimator = fail_estimator
+        self.estimator_text = estimator_text
 
     @staticmethod
     def _is_extractor(messages: list[dict]) -> bool:
@@ -99,6 +105,8 @@ class FakeLLM:
 
         if self.fail_estimator:
             raise RuntimeError("proveedor caído")
+        if self.estimator_text is not None:
+            return {**base, "text": self.estimator_text}
         techs = [t for t in KNOWN_TECHNOLOGIES if t in last] or ["sin stack definido"]
         n = len(self.estimator_calls)
         return {**base, "text": f"Estimación #{n}. Stack: {', '.join(techs)}."}

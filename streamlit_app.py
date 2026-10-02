@@ -93,7 +93,7 @@ def reset_conversation(base_url: str, notice: str | None = None) -> None:
     st.session_state.conv_notice = notice
 
 
-def fetch_session_state(base_url: str, session_id: str) -> dict | None:
+def fetch_session_state(base_url: str, session_id: str, retry: bool = True) -> dict | None:
     """GET /sessions/{id}. Si la sesión ya no existe (backend reiniciado),
     crea una nueva, avisa y devuelve su estado. ``None`` si no hay servicio.
     """
@@ -101,13 +101,13 @@ def fetch_session_state(base_url: str, session_id: str) -> dict | None:
         response = requests.get(f"{base_url}/sessions/{session_id}", timeout=10)
     except requests.exceptions.RequestException:
         return None
-    if response.status_code == 404:
+    if response.status_code == 404 and retry:
         reset_conversation(
             base_url,
             notice="La sesión anterior expiró (el servicio se reinició). Se ha creado una nueva.",
         )
         new_id = st.session_state.conv_session_id
-        return fetch_session_state(base_url, new_id) if new_id else None
+        return fetch_session_state(base_url, new_id, retry=False) if new_id else None
     if not response.ok:
         return None
     return response.json()

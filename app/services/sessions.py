@@ -20,12 +20,13 @@ que ya usamos para la caché.
 from __future__ import annotations
 
 import asyncio
+import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ProjectMetadata(BaseModel):
@@ -35,6 +36,42 @@ class ProjectMetadata(BaseModel):
     assumed_team_size: Optional[int] = Field(default=None, ge=1, le=500)
     mentioned_technologies: list[str] = Field(default_factory=list)
     agreed_scope: Optional[str] = None
+
+    # El extractor es un LLM: un campo con forma rara no debe tirar a la basura
+    # los demás hechos del turno. Se normaliza cada campo por separado.
+    @field_validator("project_name", "agreed_scope", mode="before")
+    @classmethod
+    def _coerce_text(cls, value):
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    @field_validator("assumed_team_size", mode="before")
+    @classmethod
+    def _coerce_team_size(cls, value):
+        """"4-5 personas" → 4; fuera de rango o sin número → None."""
+        if isinstance(value, bool):
+            return None
+        if isinstance(value, (int, float)):
+            number = int(value)
+        else:
+            match = re.search(r"\d+", str(value or ""))
+            if not match:
+                return None
+            number = int(match.group())
+        return number if 1 <= number <= 500 else None
+
+    @field_validator("mentioned_technologies", mode="before")
+    @classmethod
+    def _coerce_technologies(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, str):
+            value = [value]
+        if not isinstance(value, (list, tuple)):
+            return []
+        return [str(t).strip() for t in value if t is not None and str(t).strip()]
 
     def is_empty(self) -> bool:
         return not (

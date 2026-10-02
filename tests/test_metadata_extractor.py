@@ -65,3 +65,25 @@ def test_extractor_uses_small_token_budget():
 
     run(Spy())
     assert seen["max_tokens"] == EXTRACTION_MAX_TOKENS == 500
+
+
+def test_one_bad_field_does_not_discard_the_others():
+    """Un rango de equipo ("4-5") es habitual en una estimación: se queda con el
+    primer número y conserva el resto de hechos del turno."""
+    llm = FakeLLM(
+        extractor_text='{"assumed_team_size": "4-5 personas", "mentioned_technologies": ["Go"]}'
+    )
+    result = run(llm)
+    assert result.assumed_team_size == 4
+    assert result.mentioned_technologies == ["React", "Go"]
+
+
+def test_out_of_range_and_loose_types_are_coerced():
+    llm = FakeLLM(
+        extractor_text='{"assumed_team_size": 0, "mentioned_technologies": "Go", '
+        '"project_name": 2024, "agreed_scope": null}'
+    )
+    result = run(llm)
+    assert result.assumed_team_size is None
+    assert result.mentioned_technologies == ["React", "Go"]
+    assert result.project_name == "2024"

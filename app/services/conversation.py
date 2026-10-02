@@ -19,6 +19,13 @@ from app.services.sessions import Session
 logger = structlog.get_logger(__name__)
 
 
+class EmptyLLMResponseError(RuntimeError):
+    """El proveedor devolvió una respuesta vacía (bloqueo de seguridad, tokens
+    agotados…). Guardarla en el historial haría que Anthropic rechazara los
+    turnos siguientes, así que el turno se rechaza entero.
+    """
+
+
 def history_entry(transcript: str, attachments: list[ExtractedAttachment]) -> str:
     """Mensaje de usuario tal y como queda en el historial.
 
@@ -60,6 +67,10 @@ def run_turn(
 
     started = time.perf_counter()
     result = llm.complete(messages)
+    if not result["text"].strip():
+        raise EmptyLLMResponseError(
+            f"El proveedor '{result['provider']}' devolvió una respuesta vacía."
+        )
     metadata = extract_metadata(
         llm,
         session.metadata,

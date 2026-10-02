@@ -16,7 +16,7 @@ from app.schemas import (
     SessionStateResponse,
 )
 from app.services.attachments import AttachmentError, extract_attachment
-from app.services.conversation import run_turn
+from app.services.conversation import EmptyLLMResponseError, run_turn
 from app.services.sessions import Session, SessionStore
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
@@ -118,6 +118,8 @@ async def estimate_in_session(
                 attachments=extracted,
                 prompt_version=prompt_version or settings.SESSION_PROMPT_VERSION,
             )
+        except EmptyLLMResponseError as exc:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
         except Exception as exc:  # noqa: BLE001
