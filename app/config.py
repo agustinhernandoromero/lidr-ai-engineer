@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     # Anthropic: proveedor principal (único; no hay switch de proveedor)
     ANTHROPIC_API_KEY: Optional[str] = None
     ANTHROPIC_MODEL: str = "claude-haiku-4-5-20251001"
+    # Precio por millón de tokens del modelo anterior (Haiku 4.5), para estimar
+    # el coste de cada llamada en los logs. Ajustar si se cambia de modelo.
+    ANTHROPIC_INPUT_USD_PER_MTOK: float = 1.0
+    ANTHROPIC_OUTPUT_USD_PER_MTOK: float = 5.0
 
     # Gemini: proveedor de respaldo gratuito si el proveedor principal falla
     GEMINI_API_KEY: Optional[str] = None

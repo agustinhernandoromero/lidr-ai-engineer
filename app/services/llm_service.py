@@ -24,6 +24,24 @@ MAX_TOKENS = 4000
 Messages = List[Dict[str, str]]
 
 
+def _usage(input_tokens: Any, output_tokens: Any) -> Dict[str, int]:
+    """Tokens consumidos; 0 si el SDK no los informa."""
+    def as_int(value: Any) -> int:
+        return value if isinstance(value, int) else 0
+
+    return {"input_tokens": as_int(input_tokens), "output_tokens": as_int(output_tokens)}
+
+
+def estimate_cost_usd(provider: str, usage: Dict[str, int], settings) -> float:
+    """Coste aproximado de una llamada. Gemini (fallback) va en el tier gratuito."""
+    if provider != "anthropic":
+        return 0.0
+    return (
+        usage["input_tokens"] * settings.ANTHROPIC_INPUT_USD_PER_MTOK
+        + usage["output_tokens"] * settings.ANTHROPIC_OUTPUT_USD_PER_MTOK
+    ) / 1_000_000
+
+
 def _split_system(messages: Messages) -> tuple[str, Messages]:
     """Separa el system prompt del resto: ambos SDK lo reciben aparte."""
     system = "\n\n".join(m["content"] for m in messages if m["role"] == "system")
@@ -94,10 +112,12 @@ def call_anthropic(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -
         messages=chat,
     )
     text = "".join(block.text for block in response.content if hasattr(block, "text"))
+    usage = getattr(response, "usage", None)
     return {
         "text": text,
         "model": settings.ANTHROPIC_MODEL,
         "provider": "anthropic",
+        "usage": _usage(getattr(usage, "input_tokens", 0), getattr(usage, "output_tokens", 0)),
     }
 
 
@@ -144,10 +164,15 @@ def call_gemini(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -> D
             model=settings.GEMINI_MODEL, contents=contents, config=config
         )
 
+    metadata = getattr(response, "usage_metadata", None)
     return {
         "text": response.text or "",
         "model": settings.GEMINI_MODEL,
         "provider": "gemini",
+        "usage": _usage(
+            getattr(metadata, "prompt_token_count", 0),
+            getattr(metadata, "candidates_token_count", 0),
+        ),
     }
 
 
@@ -194,6 +219,7 @@ class LLMWrapper:
 
         try:
             result = call_anthropic(messages, settings, max_tokens)
+            self._log_usage(result, settings)
             return {**result, "fallback_used": False}
         except Exception as exc:  # noqa: BLE001
             logger.warning(
@@ -203,7 +229,20 @@ class LLMWrapper:
                 error=str(exc),
             )
             result = call_gemini(messages, settings, max_tokens)
+            self._log_usage(result, settings)
             return {**result, "fallback_used": True}
+
+    @staticmethod
+    def _log_usage(result: Dict[str, Any], settings) -> None:
+        usage = result.get("usage") or _usage(0, 0)
+        logger.info(
+            "llm_usage",
+            provider=result["provider"],
+            model=result["model"],
+            input_tokens=usage["input_tokens"],
+            output_tokens=usage["output_tokens"],
+            cost_usd=round(estimate_cost_usd(result["provider"], usage, settings), 6),
+        )
 
     def complete_stream(self, messages: Messages) -> Iterator[str]:
         """Streaming de Anthropic. Sin fallback (ver docstring de

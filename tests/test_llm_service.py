@@ -11,7 +11,12 @@ import pytest
 
 from app.config import Settings
 from app.schemas import DetailLevel, EstimationRequest, OutputFormat, ProjectType
-from app.services.llm_service import call_anthropic, call_gemini, generate_estimation
+from app.services.llm_service import (
+    call_anthropic,
+    call_gemini,
+    estimate_cost_usd,
+    generate_estimation,
+)
 
 DESCRIPTION = (
     "Plataforma web para que una red de gimnasios gestione altas de socios, "
@@ -160,6 +165,7 @@ def test_call_gemini_retries_once_on_server_error(mock_client_cls, mock_sleep):
         "text": "Hola de respaldo",
         "model": settings.GEMINI_MODEL,
         "provider": "gemini",
+        "usage": {"input_tokens": 0, "output_tokens": 0},
     }
     assert mock_client.models.generate_content.call_count == 2
     mock_sleep.assert_called_once_with(1)
@@ -241,3 +247,25 @@ def test_call_anthropic_sends_system_apart_and_history_as_messages(mock_client_c
         {"role": "user", "content": "u2"},
     ]
     assert result["text"] == "hola"
+
+
+@patch("anthropic.Anthropic")
+def test_call_anthropic_reports_token_usage(mock_client_cls):
+    settings = Settings(ANTHROPIC_API_KEY="fake-key")
+    mock_client = Mock()
+    mock_client_cls.return_value = mock_client
+    mock_client.messages.create.return_value = Mock(
+        content=[Mock(text="hola")], usage=Mock(input_tokens=1200, output_tokens=300)
+    )
+
+    result = call_anthropic(MESSAGES, settings)
+
+    assert result["usage"] == {"input_tokens": 1200, "output_tokens": 300}
+
+
+def test_cost_estimate_uses_configured_prices_and_gemini_is_free():
+    settings = Settings(ANTHROPIC_INPUT_USD_PER_MTOK=1.0, ANTHROPIC_OUTPUT_USD_PER_MTOK=5.0)
+    usage = {"input_tokens": 1200, "output_tokens": 300}
+
+    assert estimate_cost_usd("anthropic", usage, settings) == pytest.approx(0.0027)
+    assert estimate_cost_usd("gemini", usage, settings) == 0.0
