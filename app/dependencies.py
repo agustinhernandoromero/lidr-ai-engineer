@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from app.config import get_settings
 from app.services.cache import EstimationCache
+from app.services.sessions import SessionStore
 
 if TYPE_CHECKING:
     from app.services.llm_service import LLMWrapper
@@ -30,3 +31,8 @@ def get_llm_wrapper() -> "LLMWrapper":
     from app.services.llm_service import LLMWrapper
 
     return LLMWrapper()
+
+
+@lru_cache
+def get_session_store() -> SessionStore:
+    return SessionStore(max_turns=get_settings().MAX_TURNS)
