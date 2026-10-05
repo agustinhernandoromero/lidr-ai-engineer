@@ -227,8 +227,7 @@ Elegido frente a enviar el PDF al LLM multimodal porque:
 3. se testea sin red;
 4. deja el texto listo para el chunking de RAG.
 
-Coste: se pierden imágenes y diagramas, y un PDF escaneado no aporta texto (se avisa en
-`warnings`). Límites: 3 MB por archivo y 20.000 caracteres extraídos (se trunca con
+Coste: Límites: 3 MB por archivo y 20.000 caracteres extraídos (se trunca con
 aviso); otros formatos → 415. En el historial solo queda una marca
 `[adjuntos: x.pdf (N caracteres)]`: el texto completo se envía en el turno en que se sube.
 
