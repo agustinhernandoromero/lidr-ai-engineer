@@ -203,7 +203,7 @@ def main(argv=None) -> int:
     reading_path = Path(args.reading)
     reading = reading_path.read_text(encoding="utf-8") if reading_path.exists() else None
     Path(args.output).write_text(build_report(rows, reading), encoding="utf-8")
-    print(f"{args.output} ← {len(rows)} filas")
+    print(f"{args.output} <- {len(rows)} filas")
     return 0
 
 

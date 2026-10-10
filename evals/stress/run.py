@@ -113,8 +113,8 @@ async def _multiturn(client, name: str, turns: int, rows: list, spent: list, max
         })
         rows.append(row)
         spent[0] += float(row["cost_usd"] or 0)
-        print(f"  {name} turno {turn.index}: {row['status']} · ${float(row['cost_usd'] or 0):.4f} "
-              f"· {row['latency_ms']} ms · recuerdo {recall}", flush=True)
+        print(f"  {name} turno {turn.index}: {row['status']} | ${float(row['cost_usd'] or 0):.4f} "
+              f"| {row['latency_ms']} ms | recuerdo {recall}", flush=True)
         if spent[0] > max_cost:
             return True
     return False
@@ -140,8 +140,8 @@ async def _attachments(client, sizes_kb, repeats, pdfs, rows, spent, max_cost) -
                 row["attachment_recall"] = round(len(found) / len(MARKERS), 3)
             rows.append(row)
             spent[0] += float(row["cost_usd"] or 0)
-            print(f"  adjunto {kb} KB rep {rep}: {row['status']} · {row['cache_hit_kind']} "
-                  f"· ${float(row['cost_usd'] or 0):.4f}", flush=True)
+            print(f"  adjunto {kb} KB rep {rep}: {row['status']} | {row['cache_hit_kind']} "
+                  f"| ${float(row['cost_usd'] or 0):.4f}", flush=True)
             if spent[0] > max_cost:
                 return True
     return False
@@ -235,7 +235,7 @@ def main(argv=None) -> int:
     rows, stopped = asyncio.run(_go())
     write_csv(rows, Path(args.output))
     total = sum(float(r["cost_usd"] or 0) for r in rows)
-    print(f"{len(rows)} filas → {args.output} · coste ${total:.4f} · "
+    print(f"{len(rows)} filas -> {args.output} | coste ${total:.4f} | "
           f"{time.perf_counter() - started:.0f} s", flush=True)
     if stopped:
         print(f"FRENO DE COSTE: se superó ${args.max_cost:.2f}; filas guardadas.", file=sys.stderr)

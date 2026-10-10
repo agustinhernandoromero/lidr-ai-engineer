@@ -33,3 +33,18 @@ def test_report_survives_error_rows_and_missing_blocks():
              "attachments_total_chars": ""}]
     text = build_report(rows, None)
     assert "—" in text and "pendiente" in text
+
+
+def test_cli_messages_survive_a_cp1252_windows_console(tmp_path, monkeypatch):
+    """La consola de Windows usa cp1252: los mensajes no pueden llevar flechas Unicode."""
+    import io
+    import sys
+
+    console = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", console)
+    csv_path = tmp_path / "results.csv"
+    assert run_main(["--in-process", "--fake-llm", "--output", str(csv_path),
+                     "--pdf-dir", str(tmp_path / "p"), "--scenarios", "growing", "--turns", "2",
+                     "--attachment-sizes", "5", "--repeats", "1"]) == 0
+    assert main(["--input", str(csv_path), "--output", str(tmp_path / "R.md"),
+                 "--reading", str(tmp_path / "none.md")]) == 0

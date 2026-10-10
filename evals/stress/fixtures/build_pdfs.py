@@ -99,4 +99,4 @@ def build_all(out_dir: Path = DEFAULT_DIR, sizes_kb: list[int] | None = None) ->
 
 if __name__ == "__main__":
     for kb, path in build_all().items():
-        print(f"{kb} KB → {path} ({path.stat().st_size} bytes)")
+        print(f"{kb} KB -> {path} ({path.stat().st_size} bytes)")
