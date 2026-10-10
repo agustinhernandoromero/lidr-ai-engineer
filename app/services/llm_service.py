@@ -94,7 +94,9 @@ def build_cag_system_prompt() -> str:
 # Wrapper de proveedores
 # --------------------------------------------------------------------------- #
 
-def call_anthropic(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -> Dict[str, Any]:
+def call_anthropic(
+    messages: Messages, settings, max_tokens: int = MAX_TOKENS, json_schema: dict | None = None
+) -> Dict[str, Any]:
     """Llamada bloqueante a Anthropic. El system va en su parámetro propio."""
     from anthropic import Anthropic
 
@@ -105,11 +107,17 @@ def call_anthropic(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -
 
     system, chat = _split_system(messages)
     client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    extra: Dict[str, Any] = {}
+    if json_schema is not None:
+        # La API fuerza la forma del JSON; las reglas de negocio las valida
+        # structured_estimator, que necesita el texto para el reintento.
+        extra["output_config"] = {"format": {"type": "json_schema", "schema": json_schema}}
     response = client.messages.create(
         model=settings.ANTHROPIC_MODEL,
         max_tokens=max_tokens,
         system=system,
         messages=chat,
+        **extra,
     )
     text = "".join(block.text for block in response.content if hasattr(block, "text"))
     usage = getattr(response, "usage", None)
@@ -121,7 +129,9 @@ def call_anthropic(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -
     }
 
 
-def call_gemini(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -> Dict[str, Any]:
+def call_gemini(
+    messages: Messages, settings, max_tokens: int = MAX_TOKENS, json_schema: dict | None = None
+) -> Dict[str, Any]:
     """Llamada bloqueante a Gemini. Se usa solo como red de seguridad gratuita
     cuando Anthropic falla. Gemini llama ``model`` al rol ``assistant``.
     """
@@ -143,10 +153,14 @@ def call_gemini(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -> D
     ]
 
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    json_config: Dict[str, Any] = {}
+    if json_schema is not None:
+        json_config = {"response_mime_type": "application/json", "response_json_schema": json_schema}
     config = types.GenerateContentConfig(
         system_instruction=system,
         temperature=0.3,
         max_output_tokens=max_tokens,
+        **json_config,
     )
 
     # El tier gratuito de Gemini devuelve 503 "high demand" de forma intermitente
@@ -174,6 +188,26 @@ def call_gemini(messages: Messages, settings, max_tokens: int = MAX_TOKENS) -> D
             getattr(metadata, "candidates_token_count", 0),
         ),
     }
+
+
+def embed_text(text: str, settings) -> list[float]:
+    """Embedding de Gemini (tier gratuito) para la caché semántica del turno 1."""
+    from google import genai
+    from google.genai import types
+
+    if not settings.GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY no está configurada: no hay embeddings.")
+
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    response = client.models.embed_content(
+        model=settings.GEMINI_EMBEDDING_MODEL,
+        contents=text[:8000],
+        config=types.EmbedContentConfig(
+            output_dimensionality=settings.EMBEDDING_DIMS,
+            task_type="SEMANTIC_SIMILARITY",
+        ),
+    )
+    return list(response.embeddings[0].values)
 
 
 def stream_anthropic(messages: Messages, settings) -> Iterator[str]:
@@ -209,7 +243,9 @@ class LLMWrapper:
     para siempre, lo que rompería los tests que mockean ``get_settings()``.
     """
 
-    def complete(self, messages: Messages, max_tokens: int = MAX_TOKENS) -> Dict[str, Any]:
+    def complete(
+        self, messages: Messages, max_tokens: int = MAX_TOKENS, json_schema: dict | None = None
+    ) -> Dict[str, Any]:
         """Llama a Anthropic; si falla, cae a Gemini (gratuito).
 
         ``messages`` usa el formato neutral ``{"role", "content"}`` con un
@@ -218,7 +254,7 @@ class LLMWrapper:
         settings = get_settings()
 
         try:
-            result = call_anthropic(messages, settings, max_tokens)
+            result = call_anthropic(messages, settings, max_tokens, json_schema)
             self._log_usage(result, settings)
             return {**result, "fallback_used": False}
         except Exception as exc:  # noqa: BLE001
@@ -228,7 +264,7 @@ class LLMWrapper:
                 model=settings.ANTHROPIC_MODEL,
                 error=str(exc),
             )
-            result = call_gemini(messages, settings, max_tokens)
+            result = call_gemini(messages, settings, max_tokens, json_schema)
             self._log_usage(result, settings)
             return {**result, "fallback_used": True}
 

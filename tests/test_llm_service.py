@@ -14,6 +14,7 @@ from app.schemas import DetailLevel, EstimationRequest, OutputFormat, ProjectTyp
 from app.services.llm_service import (
     call_anthropic,
     call_gemini,
+    embed_text,
     estimate_cost_usd,
     generate_estimation,
 )
@@ -269,3 +270,61 @@ def test_cost_estimate_uses_configured_prices_and_gemini_is_free():
 
     assert estimate_cost_usd("anthropic", usage, settings) == pytest.approx(0.0027)
     assert estimate_cost_usd("gemini", usage, settings) == 0.0
+
+
+SCHEMA = {"type": "object", "properties": {"a": {"type": "integer"}}, "required": ["a"]}
+
+
+@patch("anthropic.Anthropic")
+def test_call_anthropic_forces_json_schema_when_given(mock_client_cls):
+    settings = Settings(ANTHROPIC_API_KEY="fake-key")
+    mock_client = Mock()
+    mock_client_cls.return_value = mock_client
+    mock_client.messages.create.return_value = Mock(
+        content=[Mock(text='{"a": 1}')], usage=Mock(input_tokens=1, output_tokens=1)
+    )
+
+    call_anthropic(MESSAGES, settings, json_schema=SCHEMA)
+
+    kwargs = mock_client.messages.create.call_args.kwargs
+    assert kwargs["output_config"] == {"format": {"type": "json_schema", "schema": SCHEMA}}
+
+
+@patch("anthropic.Anthropic")
+def test_call_anthropic_without_schema_sends_no_output_config(mock_client_cls):
+    settings = Settings(ANTHROPIC_API_KEY="fake-key")
+    mock_client = Mock()
+    mock_client_cls.return_value = mock_client
+    mock_client.messages.create.return_value = Mock(content=[Mock(text="hola")])
+
+    call_anthropic(MESSAGES, settings)
+
+    assert "output_config" not in mock_client.messages.create.call_args.kwargs
+
+
+@patch("google.genai.Client")
+def test_call_gemini_requests_json_with_schema(mock_client_cls):
+    settings = Settings(GEMINI_API_KEY="fake-key")
+    mock_client = Mock()
+    mock_client_cls.return_value = mock_client
+    mock_client.models.generate_content.return_value = Mock(text='{"a": 1}')
+
+    call_gemini(MESSAGES, settings, json_schema=SCHEMA)
+
+    config = mock_client.models.generate_content.call_args.kwargs["config"]
+    assert config.response_mime_type == "application/json"
+    assert config.response_json_schema == SCHEMA
+
+
+@patch("google.genai.Client")
+def test_embed_text_returns_vector_with_configured_dims(mock_client_cls):
+    settings = Settings(GEMINI_API_KEY="fake-key", EMBEDDING_DIMS=3)
+    mock_client = Mock()
+    mock_client_cls.return_value = mock_client
+    mock_client.models.embed_content.return_value = Mock(embeddings=[Mock(values=[0.1, 0.2, 0.3])])
+
+    vector = embed_text("Portal de reservas", settings)
+
+    assert vector == [0.1, 0.2, 0.3]
+    config = mock_client.models.embed_content.call_args.kwargs["config"]
+    assert config.output_dimensionality == 3
