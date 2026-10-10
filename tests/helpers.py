@@ -56,14 +56,35 @@ def make_docx(paragraphs: list[str], table: list[list[str]] | None = None) -> by
 KNOWN_TECHNOLOGIES = ["React", "FastAPI", "PostgreSQL", "Kubernetes"]
 
 
-class FakeLLM:
-    """Sustituto de ``LLMWrapper``: graba cada ``messages`` y responde sin red.
+def fake_result_json(summary: str, total_min: int = 100, total_max: int = 150) -> str:
+    """JSON de EstimationResult válido con una sola fase (o descuadrado si se pide)."""
+    return json.dumps(
+        {
+            "summary": summary,
+            "confidence_pct": 70,
+            "phases": [
+                {"name": "Desarrollo", "hours_min": 100, "hours_max": 150,
+                 "confidence_pct": 70, "summary": "Desarrollo del alcance descrito."}
+            ],
+            "total_hours_min": total_min,
+            "total_hours_max": total_max,
+            "total_duration_weeks": 4,
+            "assumptions": [],
+            "out_of_scope": [],
+        }
+    )
 
-    - Si el system es el del extractor, devuelve un JSON con los hechos que
-      encuentra por palabras clave en el último mensaje (o ``extractor_text``
-      literal, para simular respuestas rotas).
-    - Si no, devuelve una "estimación" que nombra las tecnologías presentes en
-      el último mensaje, para que el contenido de un adjunto influya en la salida.
+
+class FakeLLM:
+    """Sustituto de ``LLMWrapper``: graba cada llamada y responde sin red.
+
+    - Extractor (system con "extractor de hechos"): JSON de hechos por palabras
+      clave del mensaje del cliente, o ``extractor_text`` literal.
+    - Resumidor (system con "resumidor"): un resumen corto que NO copia el texto
+      de los turnos, o error si ``fail_summarizer``.
+    - Estimador: ``structured_responses`` en cola si se dan; si no, una
+      estimación cuyo summary nombra las tecnologías del mensaje actual (así un
+      adjunto influye en la salida), como JSON si se pidió ``json_schema``.
     """
 
     def __init__(
@@ -71,26 +92,42 @@ class FakeLLM:
         extractor_text: str | None = None,
         fail_estimator: bool = False,
         estimator_text: str | None = None,
+        structured_responses: list[str] | None = None,
+        fail_summarizer: bool = False,
     ):
         self.calls: list[list[dict]] = []
+        self.kinds: list[str] = []
         self.extractor_text = extractor_text
         self.fail_estimator = fail_estimator
         self.estimator_text = estimator_text
+        self.structured_responses = list(structured_responses or [])
+        self.fail_summarizer = fail_summarizer
 
     @staticmethod
-    def _is_extractor(messages: list[dict]) -> bool:
-        return "extractor de hechos" in messages[0]["content"]
+    def _kind(messages: list[dict]) -> str:
+        system = messages[0]["content"]
+        if "extractor de hechos" in system:
+            return "extractor"
+        if "resumidor" in system:
+            return "summarizer"
+        return "estimator"
 
     @property
     def estimator_calls(self) -> list[list[dict]]:
-        return [c for c in self.calls if not self._is_extractor(c)]
+        return [c for c, k in zip(self.calls, self.kinds) if k == "estimator"]
 
-    def complete(self, messages: list[dict], max_tokens: int = 4000) -> dict:
+    @property
+    def summarizer_calls(self) -> list[list[dict]]:
+        return [c for c, k in zip(self.calls, self.kinds) if k == "summarizer"]
+
+    def complete(self, messages: list[dict], max_tokens: int = 4000, json_schema=None) -> dict:
+        kind = self._kind(messages)
         self.calls.append(messages)
+        self.kinds.append(kind)
         last = messages[-1]["content"]
         base = {"model": "fake-model", "provider": "fake", "fallback_used": False}
 
-        if self._is_extractor(messages):
+        if kind == "extractor":
             if self.extractor_text is not None:
                 return {**base, "text": self.extractor_text}
             # Solo mira el mensaje del cliente y los adjuntos, no los hechos previos.
@@ -103,10 +140,26 @@ class FakeLLM:
             }
             return {**base, "text": json.dumps(facts)}
 
+        if kind == "summarizer":
+            if self.fail_summarizer:
+                raise RuntimeError("resumidor caído")
+            n = len(self.summarizer_calls)
+            return {**base, "text": f"Resumen acumulado número {n} de la conversación."}
+
         if self.fail_estimator:
             raise RuntimeError("proveedor caído")
+        if self.structured_responses:
+            return {**base, "text": self.structured_responses.pop(0)}
         if self.estimator_text is not None:
             return {**base, "text": self.estimator_text}
-        techs = [t for t in KNOWN_TECHNOLOGIES if t in last] or ["sin stack definido"]
+        # El turno actual es el último mensaje del cliente que no sea una
+        # petición de corrección del bucle de reintento.
+        user_texts = [m["content"] for m in messages
+                      if m["role"] == "user" and not m["content"].startswith("Tu JSON no cumple")]
+        techs = [t for t in KNOWN_TECHNOLOGIES if t in user_texts[-1]] or ["sin stack definido"]
         n = len(self.estimator_calls)
-        return {**base, "text": f"Estimación #{n}. Stack: {', '.join(techs)}."}
+        summary = f"Estimación #{n}. Stack: {', '.join(techs)}."
+        if json_schema is None:
+            # Hasta Task 10, run_turn llama sin esquema y espera texto libre.
+            return {**base, "text": summary}
+        return {**base, "text": fake_result_json(summary)}
