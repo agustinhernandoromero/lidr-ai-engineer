@@ -1,0 +1,211 @@
+"""CSV del estrés → evals/stress/REPORT.md.
+
+Las tablas y curvas se calculan del CSV; los dos párrafos de lectura se
+escriben a mano en ``evals/stress/reading.md`` y se incrustan, de modo que el
+REPORT se puede regenerar sin perder el texto.
+
+    uv run python -m evals.stress.report
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import math
+from pathlib import Path
+
+DASH = "—"
+SCENARIOS = ["growing", "pivot", "contradiction"]
+CHECKPOINTS = [1, 3, 6, 10]
+TOKEN_BUCKETS = [(0, 2_000), (2_000, 4_000), (4_000, 6_000), (6_000, 8_000), (8_000, 10**9)]
+
+
+def _f(value) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def percentile(values: list[float], p: float) -> float | None:
+    """Percentil por rango más cercano (sin interpolar)."""
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[max(0, math.ceil(p * len(ordered)) - 1)]
+
+
+def _fmt(value, spec: str = ".0f") -> str:
+    return DASH if value is None else format(value, spec)
+
+
+def _mean(values: list[float]) -> float | None:
+    return sum(values) / len(values) if values else None
+
+
+def _ok(rows):
+    return [r for r in rows if r.get("status") == "ok"]
+
+
+def _summary(rows) -> list[str]:
+    lines = [
+        "| Bloque | Escenario | Adjunto (KB) | Filas | Latencia P50 (ms) | Latencia P95 (ms) "
+        "| Coste total ($) | Caché exacta | Caché semántica | Recuerdo medio |",
+        "|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    groups: dict[tuple, list] = {}
+    for r in rows:
+        groups.setdefault((r["block"], r["scenario"], r["attachment_kb"]), []).append(r)
+    for (block, scenario, kb), group in groups.items():
+        ok = _ok(group)
+        lat = [v for v in (_f(r["latency_ms"]) for r in ok) if v is not None]
+        cost = sum(_f(r["cost_usd"]) or 0 for r in ok)
+        kinds = [r.get("cache_hit_kind") for r in ok]
+        recall_key = "memory_recall" if block == "multiturn" else "attachment_recall"
+        recall = _mean([v for v in (_f(r.get(recall_key)) for r in ok) if v is not None])
+
+        def rate(kind: str) -> str:
+            return f"{kinds.count(kind) / len(kinds):.0%}" if kinds else DASH
+
+        lines.append(
+            f"| {block} | {scenario} | {kb} | {len(group)} | {_fmt(percentile(lat, .5))} "
+            f"| {_fmt(percentile(lat, .95))} | {cost:.4f} | {rate('exact')} "
+            f"| {rate('semantic')} | {_fmt(recall, '.2f')} |"
+        )
+    return lines
+
+
+def _curve_latency(rows) -> list[str]:
+    lines = ["| tokens_in | Turnos | Latencia media (ms) | Latencia P95 (ms) |", "|---|---|---|---|"]
+    llm_rows = [r for r in _ok(rows) if r.get("cache_hit_kind") == "none"]
+    for low, high in TOKEN_BUCKETS:
+        bucket = [r for r in llm_rows if low <= (_f(r["tokens_in"]) or 0) < high]
+        lat = [_f(r["latency_ms"]) for r in bucket if _f(r["latency_ms"]) is not None]
+        if high < 10**9:
+            label = f"{low:,}–{high:,}".replace(",", ".")
+        else:
+            label = f"≥ {low:,}".replace(",", ".")
+        lines.append(f"| {label} | {len(bucket)} | {_fmt(_mean(lat))} | {_fmt(percentile(lat, .95))} |")
+    return lines
+
+
+def _curve_cost(rows) -> list[str]:
+    lines = ["| Turno | " + " | ".join(SCENARIOS) + " |", "|---" * (len(SCENARIOS) + 1) + "|"]
+    cumulative = {s: 0.0 for s in SCENARIOS}
+    by_turn: dict[int, dict[str, float]] = {}
+    for r in _ok(rows):
+        if r["block"] == "multiturn":
+            by_turn.setdefault(int(r["turn_index"]), {})[r["scenario"]] = _f(r["cost_usd"]) or 0
+    for turn in sorted(by_turn):
+        cells = []
+        for s in SCENARIOS:
+            if s in by_turn[turn]:
+                cumulative[s] += by_turn[turn][s]
+                cells.append(f"{cumulative[s]:.4f}")
+            else:
+                cells.append(DASH)
+        lines.append(f"| {turn} | " + " | ".join(cells) + " |")
+    return lines
+
+
+def _curve_recall(rows) -> list[str]:
+    lines = [
+        "| N | " + " | ".join(f"{s} (memoria / +ventana)" for s in SCENARIOS)
+        + " | Nombre del proyecto recordado |",
+        "|---" * (len(SCENARIOS) + 2) + "|",
+    ]
+    multiturn = [r for r in _ok(rows) if r["block"] == "multiturn"]
+    for n in CHECKPOINTS:
+        at_n = [r for r in multiturn if r["turn_index"] == str(n)]
+        cells = []
+        for s in SCENARIOS:
+            row = next((r for r in at_n if r["scenario"] == s), None)
+            if row is None:
+                cells.append(DASH)
+            else:
+                cells.append(f"{_fmt(_f(row['memory_recall']), '.2f')} / "
+                             f"{_fmt(_f(row['memory_recall_with_window']), '.2f')}")
+        names = [r for r in at_n if _f(r.get("project_name_recalled")) is not None]
+        recalled = sum(int(_f(r["project_name_recalled"])) for r in names)
+        lines.append(f"| {n} | " + " | ".join(cells) + f" | {recalled}/{len(names) or DASH} |")
+    return lines
+
+
+def _attachments(rows) -> list[str]:
+    lines = [
+        "| Adjunto (KB) | Rep | Caché | Chars adjunto | tokens_in | Latencia (ms) | Coste ($) "
+        "| Recuerdo adjunto |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for r in rows:
+        if r["block"] != "attachment":
+            continue
+        lines.append(
+            f"| {r['attachment_kb']} | {r['repeat']} | {r.get('cache_hit_kind') or DASH} "
+            f"| {r.get('attachments_total_chars') or DASH} | {r.get('tokens_in') or DASH} "
+            f"| {r.get('latency_ms') or DASH} | {r.get('cost_usd') or DASH} "
+            f"| {r.get('attachment_recall') or DASH} |"
+        )
+    return lines
+
+
+METHOD = """## Método
+
+- **Escala** (decidida para no gastar de más): 3 conversaciones de 10 turnos, una por
+  escenario, y 5 tamaños de adjunto × 4 repeticiones en el turno 1 (50 filas). Las
+  curvas por N se leen en los turnos 1, 3, 6 y 10 de la misma conversación.
+- **Constantes sin tocar**: ventana `MAX_TURNS=6`, `MAX_ATTACHMENT_CHARS=20.000`,
+  umbral semántico 0,92. "KB" de adjunto = miles de caracteres de texto del PDF.
+- **Observación**: un evento `turn_observed` por turno (13 campos + `llm_calls`,
+  `structured_attempts`, `tier_rule`) que agrega todas las llamadas del turno; un único
+  evento se convierte a CSV en una pasada, sin reconciliar marcas de tiempo.
+- **Métricas** en `evals/stress/metrics.py` (aparte de `evals/metrics.py` porque evalúan
+  la observación y el snapshot, no un `EstimationResult`): `LatencyBudgetMetric(20.000 ms)`,
+  `CostBudgetMetric($0,02)`, `MemoryDriftMetric` (coincidencia exacta sin mayúsculas en
+  resumen, anclas y metadata). `memory_recall_with_window` añade la ventana para separar
+  "olvidado" de "aún en ventana".
+- **No medido**: ráfagas concurrentes (sin bloque en el enunciado) y conversaciones de
+  más de 10 turnos.
+"""
+
+
+def build_report(rows: list[dict], reading: str | None) -> str:
+    parts = [
+        "# Estrés del CAG — sesión 06",
+        "",
+        "Datos: `evals/stress/results.csv`. Generado por `evals/stress/report.py`.",
+        "",
+        "## Resumen",
+        "", *_summary(rows), "",
+        "## Curva 1 — latencia frente a tokens de entrada (turnos sin caché)",
+        "", *_curve_latency(rows), "",
+        "## Curva 2 — coste acumulado (USD) frente a turno",
+        "", *_curve_cost(rows), "",
+        "## Curva 3 — recuerdo de hechos frente a N",
+        "", *_curve_recall(rows), "",
+        "## Adjuntos",
+        "", *_attachments(rows), "",
+        "## Lectura",
+        "", reading.strip() if reading else "(pendiente: lectura tras la ejecución real)", "",
+        METHOD,
+    ]
+    return "\n".join(parts)
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description="Genera REPORT.md a partir del CSV de estrés")
+    parser.add_argument("--input", default="evals/stress/results.csv")
+    parser.add_argument("--output", default="evals/stress/REPORT.md")
+    parser.add_argument("--reading", default="evals/stress/reading.md")
+    args = parser.parse_args(argv)
+    with Path(args.input).open(encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    reading_path = Path(args.reading)
+    reading = reading_path.read_text(encoding="utf-8") if reading_path.exists() else None
+    Path(args.output).write_text(build_report(rows, reading), encoding="utf-8")
+    print(f"{args.output} ← {len(rows)} filas")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
