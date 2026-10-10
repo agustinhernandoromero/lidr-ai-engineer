@@ -50,6 +50,10 @@ app/
 │   ├── sessions.py          # ConversationHistory, ProjectMetadata, Session, SessionStore
 │   ├── attachments.py       # Extracción de texto de PDF y Word
 │   ├── metadata_extractor.py # 2ª llamada al LLM: hechos del proyecto en JSON
+│   ├── structured_estimator.py # JSON validado + reintento + render a Markdown
+│   ├── compression/         # anchors.py · summarizer.py · policy.py
+│   ├── tier_resolver.py     # para quién se redacta (reglas explicables)
+│   ├── session_cache.py     # caché exacta + semántica del turno 1
 │   └── conversation.py      # run_turn: orquesta un turno de la conversación
 ├── prompts/
 │   ├── loader.py            # render_estimation_prompt / render_session_prompt / render_extraction_prompt
@@ -57,11 +61,14 @@ app/
 │   │   ├── v1/              # system.j2 · user.j2 · examples.j2
 │   │   └── v2/              # variación deliberada: tono y ejemplos distintos
 │   ├── session5/v1/         # prompt conversacional con bloque <project_metadata>
+│   ├── session5/v2/         # + anclas, resumen, tier y respuesta JSON en horas
+│   ├── conversation_summary/v1/ # prompt del resumen acumulativo
 │   └── extraction/v1/       # prompt del extractor de metadata
 └── context/
     └── examples.py          # Ejemplos CAG del chat libre (sesión 02)
+evals/                       # MetricResult + SchemaAdherenceMetric (evals deterministas)
 streamlit_app.py             # Cliente: formulario · conversación (sesión 05) · chat
-tests/                       # Tests de template, sesiones, adjuntos y servicio
+tests/                       # Tests de template, sesiones, adjuntos, memoria y servicio
 ```
 
 ## ⚙️ Instalación
@@ -101,15 +108,18 @@ Servicio en `http://localhost:8000/docs`, cliente en `http://localhost:8501`.
 ## ✅ Tests
 
 ```bash
-uv run pytest -v                       # suite completa, sin red
+uv run pytest -v                       # suite completa, sin red (LLM falso)
 uv run pytest tests/test_sessions.py -v  # tests de la sesión 05
 ```
 
-Prueba real contra Anthropic (gasta unos céntimos de API, opcional):
+Prueba real contra Anthropic: 8 turnos con compresión (gasta unos céntimos, opcional):
 
 ```bash
-RUN_LIVE_TESTS=1 uv run pytest -m live -v
+RUN_LIVE_TESTS=1 uv run pytest -m live -v -s -p no:logging
 ```
+
+(En Windows con Control de aplicaciones, `uv run python -m pytest` en lugar de
+`uv run pytest`.)
 
 ### Tests de la sesión 05
 
@@ -242,7 +252,67 @@ igual.
 
 Los prompts conversacionales viven en `app/prompts/session5/v1/`, separados de
 `estimation/`, para no aparecer en el selector de versiones de `/estimate`. El endpoint
-de sesiones no usa la caché de Redis: con historial, la clave no se repetiría nunca.
+de sesiones no usa la caché de Redis: con historial, la clave no se repetiría nunca
+(salvo el turno 1, ver abajo).
+
+## 🧠 Sesión 05 — directo: estructura, memoria comprimida, tier y caché
+
+Sobre la conversación anterior, `POST /api/v1/sessions/{id}/estimate` (prompt
+`session5/v2`, por defecto) añade cuatro piezas. `/estimate` no cambia.
+
+**Salida estructurada.** El modelo devuelve un `EstimationResult` en **horas**: fases
+(cada una con mínimo, máximo y confianza) **antes** que los totales, supuestos y
+exclusiones. Las fases van primero a propósito: el modelo genera de izquierda a derecha,
+se compromete con cada fase y luego solo suma. Reglas de negocio (validadores Pydantic):
+las fases suman los totales, mínimo ≤ máximo y, con confianza < 30 %, el resumen empieza
+por `Fuera de alcance:`. Los **euros los calcula el código** (horas × `HOURLY_RATE_EUR`,
+50 €/h por defecto): los LLM calculan mal y la tarifa es una decisión de negocio.
+
+La forma del JSON la fuerza la API (`output_config` con esquema JSON en Anthropic,
+`response_json_schema` en Gemini). Si una regla falla, se reenvía al modelo su propio
+JSON con el error ("las fases suman 420 h pero total_hours_min dice 400") y se reintenta
+hasta `STRUCTURED_MAX_RETRIES` (2) veces; agotado, 502 y la sesión no cambia. No se usa
+`messages.parse()` porque valida dentro del SDK y no devuelve el texto que el reintento
+necesita. El Markdown que ve el usuario (`output_format`) se genera en código desde el JSON.
+
+**Memoria comprimida.** Cuando la ventana supera `MAX_TURNS` (6), los turnos que salen
+no se pierden:
+
+| Destino | Cuándo | Coste |
+|---|---|---|
+| **Ancla** (literal, nunca se expulsa) | El mensaje del cliente contiene un compromiso: NDA, contrato firmado, alcance o presupuesto cerrado, RGPD/ISO 27001/ENS…, fecha inamovible, "el cliente se compromete" (regex ES + EN) | 0 llamadas |
+| **Resumen acumulativo** | El resto: se funde con el resumen anterior en uno nuevo | 1 llamada por turno desde el 7 |
+
+Anclas y resumen se inyectan en el system prompt (`<anchors>`, `<conversation_summary>`)
+junto a `<project_metadata>`. Si el resumidor falla, se conserva el resumen anterior.
+
+**Tier dinámico.** Para quién se redacta, sin llamadas al LLM; gana la primera regla:
+
+| Regla | Tier | Cuándo |
+|---|---|---|
+| `explicit_override` | el elegido | El cliente lo fija (campo `tier`) |
+| `nda_detected` | executive | NDA / confidencial / bajo embargo |
+| `regulatory_context` | executive | RGPD, HIPAA, ISO 27001, ENS, PCI-DSS… |
+| `technical_audience` | developer | ≥ 2 términos técnicos distintos (Kubernetes, Kafka…) |
+| `small_team_pm` | pm | Equipo asumido ≤ 2 |
+| `default` | default | Ninguna |
+
+**Caché del turno 1.** Solo el turno 1 es cacheable: sin historial, su respuesta depende
+del formulario, el tier, el mensaje y los adjuntos, igual que `/estimate`. Desde el
+turno 2 depende de toda la conversación. Primero caché **exacta** (Redis) y después
+**semántica**: embedding del mensaje con Gemini (`gemini-embedding-001`, tier gratuito) y
+similitud coseno ≥ 0,92 contra entradas del mismo formulario, tier y adjuntos, calculada
+en Python sobre el Redis normal. Un acierto no llama a ningún LLM. Las respuestas del
+fallback no se cachean; si Redis o los embeddings fallan, el turno sigue sin caché.
+`SEMANTIC_CACHE_LOG_ONLY=true` mide similitudes sin servir aciertos (calibración).
+
+**Evals.** `evals/metrics.py` define `MetricResult(name, score, passed, details)`,
+`run_all_metrics` y `SchemaAdherenceMetric`, que vuelve a comprobar las reglas de negocio
+para detectar si un cambio futuro las relaja.
+
+La respuesta del endpoint añade `result`, `cost_min_eur`/`cost_max_eur`, `tier`/`tier_rule`,
+`anchors_count`, `summary_chars`, `structured_attempts` y `cache_hit_kind`; y
+`GET /sessions/{id}` expone resumen, anclas y último tier.
 
 ## 📝 Notas
 
