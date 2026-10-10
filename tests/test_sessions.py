@@ -9,7 +9,7 @@ import httpx
 import pytest
 import pytest_asyncio
 
-from app.dependencies import get_llm_wrapper, get_session_store
+from app.dependencies import get_llm_wrapper, get_session_cache, get_session_store
 from app.main import app
 from app.services.sessions import SessionStore
 from tests.helpers import FakeLLM, make_pdf
@@ -28,6 +28,8 @@ async def client(llm):
     store = SessionStore(max_turns=MAX_TURNS)
     app.dependency_overrides[get_session_store] = lambda: store
     app.dependency_overrides[get_llm_wrapper] = lambda: llm
+    # Nunca tocar Redis ni los embeddings reales de Gemini en los tests.
+    app.dependency_overrides[get_session_cache] = lambda: None
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
@@ -201,3 +203,104 @@ async def test_empty_llm_answer_is_502_and_not_stored_in_history(client):
     state = (await client.get(f"/api/v1/sessions/{sid}")).json()
     assert state["turn_count"] == 0
     assert state["history"] == []
+
+
+@pytest.mark.asyncio
+async def test_response_carries_structured_result_euros_and_tier(client):
+    sid = await new_session(client)
+    data = (await estimate(client, sid, "Proyecto Hotelia: portal de reservas en React.")).json()
+
+    assert data["result"]["total_hours_min"] == 100
+    assert data["cost_min_eur"] == 5000 and data["cost_max_eur"] == 7500
+    assert data["tier"] == "default" and data["tier_rule"] == "default"
+    assert data["cache_hit_kind"] == "none"
+    assert "| Desarrollo |" not in data["text"]  # FORM pide narrative
+    assert "5.000–7.500 €" in data["text"]
+
+
+@pytest.mark.asyncio
+async def test_tier_override_and_invalid_tier(client):
+    sid = await new_session(client)
+    ok = await client.post(f"/api/v1/sessions/{sid}/estimate",
+                           data={"transcript": "Proyecto Hotelia: portal de reservas.", **FORM, "tier": "pm"})
+    assert ok.json()["tier"] == "pm" and ok.json()["tier_rule"] == "explicit_override"
+    bad = await client.post(f"/api/v1/sessions/{sid}/estimate",
+                            data={"transcript": "Proyecto Hotelia: portal de reservas.", **FORM, "tier": "ceo"})
+    assert bad.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_structured_failure_is_502_and_session_untouched(client):
+    app.dependency_overrides[get_llm_wrapper] = lambda: FakeLLM(
+        structured_responses=["no json", "no json", "no json"])
+    sid = await new_session(client)
+    response = await estimate(client, sid, "Proyecto Hotelia: portal de reservas en React.")
+    assert response.status_code == 502
+    assert (await client.get(f"/api/v1/sessions/{sid}")).json()["turn_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_anchor_survives_eviction_and_reaches_the_prompt(client, llm):
+    sid = await new_session(client)
+    await estimate(client, sid, "Proyecto Hotelia: el presupuesto está cerrado en 30.000 euros.")
+    for i in range(2, 9):
+        await estimate(client, sid, f"Turno {i}: el cliente añade el requisito {i}.")
+
+    # El turno 1 sale de la ventana al cerrar el turno 7 y se promueve a ancla;
+    # el prompt del turno 8 ya lo lleva en el bloque <anchors>.
+    state = (await client.get(f"/api/v1/sessions/{sid}")).json()
+    assert state["anchors_count"] == 1
+    assert state["anchors"][0]["rule"] == "budget_locked"
+    assert state["history_turns"] == MAX_TURNS
+    last_system = llm.estimator_calls[-1][0]["content"]
+    assert "presupuesto está cerrado en 30.000" in last_system
+
+
+@pytest.mark.asyncio
+async def test_turn_eight_creates_summary(client, llm):
+    sid = await new_session(client)
+    for i in range(1, 9):
+        await estimate(client, sid, f"Turno {i}: el cliente añade el requisito {i}.")
+    state = (await client.get(f"/api/v1/sessions/{sid}")).json()
+    assert state["summary_chars"] > 0
+    assert len(llm.summarizer_calls) == 2  # turnos 7 y 8
+    assert "Resumen acumulado" in llm.estimator_calls[-1][0]["content"]
+
+
+@pytest_asyncio.fixture
+async def cached_client(llm):
+    import fakeredis
+    from app.services.session_cache import SessionTurnCache
+
+    store = SessionStore(max_turns=MAX_TURNS)
+    cache = SessionTurnCache(fakeredis.FakeRedis(decode_responses=True), embedder=None,
+                             threshold=0.92, log_only=False, ttl=60)
+    app.dependency_overrides[get_session_store] = lambda: store
+    app.dependency_overrides[get_llm_wrapper] = lambda: llm
+    app.dependency_overrides[get_session_cache] = lambda: cache
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_turn_one_exact_hit_calls_no_llm(cached_client, llm):
+    text = "Proyecto Hotelia: portal de reservas en React."
+    first = (await estimate(cached_client, await new_session(cached_client), text)).json()
+    calls_before = len(llm.calls)
+    sid2 = await new_session(cached_client)
+    second = (await estimate(cached_client, sid2, text)).json()
+
+    assert first["cache_hit_kind"] == "none" and second["cache_hit_kind"] == "exact"
+    assert len(llm.calls) == calls_before
+    assert second["project_metadata"]["project_name"] == "Hotelia"
+    state = (await cached_client.get(f"/api/v1/sessions/{sid2}")).json()
+    assert state["turn_count"] == 1 and len(state["history"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_turn_two_never_uses_cache(cached_client):
+    sid = await new_session(cached_client)
+    await estimate(cached_client, sid, "Proyecto Hotelia: portal de reservas en React.")
+    second = (await estimate(cached_client, sid, "Proyecto Hotelia: portal de reservas en React.")).json()
+    assert second["cache_hit_kind"] == "none"

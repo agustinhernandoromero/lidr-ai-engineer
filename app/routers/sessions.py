@@ -1,12 +1,12 @@
 """Sesiones conversacionales: memoria entre turnos y adjuntos PDF/Word."""
 
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 
 from app.config import get_settings
-from app.dependencies import get_llm_wrapper, get_session_store
+from app.dependencies import get_llm_wrapper, get_session_cache, get_session_store
 from app.schemas import (
     DetailLevel,
     OutputFormat,
@@ -16,8 +16,10 @@ from app.schemas import (
     SessionStateResponse,
 )
 from app.services.attachments import AttachmentError, extract_attachment
-from app.services.conversation import EmptyLLMResponseError, run_turn
+from app.services.conversation import run_turn
 from app.services.sessions import Session, SessionStore
+from app.services.structured_estimator import StructuredOutputError
+from app.services.tier_resolver import Tier
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
 
@@ -58,6 +60,13 @@ async def get_session(
         max_turns=session.history.max_turns,
         project_metadata=session.metadata,
         history=session.history.as_dicts(),
+        message_count=len(session.history) * 2,
+        summary=session.history.summary,
+        summary_chars=len(session.history.summary or ""),
+        anchors=[{"user": a.user, "rule": a.rule} for a in session.history.anchors],
+        anchors_count=len(session.history.anchors),
+        last_resolved_tier=session.last_tier,
+        last_tier_rule=session.last_tier_rule,
     )
 
 
@@ -79,11 +88,13 @@ async def estimate_in_session(
     detail_level: DetailLevel = Form(DetailLevel.MEDIUM),
     output_format: OutputFormat = Form(OutputFormat.PHASES_TABLE),
     attachments: Optional[list[UploadFile]] = File(default=None),
+    tier: Literal["auto", "executive", "pm", "developer", "default"] = Form("auto"),
     prompt_version: Optional[str] = Query(
         default=None, description="Versión de app/prompts/session5/ (por defecto la de config)."
     ),
     store: SessionStore = Depends(get_session_store),
     llm=Depends(get_llm_wrapper),
+    cache=Depends(get_session_cache),
 ) -> SessionEstimationResponse:
     session = _get_session_or_404(store, session_id)
     settings = get_settings()
@@ -105,7 +116,7 @@ async def estimate_in_session(
 
     async with session.lock:
         try:
-            # El SDK es síncrono y un turno hace dos llamadas: en el threadpool
+            # El SDK es síncrono y un turno hace varias llamadas: en el threadpool
             # no bloquean el event loop para el resto de sesiones.
             result = await run_in_threadpool(
                 run_turn,
@@ -117,8 +128,11 @@ async def estimate_in_session(
                 output_format=output_format.value,
                 attachments=extracted,
                 prompt_version=prompt_version or settings.SESSION_PROMPT_VERSION,
+                settings=settings,
+                tier_override=None if tier == "auto" else Tier(tier),
+                cache=cache,
             )
-        except EmptyLLMResponseError as exc:
+        except StructuredOutputError as exc:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))

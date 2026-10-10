@@ -160,6 +160,13 @@ class SessionStateResponse(BaseModel):
     max_turns: int
     project_metadata: ProjectMetadata
     history: list[dict[str, str]]
+    message_count: int = 0
+    summary: Optional[str] = None
+    summary_chars: int = 0
+    anchors: list[dict[str, str]] = Field(default_factory=list)
+    anchors_count: int = 0
+    last_resolved_tier: str = "default"
+    last_tier_rule: str = "default"
 
 
 class SessionEstimationResponse(BaseModel):
@@ -175,3 +182,13 @@ class SessionEstimationResponse(BaseModel):
     history_turns: int = Field(description="Pares de historial enviados al LLM en este turno.")
     project_metadata: ProjectMetadata
     warnings: list[str] = Field(default_factory=list)
+    result: EstimationResult
+    cost_min_eur: int
+    cost_max_eur: int
+    tier: str
+    tier_rule: str
+    anchors_count: int = 0
+    summary_chars: int = 0
+    structured_attempts: int = 1
+    cache_hit_kind: str = "none"
+    cache_similarity: Optional[float] = None

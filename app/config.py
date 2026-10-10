@@ -36,7 +36,7 @@ class Settings(BaseSettings):
 
     # Memoria conversacional (sesión 05)
     MAX_TURNS: int = 6  # pares user+assistant que conserva la ventana deslizante
-    SESSION_PROMPT_VERSION: str = "v1"  # versión de app/prompts/session5/
+    SESSION_PROMPT_VERSION: str = "v2"  # versión de app/prompts/session5/
 
     # Adjuntos (camino B: extracción local de texto)
     MAX_ATTACHMENT_BYTES: int = 3_000_000
