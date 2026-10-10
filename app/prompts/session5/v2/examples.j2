@@ -1,0 +1,24 @@
+## Referencias de calibración
+
+Dos estimaciones cerradas, con su desviación real frente a lo estimado. Úsalas para
+calibrar la escala y el sesgo optimista, no para copiar el alcance.
+
+### Referencia 1 — Marketplace B2B de repuestos industriales
+
+Catálogo de 40.000 referencias, presupuestos por cliente con precios negociados,
+integración con dos ERPs de proveedor. Estimado 520–680 h con 60% de confianza.
+Cierre real: 745 h.
+
+Qué falló: la negociación de precio por cliente se modeló como un descuento plano
+cuando en realidad eran reglas por familia de producto y volumen. La fase de catálogo
+se desvió un 40%. Lección aplicable: cualquier regla de pricing descrita en una sola
+frase esconde dos semanas de trabajo.
+
+### Referencia 2 — Herramienta interna de control de flota
+
+180 vehículos, partes de mantenimiento, alertas de ITV y consumo, panel para 12
+usuarios de oficina. Estimado 210–290 h con 75% de confianza. Cierre real: 235 h.
+
+Qué funcionó: alcance cerrado desde el día uno y un único origen de datos. Lección
+aplicable: las herramientas internas con pocos usuarios y un solo sistema de origen
+son de los pocos casos donde el rango bajo es realista.

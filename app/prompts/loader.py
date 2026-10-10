@@ -111,6 +111,9 @@ def render_session_prompt(
     metadata: dict,
     attachments_text: str,
     version: str,
+    anchors: list[dict] | None = None,
+    summary: str | None = None,
+    tier: str = "default",
 ) -> tuple[str, str]:
     """Par (system, user) de un turno conversacional (sesión 05).
 
@@ -126,6 +129,9 @@ def render_session_prompt(
         "output_format": output_format,
         "project_metadata": metadata,
         "attachments_text": attachments_text,
+        "anchors": anchors or [],
+        "summary": summary,
+        "tier": tier,
     }
     system, user = _render_pair("session5", version, context)
 
@@ -134,6 +140,9 @@ def render_session_prompt(
         prompt_version=version,
         has_metadata=any(metadata.values()),
         attachments_chars=len(attachments_text),
+        tier=tier,
+        anchors=len(anchors or []),
+        summary_chars=len(summary or ""),
         system_hash=_fingerprint(system),
         user_hash=_fingerprint(user),
     )

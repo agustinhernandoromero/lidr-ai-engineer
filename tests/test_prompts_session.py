@@ -78,3 +78,45 @@ def test_extraction_prompt_contains_contract_and_inputs():
     assert "Hotelia" in user
     assert "Seremos cinco personas" in user
     assert "Estimación: 400 h" in user
+
+
+def render_v2(**extra):
+    return render_session_prompt(
+        transcript="Queremos un portal de reservas para hoteles pequeños.",
+        project_type="web_saas",
+        detail_level="medium",
+        output_format="phases_table",
+        metadata=KNOWN,
+        attachments_text="",
+        version="v2",
+        **extra,
+    )
+
+
+def test_v2_empty_memory_blocks_render_empty():
+    system, _ = render_v2()
+    assert "<anchors>\n</anchors>" in system
+    assert "<conversation_summary>\n</conversation_summary>" in system
+    assert "Proyecto: Hotelia" in system.split("</project_metadata>")[0]
+
+
+def test_v2_injects_anchors_summary_and_tier():
+    system, _ = render_v2(
+        anchors=[{"user": "El presupuesto está cerrado en 30.000 euros", "rule": "budget_locked"}],
+        summary="El cliente pidió primero un MVP sin pagos.",
+        tier="executive",
+    )
+    assert "[budget_locked] El presupuesto está cerrado en 30.000 euros" in system
+    assert "El cliente pidió primero un MVP sin pagos." in system
+    assert "Dirección" in system
+
+
+def test_v2_asks_for_hours_json_and_sums():
+    system, _ = render_v2()
+    assert "HORAS" in system and "total_hours_min" in system
+    assert "Fuera de alcance:" in system
+
+
+def test_v1_still_renders_without_new_arguments():
+    system, _ = render(KNOWN)
+    assert "<anchors>" not in system
