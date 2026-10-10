@@ -60,3 +60,11 @@ def test_low_confidence_requires_out_of_scope_prefix():
 def test_cost_is_computed_from_hours_and_rate():
     result = EstimationResult.model_validate(valid_payload())
     assert cost_range_eur(result, rate=50) == (9000, 13500)
+
+
+def test_developer_style_phase_texts_fit_the_limits():
+    """Con el tier developer el modelo escribe más: 100 y 900 caracteres caben."""
+    payload = valid_payload()
+    payload["phases"][0]["name"] = "n" * 100
+    payload["phases"][0]["summary"] = "s" * 900
+    assert EstimationResult.model_validate(payload).phases[0].name == "n" * 100

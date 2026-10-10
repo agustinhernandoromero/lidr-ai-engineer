@@ -38,8 +38,13 @@ def _json_slice(text: str) -> str:
 
 
 def _describe(exc: Exception) -> str:
+    """Error legible para el modelo, con el campo que falla ("phases.0.name: …")."""
     if isinstance(exc, ValidationError):
-        return "; ".join(err["msg"] for err in exc.errors()[:5])
+        parts = []
+        for err in exc.errors()[:5]:
+            field = ".".join(str(p) for p in err["loc"])
+            parts.append(f"{field}: {err['msg']}" if field else err["msg"])
+        return "; ".join(parts)
     return str(exc)
 
 

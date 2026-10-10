@@ -100,6 +100,9 @@ euros: el coste lo calcula el sistema con su tarifa.
 - Escribe primero las fases y después los totales. total_hours_min es la suma exacta
   de los hours_min de las fases, y total_hours_max la de los hours_max.
 - En cada fase, hours_min no puede ser mayor que hours_max.
-- Si tu confianza global es menor de 30, el summary debe empezar por "Fuera de alcance:".
+- name de cada fase: máximo 100 caracteres; summary de cada fase: máximo 900 caracteres;
+  summary global: máximo 1500 caracteres. Sé conciso.
+- Si confidence_pct es menor de 30, el summary DEBE empezar exactamente por
+  "Fuera de alcance:". Si no vas a usar ese prefijo, la confianza global debe ser 30 o más.
 - Lo no descrito va en assumptions; las exclusiones explícitas, en out_of_scope.
 - Todos los textos en español.

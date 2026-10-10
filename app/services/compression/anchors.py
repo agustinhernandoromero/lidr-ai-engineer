@@ -56,20 +56,36 @@ _NEGATION = re.compile(
     r"\b(no|nunca|jam[áa]s|sin|not|never|haven't|hasn't|didn't|isn't)\b", _FLAGS
 )
 _NEGATION_WINDOW = 30  # caracteres antes de la coincidencia
+# Lo que va detrás de "Excluido:" / "fuera de alcance" es justo lo que NO aplica.
+_EXCLUSION = re.compile(
+    r"\b(excluid[oa]s?|fuera\s+de\s+alcance|out\s+of\s+scope|excluded)\b", _FLAGS
+)
 
 
-def detect_anchor(text: str) -> str | None:
-    """Nombre de la primera regla que encaja, o ``None`` si no es un ancla.
+def affirmed_match(pattern: re.Pattern[str], text: str) -> bool:
+    """¿Aparece ``pattern`` afirmado en ``text``?
 
-    Se evalúa frase a frase; las preguntas se ignoran y una coincidencia con
-    una negación justo antes ("no hemos firmado…", "no aplica GDPR") no cuenta.
+    Se evalúa frase a frase y no cuenta si la frase es una pregunta, si la
+    coincidencia va detrás de una exclusión ("Excluido: …, RGPD") o si hay una
+    negación justo antes ("no hemos firmado…", "no aplica el RGPD"). Lo usan
+    las anclas y el tier dinámico.
     """
     for sentence in _SENTENCE_SPLIT.split(text or ""):
         if "?" in sentence or "¿" in sentence:
             continue
-        for name, pattern in _PATTERNS:
-            for match in pattern.finditer(sentence):
-                before = sentence[max(0, match.start() - _NEGATION_WINDOW) : match.start()]
-                if not _NEGATION.search(before):
-                    return name
+        exclusion = _EXCLUSION.search(sentence)
+        if exclusion:
+            sentence = sentence[: exclusion.start()]
+        for match in pattern.finditer(sentence):
+            before = sentence[max(0, match.start() - _NEGATION_WINDOW) : match.start()]
+            if not _NEGATION.search(before):
+                return True
+    return False
+
+
+def detect_anchor(text: str) -> str | None:
+    """Nombre de la primera regla que encaja afirmada, o ``None`` si no es un ancla."""
+    for name, pattern in _PATTERNS:
+        if affirmed_match(pattern, text):
+            return name
     return None

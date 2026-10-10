@@ -72,11 +72,11 @@ LOW_CONFIDENCE_THRESHOLD = 30
 class Phase(BaseModel):
     """Una fase del desglose, en horas."""
 
-    name: str = Field(min_length=1, max_length=64)
+    name: str = Field(min_length=1, max_length=100)
     hours_min: int = Field(ge=1, le=20_000)
     hours_max: int = Field(ge=1, le=20_000)
     confidence_pct: int = Field(ge=0, le=100)
-    summary: str = Field(min_length=10, max_length=600)
+    summary: str = Field(min_length=10, max_length=900)
 
     @model_validator(mode="after")
     def _min_not_above_max(self) -> "Phase":

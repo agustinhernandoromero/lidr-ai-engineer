@@ -1,5 +1,7 @@
 """Estimador estructurado: render a Markdown y bucle de reintento."""
 
+import json
+
 import pytest
 
 from app.schemas import EstimationResult
@@ -84,3 +86,11 @@ def test_schema_sent_to_provider_is_the_transformed_estimation_schema():
     estimate_structured(Spy(), MESSAGES, max_retries=0)
     assert seen["schema"] is ESTIMATION_JSON_SCHEMA
     assert seen["schema"]["additionalProperties"] is False
+
+
+def test_retry_message_names_the_failing_field():
+    long_name = json.loads(fake_result_json("Nombre de fase larguísimo."))
+    long_name["phases"][0]["name"] = "x" * 150
+    llm = FakeLLM(structured_responses=[json.dumps(long_name), fake_result_json("Corregido.")])
+    estimate_structured(llm, MESSAGES, max_retries=2)
+    assert "phases.0.name" in llm.estimator_calls[1][-1]["content"]

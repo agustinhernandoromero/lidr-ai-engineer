@@ -40,3 +40,12 @@ def test_precedence_executive_beats_developer():
 
 def test_default_when_nothing_matches():
     assert resolve_tier("Un portal de reservas sencillo", EMPTY) == (Tier.DEFAULT, "default")
+
+
+def test_exclusions_and_negations_do_not_trigger_executive():
+    md = ProjectMetadata(agreed_scope="Portal de reservas. Excluido: pagos online, RGPD avanzado.")
+    assert resolve_tier("Seguimos con el MVP", md) == (Tier.DEFAULT, "default")
+    assert resolve_tier("Esto no es confidencial", EMPTY) == (Tier.DEFAULT, "default")
+    assert resolve_tier("En este proyecto no aplica el RGPD", EMPTY) == (Tier.DEFAULT, "default")
+    scope = ProjectMetadata(agreed_scope="Fuera de alcance: certificación ISO 27001")
+    assert resolve_tier("Seguimos", scope) == (Tier.DEFAULT, "default")

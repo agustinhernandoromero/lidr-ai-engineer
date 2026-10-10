@@ -15,6 +15,7 @@ from typing import Callable
 
 import structlog
 
+from app.services.compression.anchors import affirmed_match
 from app.services.sessions import ProjectMetadata
 
 logger = structlog.get_logger(__name__)
@@ -48,13 +49,15 @@ class _Context:
     metadata: ProjectMetadata
 
 
+# Las reglas de contenido usan affirmed_match: "Excluido: RGPD avanzado" o
+# "esto no es confidencial" no deben cambiar la audiencia.
 def _has_nda(ctx: _Context) -> bool:
-    return bool(_NDA.search(ctx.transcript) or _NDA.search(ctx.metadata.agreed_scope or ""))
+    return affirmed_match(_NDA, ctx.transcript) or affirmed_match(_NDA, ctx.metadata.agreed_scope or "")
 
 
 def _has_regulation(ctx: _Context) -> bool:
     haystacks = [ctx.transcript, ctx.metadata.agreed_scope or "", *ctx.metadata.mentioned_technologies]
-    return any(_REGULATORY.search(h) for h in haystacks)
+    return any(affirmed_match(_REGULATORY, h) for h in haystacks)
 
 
 def _technical_audience(ctx: _Context) -> bool:

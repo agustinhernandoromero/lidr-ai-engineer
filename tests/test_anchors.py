@@ -52,3 +52,8 @@ def test_negated_or_questioned_commitments_are_not_anchors(text):
 def test_commitment_in_another_sentence_still_counts():
     text = "¿Podemos empezar ya? El presupuesto está cerrado en 30.000 euros."
     assert detect_anchor(text) == "budget_locked"
+
+
+def test_excluded_items_are_not_anchors():
+    assert detect_anchor("Excluido del MVP: certificación ISO 27001") is None
+    assert detect_anchor("El alcance incluye reservas; fuera de alcance: cumplir RGPD avanzado") is None

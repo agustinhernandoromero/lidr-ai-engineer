@@ -120,3 +120,9 @@ def test_v2_asks_for_hours_json_and_sums():
 def test_v1_still_renders_without_new_arguments():
     system, _ = render(KNOWN)
     assert "<anchors>" not in system
+
+
+def test_v2_states_length_limits_and_prefix_rule_explicitly():
+    system, _ = render_v2()
+    assert "máximo 100 caracteres" in system and "máximo 900 caracteres" in system
+    assert "30 o más" in system
