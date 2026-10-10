@@ -42,6 +42,16 @@ class Settings(BaseSettings):
     MAX_ATTACHMENT_BYTES: int = 3_000_000
     MAX_ATTACHMENT_CHARS: int = 20_000
 
+    # Sesión 05 (directo): salida estructurada, memoria comprimida y caché del turno 1
+    HOURLY_RATE_EUR: int = 50  # el LLM estima horas; los euros los calcula el código
+    STRUCTURED_MAX_RETRIES: int = 2  # reintentos si el JSON no cumple las reglas
+    SUMMARY_MAX_TOKENS: int = 600  # tope del resumen acumulativo
+    SESSION_CACHE_ENABLED: bool = True  # caché exacta + semántica del turno 1
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
+    EMBEDDING_DIMS: int = 768
+    SEMANTIC_CACHE_THRESHOLD: float = 0.92  # similitud coseno mínima para servir
+    SEMANTIC_CACHE_LOG_ONLY: bool = False  # True: mide similitudes sin servir hits
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
