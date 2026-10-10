@@ -173,6 +173,15 @@ with st.sidebar:
                 ],
             }
         )
+        st.caption(
+            f"Tier: **{conv_state.get('last_resolved_tier', 'default')}** "
+            f"({conv_state.get('last_tier_rule', 'default')})"
+        )
+        st.markdown(f"**Anclas** ({conv_state.get('anchors_count', 0)}) · nunca se olvidan")
+        for anchor in conv_state.get("anchors", []):
+            st.caption(f"`{anchor['rule']}` {anchor['user'][:120]}")
+        with st.expander(f"Resumen acumulado ({conv_state.get('summary_chars', 0)} caracteres)"):
+            st.write(conv_state.get("summary") or "Aún no hay resumen (empieza en el turno 7).")
     if st.button("Nueva conversación", use_container_width=True):
         reset_conversation(conv_base_url)
         st.rerun()
@@ -335,10 +344,22 @@ with tab_conv:
                 st.warning(warning)
             if turn["fallback_used"]:
                 st.warning(f"Respuesta generada por el modelo de respaldo (`{turn['model']}`).")
+            result = turn.get("result")
+            if result:
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Horas", f"{result['total_hours_min']}–{result['total_hours_max']}")
+                m2.metric(
+                    "Coste (€)",
+                    f"{turn['cost_min_eur']:,}–{turn['cost_max_eur']:,}".replace(",", "."),
+                )
+                m3.metric("Semanas", result["total_duration_weeks"])
+                m4.metric("Confianza", f"{result['confidence_pct']}%")
             st.markdown(turn["text"])
             st.caption(
                 f"Turno {turn['turn']} · {turn['provider']} · `{turn['model']}` · "
                 f"{turn['history_turns']} pares de historial enviados · {turn['elapsed']:.1f} s"
+                f" · tier {turn.get('tier', '—')} ({turn.get('tier_rule', '—')})"
+                f" · caché {turn.get('cache_hit_kind', 'none')}"
             )
 
     nonce = st.session_state.conv_form_nonce
@@ -370,6 +391,12 @@ with tab_conv:
             format_func=lambda x: OUTPUT_FORMAT_LABELS[x],
             key="conv_output_format",
         )
+        conv_tier = st.selectbox(
+            "Audiencia (tier)",
+            ["auto", "executive", "pm", "developer", "default"],
+            help="«auto» deja que el servicio la deduzca de la conversación.",
+            key="conv_tier",
+        )
         conv_files = st.file_uploader(
             "Adjuntos (PDF o Word, máx. 3 MB cada uno)",
             type=["pdf", "docx"],
@@ -400,6 +427,7 @@ with tab_conv:
                             "project_type": conv_project_type.value,
                             "detail_level": conv_detail_level.value,
                             "output_format": conv_output_format.value,
+                            "tier": conv_tier,
                         },
                         files=files or None,
                         timeout=REQUEST_TIMEOUT,
