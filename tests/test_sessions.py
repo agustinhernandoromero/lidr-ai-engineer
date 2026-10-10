@@ -304,3 +304,30 @@ async def test_turn_two_never_uses_cache(cached_client):
     await estimate(cached_client, sid, "Proyecto Hotelia: portal de reservas en React.")
     second = (await estimate(cached_client, sid, "Proyecto Hotelia: portal de reservas en React.")).json()
     assert second["cache_hit_kind"] == "none"
+
+
+@pytest.mark.asyncio
+async def test_semantic_hit_reextracts_metadata_from_the_real_transcript(llm):
+    """La estimación puede reutilizarse, pero los hechos del proyecto salen del
+    mensaje real, no del que se cacheó."""
+    import fakeredis
+    from app.services.session_cache import SessionTurnCache
+
+    emb = {"Proyecto Hotelia: portal de reservas en React.": [1.0, 0.0],
+           "Proyecto Hotelia: portal de reservas con FastAPI.": [0.99, 0.01]}
+    cache = SessionTurnCache(fakeredis.FakeRedis(decode_responses=True), embedder=lambda t: emb[t],
+                             threshold=0.92, log_only=False, ttl=60)
+    store = SessionStore(max_turns=MAX_TURNS)
+    app.dependency_overrides[get_session_store] = lambda: store
+    app.dependency_overrides[get_llm_wrapper] = lambda: llm
+    app.dependency_overrides[get_session_cache] = lambda: cache
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
+            await estimate(c, await new_session(c), "Proyecto Hotelia: portal de reservas en React.")
+            second = (await estimate(c, await new_session(c),
+                                     "Proyecto Hotelia: portal de reservas con FastAPI.")).json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert second["cache_hit_kind"] == "semantic"
+    assert second["project_metadata"]["mentioned_technologies"] == ["FastAPI"]

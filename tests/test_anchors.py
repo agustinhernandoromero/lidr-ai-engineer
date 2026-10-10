@@ -35,3 +35,20 @@ def test_commitments_are_detected(text, rule):
 ])
 def test_ordinary_sentences_are_not_anchors(text):
     assert detect_anchor(text) is None
+
+
+@pytest.mark.parametrize("text", [
+    "Aún no hay contrato firmado",
+    "No hemos firmado el contrato todavía",
+    "We have not signed the contract",
+    "¿Cuál sería el presupuesto máximo?",
+    "¿El alcance está cerrado?",
+    "En este proyecto no aplica GDPR",
+])
+def test_negated_or_questioned_commitments_are_not_anchors(text):
+    assert detect_anchor(text) is None
+
+
+def test_commitment_in_another_sentence_still_counts():
+    text = "¿Podemos empezar ya? El presupuesto está cerrado en 30.000 euros."
+    assert detect_anchor(text) == "budget_locked"

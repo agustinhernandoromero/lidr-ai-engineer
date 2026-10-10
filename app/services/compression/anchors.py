@@ -48,9 +48,28 @@ _PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 )
 
 
+# Una frase interrogativa o negada no es un compromiso: "¿el alcance está
+# cerrado?" o "aún no hemos firmado el contrato" convertidos en ancla dirían al
+# modelo justo lo contrario, y para siempre.
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
+_NEGATION = re.compile(
+    r"\b(no|nunca|jam[áa]s|sin|not|never|haven't|hasn't|didn't|isn't)\b", _FLAGS
+)
+_NEGATION_WINDOW = 30  # caracteres antes de la coincidencia
+
+
 def detect_anchor(text: str) -> str | None:
-    """Nombre de la primera regla que encaja, o ``None`` si no es un ancla."""
-    for name, pattern in _PATTERNS:
-        if pattern.search(text or ""):
-            return name
+    """Nombre de la primera regla que encaja, o ``None`` si no es un ancla.
+
+    Se evalúa frase a frase; las preguntas se ignoran y una coincidencia con
+    una negación justo antes ("no hemos firmado…", "no aplica GDPR") no cuenta.
+    """
+    for sentence in _SENTENCE_SPLIT.split(text or ""):
+        if "?" in sentence or "¿" in sentence:
+            continue
+        for name, pattern in _PATTERNS:
+            for match in pattern.finditer(sentence):
+                before = sentence[max(0, match.start() - _NEGATION_WINDOW) : match.start()]
+                if not _NEGATION.search(before):
+                    return name
     return None

@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from dataclasses import dataclass
 from typing import Callable, Optional
 
@@ -29,6 +30,7 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 _PREFIX = "session_turn1"
+_NUMBERS = re.compile(r"\d+(?:[.,]\d+)?")
 MAX_SEMANTIC_ENTRIES = 200
 
 
@@ -41,6 +43,13 @@ class CacheHit:
 
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _numbers(text: str) -> list[str]:
+    """Cifras del mensaje. Dos encargos casi iguales con cifras distintas ("3
+    usuarios" frente a "300") no son el mismo encargo aunque el embedding diga
+    que se parecen mucho."""
+    return sorted(_NUMBERS.findall(text or ""))
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
@@ -104,8 +113,11 @@ class SessionTurnCache:
             if vector is None:
                 return None
             best_score, best_payload = 0.0, None
+            numbers = _numbers(transcript)
             for item in self._client.lrange(f"{_PREFIX}:sem:{bucket}", 0, -1):
                 entry = json.loads(item)
+                if entry.get("numbers") != numbers:
+                    continue
                 score = _cosine(vector, entry["vector"])
                 if score > best_score:
                     best_score, best_payload = score, entry["payload"]
@@ -131,7 +143,8 @@ class SessionTurnCache:
             if vector is None:
                 return
             list_key = f"{_PREFIX}:sem:{bucket}"
-            self._client.lpush(list_key, json.dumps({"vector": vector, "payload": payload}))
+            entry = {"vector": vector, "numbers": _numbers(transcript), "payload": payload}
+            self._client.lpush(list_key, json.dumps(entry))
             self._client.ltrim(list_key, 0, MAX_SEMANTIC_ENTRIES - 1)
             self._client.expire(list_key, self._ttl)
         except Exception as exc:  # noqa: BLE001

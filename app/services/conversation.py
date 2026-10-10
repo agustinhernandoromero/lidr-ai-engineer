@@ -97,6 +97,17 @@ def run_turn(
     if hit is None:
         result, meta = estimate_structured(llm, messages, settings.STRUCTURED_MAX_RETRIES)
     markdown = render_markdown(result, output_format, settings.HOURLY_RATE_EUR)
+    if hit is not None and hit.kind == "semantic":
+        # Un acierto semántico reutiliza la estimación de un mensaje parecido,
+        # pero los hechos del proyecto (nombre, tecnologías…) tienen que salir
+        # del mensaje real: si no, la sesión arrastraría los de otro proyecto.
+        metadata = extract_metadata(
+            llm,
+            session.metadata,
+            transcript=transcript,
+            attachments_text=attachments_text,
+            answer=markdown,
+        )
     if hit is None:
         metadata = extract_metadata(
             llm,

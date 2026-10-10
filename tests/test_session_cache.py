@@ -78,3 +78,15 @@ def test_corrupt_payload_is_a_miss():
     cache = make_cache(client=client)
     client.set("session_turn1:exact:k", "{no es json")
     assert cache.lookup(key="k", bucket="b", transcript="t") is None
+
+
+def test_semantic_hit_requires_the_same_numbers():
+    """Dos transcripts casi iguales pero con cifras distintas no son el mismo encargo."""
+    emb = vectors({"SaaS para 3 usuarios": [1.0, 0.0], "SaaS para 300 usuarios": [1.0, 0.0],
+                   "Un SaaS para 3 usuarios": [1.0, 0.0]})
+    cache = make_cache(embedder=emb)
+    cache.store(key="k1", bucket="b", transcript="SaaS para 3 usuarios", payload=PAYLOAD)
+
+    assert cache.lookup(key="k2", bucket="b", transcript="SaaS para 300 usuarios") is None
+    hit = cache.lookup(key="k3", bucket="b", transcript="Un SaaS para 3 usuarios")
+    assert hit is not None and hit.kind == "semantic"
