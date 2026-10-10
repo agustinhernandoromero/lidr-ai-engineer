@@ -5,12 +5,12 @@ import pytest
 from app.services.sessions import ConversationHistory, ProjectMetadata, SessionStore
 
 
-def test_history_keeps_only_last_max_turns_pairs():
+def test_history_overflow_is_popped_oldest_first():
     history = ConversationHistory(max_turns=2)
     for i in range(1, 5):
         history.add_turn(f"user {i}", f"assistant {i}")
 
-    assert len(history) == 2
+    assert history.pop_overflow() == [("user 1", "assistant 1"), ("user 2", "assistant 2")]
     assert history.as_dicts() == [
         {"user": "user 3", "assistant": "assistant 3"},
         {"user": "user 4", "assistant": "assistant 4"},

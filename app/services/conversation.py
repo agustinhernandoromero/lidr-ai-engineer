@@ -83,6 +83,7 @@ def run_turn(
     # A partir de aquí no hay nada que pueda fallar: se muta la sesión.
     session.metadata = metadata
     session.history.add_turn(history_entry(transcript, attachments), result["text"])
+    session.history.pop_overflow()  # provisional: Task 10 lo sustituye por compress()
     session.turn_count += 1
 
     logger.info(

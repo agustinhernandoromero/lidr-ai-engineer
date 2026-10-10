@@ -1,0 +1,11 @@
+<resumen_anterior>
+{{ previous_summary or "" }}
+</resumen_anterior>
+
+<turnos_expulsados>
+{% for turn in evicted %}
+Cliente: {{ turn.user }}
+Estimador: {{ turn.assistant }}
+
+{% endfor %}
+</turnos_expulsados>

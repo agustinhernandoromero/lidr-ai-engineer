@@ -3,9 +3,11 @@
 Separa dos cosas que suelen mezclarse:
 
 - **Historial** (``ConversationHistory``): los mensajes brutos user/assistant
-  que viajan a la API en cada llamada. Se acota con una ventana deslizante de
-  ``max_turns`` pares; el system prompt NO se guarda aquí, se regenera en cada
-  turno a partir de la metadata.
+  que viajan a la API en cada llamada, acotados a ``max_turns`` pares. Lo que
+  sobra no se descarta: ``pop_overflow`` lo entrega a la política de
+  compresión (``app/services/compression/``), que lo guarda como ancla literal
+  o lo funde en ``summary``. El system prompt NO se guarda aquí, se regenera
+  en cada turno a partir de la metadata, las anclas y el resumen.
 - **Memoria** (``ProjectMetadata``): los hechos del proyecto en curso (nombre,
   equipo, tecnologías, alcance). Sobrevive aunque el turno que los mencionó ya
   haya salido de la ventana, porque se inyecta en el system prompt.
@@ -27,6 +29,15 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
+
+
+@dataclass
+class Anchor:
+    """Turno promovido a ancla: sobrevive literal, nunca se expulsa."""
+
+    user: str
+    assistant: str
+    rule: str
 
 
 class ProjectMetadata(BaseModel):
@@ -113,15 +124,24 @@ class ConversationHistory:
             raise ValueError("max_turns debe ser al menos 1")
         self.max_turns = max_turns
         self._turns: list[tuple[str, str]] = []
+        self.summary: Optional[str] = None
+        self.anchors: list[Anchor] = []
 
     def __len__(self) -> int:
         return len(self._turns)
 
     def add_turn(self, user: str, assistant: str) -> None:
-        """Añade un par y descarta los más antiguos si se supera la ventana."""
+        """Añade un par. No recorta: lo que sobra lo recoge ``pop_overflow`` y
+        la política de compresión decide si va a anclas o al resumen."""
         self._turns.append((user, assistant))
-        if len(self._turns) > self.max_turns:
-            self._turns = self._turns[-self.max_turns :]
+
+    def pop_overflow(self) -> list[tuple[str, str]]:
+        """Saca y devuelve los pares más antiguos que exceden ``max_turns``."""
+        overflow = len(self._turns) - self.max_turns
+        if overflow <= 0:
+            return []
+        evicted, self._turns = self._turns[:overflow], self._turns[overflow:]
+        return evicted
 
     def to_messages_list(self, system_prompt: str) -> list[dict[str, str]]:
         """Array ``messages`` neutral (``{"role", "content"}``) listo para el wrapper.
@@ -145,6 +165,8 @@ class Session:
     history: ConversationHistory
     metadata: ProjectMetadata = field(default_factory=ProjectMetadata)
     turn_count: int = 0
+    last_tier: str = "default"
+    last_tier_rule: str = "default"
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     # Serializa los turnos de una misma sesión: dos peticiones simultáneas
     # (p. ej. doble clic) no deben intercalar su lectura/escritura del historial.

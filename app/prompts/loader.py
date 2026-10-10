@@ -156,3 +156,23 @@ def render_extraction_prompt(
         "answer": answer,
     }
     return _render_pair("extraction", version, context)
+
+
+SUMMARY_ASSISTANT_MAX_CHARS = 1500
+
+
+def render_summary_prompt(
+    *, previous_summary: str | None, evicted: list[tuple[str, str]], version: str = "v1"
+) -> tuple[str, str]:
+    """Par (system, user) del resumidor acumulativo.
+
+    Las respuestas del estimador se recortan: son Markdown largo y lo que el
+    resumen necesita son las cifras y decisiones, no la tabla entera.
+    """
+    turns = [
+        {"user": user, "assistant": assistant[:SUMMARY_ASSISTANT_MAX_CHARS]}
+        for user, assistant in evicted
+    ]
+    return _render_pair(
+        "conversation_summary", version, {"previous_summary": previous_summary, "evicted": turns}
+    )
