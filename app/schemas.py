@@ -167,6 +167,7 @@ class SessionStateResponse(BaseModel):
     anchors_count: int = 0
     last_resolved_tier: str = "default"
     last_tier_rule: str = "default"
+    last_turn_observed: Optional[dict] = None
 
 
 class SessionEstimationResponse(BaseModel):
@@ -192,3 +193,4 @@ class SessionEstimationResponse(BaseModel):
     structured_attempts: int = 1
     cache_hit_kind: str = "none"
     cache_similarity: Optional[float] = None
+    observation: dict = Field(default_factory=dict)

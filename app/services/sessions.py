@@ -167,6 +167,7 @@ class Session:
     turn_count: int = 0
     last_tier: str = "default"
     last_tier_rule: str = "default"
+    last_observation: Optional[dict] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     # Serializa los turnos de una misma sesión: dos peticiones simultáneas
     # (p. ej. doble clic) no deben intercalar su lectura/escritura del historial.

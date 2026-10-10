@@ -67,6 +67,7 @@ async def get_session(
         anchors_count=len(session.history.anchors),
         last_resolved_tier=session.last_tier,
         last_tier_rule=session.last_tier_rule,
+        last_turn_observed=session.last_observation,
     )
 
 

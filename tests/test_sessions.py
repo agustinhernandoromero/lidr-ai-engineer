@@ -331,3 +331,39 @@ async def test_semantic_hit_reextracts_metadata_from_the_real_transcript(llm):
 
     assert second["cache_hit_kind"] == "semantic"
     assert second["project_metadata"]["mentioned_technologies"] == ["FastAPI"]
+
+
+@pytest.mark.asyncio
+async def test_each_turn_returns_an_aggregated_observation(client):
+    from app.services.conversation import OBSERVATION_FIELDS
+
+    sid = await new_session(client)
+    pdf = make_pdf("Despliegue en Kubernetes")
+    data = (await estimate(client, sid, "Proyecto Hotelia: portal de reservas en React.",
+                           files=[("attachments", ("a.pdf", pdf, "application/pdf"))])).json()
+    obs = data["observation"]
+
+    assert set(OBSERVATION_FIELDS) <= set(obs)
+    assert len(OBSERVATION_FIELDS) == 13
+    assert obs["turn_index"] == 1 and obs["session_id"] == sid
+    assert obs["attachments_total_chars"] > 0
+    assert obs["enriched_transcript_chars"] > obs["attachments_total_chars"]
+    assert obs["messages_in_window"] == 2
+    assert obs["cache_hit_kind"] == "none" and obs["last_resolved_tier"] == "default"
+    assert obs["llm_calls"] == 2  # estimador + extractor
+    assert obs["latency_ms"] >= 0
+
+    state = (await client.get(f"/api/v1/sessions/{sid}")).json()
+    assert state["last_turn_observed"] == obs
+
+
+@pytest.mark.asyncio
+async def test_observation_counts_summarizer_and_window_after_compression(client):
+    sid = await new_session(client)
+    for i in range(1, 8):
+        data = (await estimate(client, sid, f"Turno {i}: el cliente añade el requisito {i}.")).json()
+    obs = data["observation"]
+    assert obs["turn_index"] == 7
+    assert obs["llm_calls"] == 3  # estimador + extractor + resumidor
+    assert obs["messages_in_window"] == 2 * MAX_TURNS
+    assert obs["summary_chars"] > 0

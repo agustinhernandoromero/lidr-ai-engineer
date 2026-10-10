@@ -20,8 +20,16 @@ from app.services.metadata_extractor import extract_metadata
 from app.services.sessions import ProjectMetadata, Session
 from app.services.structured_estimator import estimate_structured, render_markdown
 from app.services.tier_resolver import resolve_tier
+from app.services.usage_meter import UsageMeter
 
 logger = structlog.get_logger(__name__)
+
+# Los 13 campos mínimos del evento turn_observed (enunciado de la sesión 06).
+OBSERVATION_FIELDS = (
+    "turn_index", "session_id", "enriched_transcript_chars", "attachments_total_chars",
+    "messages_in_window", "anchors_count", "summary_chars", "tokens_in", "tokens_out",
+    "cost_usd", "latency_ms", "cache_hit_kind", "last_resolved_tier",
+)
 
 
 def history_entry(transcript: str, attachments: list[ExtractedAttachment]) -> str:
@@ -52,6 +60,10 @@ def run_turn(
     cache=None,
 ) -> dict:
     """Ejecuta un turno completo. Bloqueante: el router lo lanza en un threadpool."""
+    turn_started = time.perf_counter()
+    # Todas las llamadas del turno (estimador, extractor, resumidor) pasan por
+    # el medidor: así la observación agrega su gasto sin cambiar firmas.
+    llm = UsageMeter(llm, settings)
     attachments_text = format_attachments(attachments)
     tier, tier_rule = resolve_tier(transcript, session.metadata, tier_override)
     system, user = render_session_prompt(
@@ -141,6 +153,28 @@ def run_turn(
 
     cost_min, cost_max = cost_range_eur(result, settings.HOURLY_RATE_EUR)
     cache_hit_kind = hit.kind if hit is not None else "none"
+    observation = {
+        "turn_index": session.turn_count,
+        "session_id": session.session_id,
+        "enriched_transcript_chars": len(transcript) + len(attachments_text),
+        "attachments_total_chars": sum(len(a.text) for a in attachments),
+        "messages_in_window": len(session.history) * 2,
+        "anchors_count": len(session.history.anchors),
+        "summary_chars": len(session.history.summary or ""),
+        "tokens_in": llm.tokens_in,
+        "tokens_out": llm.tokens_out,
+        "cost_usd": round(llm.cost_usd, 6),
+        "latency_ms": round((time.perf_counter() - turn_started) * 1000, 1),
+        "cache_hit_kind": cache_hit_kind,
+        "last_resolved_tier": tier.value,
+        "tier_rule": tier_rule,
+        "llm_calls": llm.llm_calls,
+        "structured_attempts": meta["attempts"],
+    }
+    session.last_observation = observation
+    # Un único evento agregado por turno: se convierte a CSV en una pasada, sin
+    # reconciliar marcas de tiempo de varios eventos sueltos.
+    logger.info("turn_observed", **observation)
     logger.info(
         "session_turn_completed",
         session_id=session.session_id,
@@ -179,4 +213,5 @@ def run_turn(
         "structured_attempts": meta["attempts"],
         "cache_hit_kind": cache_hit_kind,
         "cache_similarity": hit.similarity if hit is not None else None,
+        "observation": observation,
     }
