@@ -36,3 +36,25 @@ def get_llm_wrapper() -> "LLMWrapper":
 @lru_cache
 def get_session_store() -> SessionStore:
     return SessionStore(max_turns=get_settings().MAX_TURNS)
+
+
+@lru_cache
+def get_session_cache():
+    """Caché del turno 1, o ``None`` si está desactivada por configuración."""
+    settings = get_settings()
+    if not settings.SESSION_CACHE_ENABLED:
+        return None
+
+    import redis
+
+    from app.services.llm_service import embed_text
+    from app.services.session_cache import SessionTurnCache
+
+    embedder = (lambda text: embed_text(text, get_settings())) if settings.GEMINI_API_KEY else None
+    return SessionTurnCache(
+        redis.Redis.from_url(settings.REDIS_URL, decode_responses=True),
+        embedder=embedder,
+        threshold=settings.SEMANTIC_CACHE_THRESHOLD,
+        log_only=settings.SEMANTIC_CACHE_LOG_ONLY,
+        ttl=settings.CACHE_TTL,
+    )
