@@ -66,3 +66,6 @@ uvicorn_pid.txt
 
 # Notas y capturas de trabajo personales — no van al repo del curso.
 docs/
+
+# PDFs del estrés (se regeneran con evals/stress/fixtures/build_pdfs.py)
+evals/stress/fixtures/*.pdf
