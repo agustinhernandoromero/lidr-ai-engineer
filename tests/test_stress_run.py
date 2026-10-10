@@ -63,3 +63,61 @@ def test_failed_turn_is_recorded_and_the_run_continues(tmp_path, monkeypatch):
     assert code == 0
     statuses = [r["status"] for r in rows if r["block"] == "multiturn"]
     assert statuses[1] == "error" and statuses.count("ok") == 9
+
+
+def test_scenario_turn_stays_aligned_after_a_failed_turn(tmp_path, monkeypatch):
+    from tests import helpers
+
+    original = helpers.FakeLLM.complete
+    state = {"n": 0}
+
+    def flaky(self, messages, max_tokens=4000, json_schema=None):
+        if json_schema is not None:
+            state["n"] += 1
+            if state["n"] in (2, 3, 4):
+                return {"text": "no json", "model": "f", "provider": "fake", "fallback_used": False}
+        return original(self, messages, max_tokens, json_schema)
+
+    monkeypatch.setattr(helpers.FakeLLM, "complete", flaky)
+    _, rows = run_fake(tmp_path, "--scenarios", "growing", "--attachment-sizes", "0", "--repeats", "1")
+    multiturn = [r for r in rows if r["block"] == "multiturn"]
+    assert [r["scenario_turn"] for r in multiturn] == [str(i) for i in range(1, 11)]
+    assert multiturn[-1]["turn_index"] == "9"  # el servidor no contó el turno fallido
+
+
+def test_turn_one_has_no_facts_due_and_no_free_recall(tmp_path):
+    _, rows = run_fake(tmp_path, "--scenarios", "growing", "--turns", "2",
+                       "--attachment-sizes", "0", "--repeats", "1")
+    first = rows[0]
+    assert first["facts_due"] == "" and first["memory_recall"] == ""
+
+
+def test_provider_and_fallback_are_recorded(tmp_path):
+    _, rows = run_fake(tmp_path, "--scenarios", "growing", "--turns", "1",
+                       "--attachment-sizes", "0", "--repeats", "1")
+    assert rows[0]["provider"] == "fake" and rows[0]["fallback_used"] == "False"
+
+
+def test_rows_are_saved_even_if_the_run_crashes(tmp_path, monkeypatch):
+    import httpx
+    import pytest
+    from evals.stress import run as run_module
+
+    original = run_module._turn
+    calls = {"n": 0}
+
+    async def boom(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 2:
+            raise httpx.ReadTimeout("servidor colgado")
+        if calls["n"] == 4:
+            raise KeyError("observation")
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(run_module, "_turn", boom)
+    out = tmp_path / "results.csv"
+    with pytest.raises(KeyError):
+        main(["--in-process", "--fake-llm", "--output", str(out), "--pdf-dir", str(tmp_path / "p"),
+              "--scenarios", "growing", "--attachment-sizes", "0", "--repeats", "1"])
+    rows = list(csv.DictReader(out.open(encoding="utf-8")))
+    assert [r["status"] for r in rows] == ["ok", "error", "ok"]  # el timeout es fila de error

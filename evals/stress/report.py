@@ -17,7 +17,8 @@ from pathlib import Path
 DASH = "—"
 SCENARIOS = ["growing", "pivot", "contradiction"]
 CHECKPOINTS = [1, 3, 6, 10]
-TOKEN_BUCKETS = [(0, 2_000), (2_000, 4_000), (4_000, 6_000), (6_000, 8_000), (8_000, 10**9)]
+# tokens_in suma todas las llamadas del turno (estimador + extractor + resumidor).
+TOKEN_BUCKETS = [(0, 5_000), (5_000, 10_000), (10_000, 15_000), (15_000, 20_000), (20_000, 10**9)]
 
 
 def _f(value) -> float | None:
@@ -43,13 +44,19 @@ def _mean(values: list[float]) -> float | None:
     return sum(values) / len(values) if values else None
 
 
+def _turn_of(row: dict):
+    """Turno del guion (alineado aunque falle un turno); CSV antiguos usan turn_index."""
+    return row.get("scenario_turn") or row["turn_index"]
+
+
 def _ok(rows):
     return [r for r in rows if r.get("status") == "ok"]
 
 
 def _summary(rows) -> list[str]:
     lines = [
-        "| Bloque | Escenario | Adjunto (KB) | Filas | Latencia P50 (ms) | Latencia P95 (ms) "
+        "| Bloque | Escenario | Adjunto (KB) | Filas | Latencia P50 sin caché (ms) "
+        "| Latencia P95 sin caché (ms) "
         "| Coste total ($) | Caché exacta | Caché semántica | Recuerdo medio |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
@@ -58,7 +65,9 @@ def _summary(rows) -> list[str]:
         groups.setdefault((r["block"], r["scenario"], r["attachment_kb"]), []).append(r)
     for (block, scenario, kb), group in groups.items():
         ok = _ok(group)
-        lat = [v for v in (_f(r["latency_ms"]) for r in ok) if v is not None]
+        # Latencia solo de turnos sin caché: un acierto (~1 ms) no es la latencia del sistema.
+        misses = [r for r in ok if r.get("cache_hit_kind") == "none"]
+        lat = [v for v in (_f(r["latency_ms"]) for r in misses) if v is not None]
         cost = sum(_f(r["cost_usd"]) or 0 for r in ok)
         kinds = [r.get("cache_hit_kind") for r in ok]
         recall_key = "memory_recall" if block == "multiturn" else "attachment_recall"
@@ -95,7 +104,7 @@ def _curve_cost(rows) -> list[str]:
     by_turn: dict[int, dict[str, float]] = {}
     for r in _ok(rows):
         if r["block"] == "multiturn":
-            by_turn.setdefault(int(r["turn_index"]), {})[r["scenario"]] = _f(r["cost_usd"]) or 0
+            by_turn.setdefault(int(_turn_of(r)), {})[r["scenario"]] = _f(r["cost_usd"]) or 0
     for turn in sorted(by_turn):
         cells = []
         for s in SCENARIOS:
@@ -116,7 +125,7 @@ def _curve_recall(rows) -> list[str]:
     ]
     multiturn = [r for r in _ok(rows) if r["block"] == "multiturn"]
     for n in CHECKPOINTS:
-        at_n = [r for r in multiturn if r["turn_index"] == str(n)]
+        at_n = [r for r in multiturn if str(_turn_of(r)) == str(n)]
         cells = []
         for s in SCENARIOS:
             row = next((r for r in at_n if r["scenario"] == s), None)
@@ -164,6 +173,13 @@ METHOD = """## Método
   `CostBudgetMetric($0,02)`, `MemoryDriftMetric` (coincidencia exacta sin mayúsculas en
   resumen, anclas y metadata). `memory_recall_with_window` añade la ventana para separar
   "olvidado" de "aún en ventana".
+- **Repeticiones de adjuntos**: las repeticiones 2–4 aciertan en la caché exacta; miden la
+  caché, no la latencia del LLM. Por eso la latencia P50/P95 se calcula solo sobre turnos
+  sin caché, y coste y recuerdo de esas repeticiones son copias de la primera.
+- **Latencia**: `latency_ms` cubre el turno en el servicio (render, caché, LLM, extracción,
+  compresión); no incluye la extracción del PDF en el router ni el tiempo de red.
+- **Turno 1**: no tiene hechos anteriores que recordar; su recuerdo queda en blanco y no
+  cuenta en las medias.
 - **No medido**: ráfagas concurrentes (sin bloque en el enunciado) y conversaciones de
   más de 10 turnos.
 """

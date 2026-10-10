@@ -40,16 +40,17 @@ OBS_COLUMNS = [
     "tier_rule", "llm_calls", "structured_attempts",
 ]
 COLUMNS = [
-    "block", "scenario", "attachment_kb", "repeat", "status", "error", *OBS_COLUMNS,
+    "block", "scenario", "attachment_kb", "repeat", "scenario_turn", "status", "error",
+    *OBS_COLUMNS, "provider", "fallback_used",
     "latency_ok", "cost_ok", "memory_recall", "memory_recall_with_window",
     "project_name_recalled", "facts_due", "facts_missing", "attachment_recall",
     "technologies", "anchors", "total_hours_min", "total_hours_max",
 ]
 
 
-def _recall(snapshot: dict, facts: list[str], where: list[str] | None = None) -> tuple[float, list[str]]:
+def _recall(snapshot: dict, facts: list[str], where: list[str] | None = None) -> tuple[float | str, list[str]]:
     if not facts:
-        return 1.0, []
+        return "", []  # sin hechos pendientes no hay nada que medir (no es un 1,0 regalado)
     missing = [f for f in facts if not MemoryDriftMetric(f, where).evaluate(snapshot).passed]
     return round(1 - len(missing) / len(facts), 3), missing
 
@@ -73,6 +74,8 @@ def _row(base: dict, data: dict | None, snapshot: dict, error: str = "") -> dict
     if data:
         obs = data["observation"]
         row.update({c: obs.get(c, "") for c in OBS_COLUMNS})
+        row["provider"] = data.get("provider", "")
+        row["fallback_used"] = data.get("fallback_used", "")
         row["latency_ok"] = int(LATENCY.evaluate(obs).passed)
         row["cost_ok"] = int(COST.evaluate(obs).passed)
         row["total_hours_min"] = data["result"]["total_hours_min"]
@@ -89,10 +92,13 @@ async def _multiturn(client, name: str, turns: int, rows: list, spent: list, max
     scenario = SCENARIOS[name]
     sid = (await client.post(f"{API}/sessions")).json()["session_id"]
     for turn in scenario.turns[:turns]:
-        base = {"block": "multiturn", "scenario": name, "attachment_kb": 0, "repeat": 1}
+        # scenario_turn es el turno del guion; turn_index lo cuenta el servidor y no
+        # avanza si un turno falla, así que no sirve para alinear las curvas.
+        base = {"block": "multiturn", "scenario": name, "attachment_kb": 0, "repeat": 1,
+                "scenario_turn": turn.index}
         try:
             data, error = await _turn(client, sid, turn.transcript, scenario.project_type), ""
-        except RuntimeError as exc:
+        except (RuntimeError, httpx.HTTPError) as exc:
             data, error = None, str(exc)
         snapshot = (await client.get(f"{API}/sessions/{sid}")).json()
         row = _row(base, data, snapshot, error)
@@ -127,10 +133,11 @@ async def _attachments(client, sizes_kb, repeats, pdfs, rows, spent, max_cost) -
             files = None
             if kb:
                 files = [("attachments", (pdfs[kb].name, pdfs[kb].read_bytes(), "application/pdf"))]
-            base = {"block": "attachment", "scenario": "attachment", "attachment_kb": kb, "repeat": rep}
+            base = {"block": "attachment", "scenario": "attachment", "attachment_kb": kb,
+                    "repeat": rep, "scenario_turn": 1}
             try:
                 data, error = await _turn(client, sid, ATTACHMENT_TRANSCRIPT, "web_saas", files), ""
-            except RuntimeError as exc:
+            except (RuntimeError, httpx.HTTPError) as exc:
                 data, error = None, str(exc)
             snapshot = (await client.get(f"{API}/sessions/{sid}")).json()
             row = _row(base, data, snapshot, error)
@@ -147,15 +154,16 @@ async def _attachments(client, sizes_kb, repeats, pdfs, rows, spent, max_cost) -
     return False
 
 
-async def run(client, *, scenarios, turns, sizes_kb, repeats, max_cost, pdf_dir) -> tuple[list[dict], bool]:
+async def run(client, rows: list[dict], *, scenarios, turns, sizes_kb, repeats, max_cost,
+              pdf_dir) -> bool:
+    """Añade filas a ``rows`` según avanza (así sobreviven a un fallo) y devuelve
+    ``True`` si se paró por el freno de coste."""
     pdfs = build_all(pdf_dir, [kb for kb in sizes_kb if kb])
-    rows: list[dict] = []
     spent = [0.0]
     for name in scenarios:
         if await _multiturn(client, name, turns, rows, spent, max_cost):
-            return rows, True
-    stopped = await _attachments(client, sizes_kb, repeats, pdfs, rows, spent, max_cost)
-    return rows, stopped
+            return True
+    return await _attachments(client, sizes_kb, repeats, pdfs, rows, spent, max_cost)
 
 
 def write_csv(rows: list[dict], path: Path) -> None:
@@ -220,20 +228,25 @@ def main(argv=None) -> int:
               f"~${llm_turns * EST_COST_PER_TURN:.2f}, ~{llm_turns * 15 // 60} min. "
               f"Freno: ${args.max_cost:.2f}.", flush=True)
 
+    rows: list[dict] = []
+
     async def _go():
         client, app = _client(args)
         try:
             async with client:
-                return await run(client, scenarios=scenarios, turns=args.turns, sizes_kb=sizes,
-                                 repeats=args.repeats, max_cost=args.max_cost,
+                return await run(client, rows, scenarios=scenarios, turns=args.turns,
+                                 sizes_kb=sizes, repeats=args.repeats, max_cost=args.max_cost,
                                  pdf_dir=Path(args.pdf_dir))
         finally:
             if app is not None:
                 app.dependency_overrides.clear()
 
     started = time.perf_counter()
-    rows, stopped = asyncio.run(_go())
-    write_csv(rows, Path(args.output))
+    try:
+        stopped = asyncio.run(_go())
+    finally:
+        # Lo ya pagado no se pierde: el CSV se escribe aunque algo reviente (o Ctrl+C).
+        write_csv(rows, Path(args.output))
     total = sum(float(r["cost_usd"] or 0) for r in rows)
     print(f"{len(rows)} filas -> {args.output} | coste ${total:.4f} | "
           f"{time.perf_counter() - started:.0f} s", flush=True)
