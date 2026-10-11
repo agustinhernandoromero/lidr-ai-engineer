@@ -106,7 +106,9 @@ async def estimate_in_session(
         try:
             extracted.append(
                 extract_attachment(
-                    upload.filename,
+                    # FastAPI tipa filename como opcional; extract_attachment ya pone
+                    # "sin_nombre" si viene vacío (y responde 415 por la extensión).
+                    upload.filename or "",
                     data,
                     max_bytes=settings.MAX_ATTACHMENT_BYTES,
                     max_chars=settings.MAX_ATTACHMENT_CHARS,

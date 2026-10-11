@@ -89,7 +89,7 @@ def _curve_latency(rows) -> list[str]:
     llm_rows = [r for r in _ok(rows) if r.get("cache_hit_kind") == "none"]
     for low, high in TOKEN_BUCKETS:
         bucket = [r for r in llm_rows if low <= (_f(r["tokens_in"]) or 0) < high]
-        lat = [_f(r["latency_ms"]) for r in bucket if _f(r["latency_ms"]) is not None]
+        lat = [v for v in (_f(r["latency_ms"]) for r in bucket) if v is not None]
         if high < 10**9:
             label = f"{low:,}–{high:,}".replace(",", ".")
         else:
@@ -135,7 +135,7 @@ def _curve_recall(rows) -> list[str]:
                 cells.append(f"{_fmt(_f(row['memory_recall']), '.2f')} / "
                              f"{_fmt(_f(row['memory_recall_with_window']), '.2f')}")
         names = [r for r in at_n if _f(r.get("project_name_recalled")) is not None]
-        recalled = sum(int(_f(r["project_name_recalled"])) for r in names)
+        recalled = sum(int(_f(r["project_name_recalled"]) or 0) for r in names)
         lines.append(f"| {n} | " + " | ".join(cells) + f" | {recalled}/{len(names) or DASH} |")
     return lines
 
