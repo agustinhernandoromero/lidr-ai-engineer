@@ -61,7 +61,7 @@ estimación sale. Esta rama lo convierte en **conversacional**:
 | Cada petición es independiente | Sesiones con `session_id` (`POST /sessions`) |
 | Solo texto | Adjuntos PDF y Word en `multipart/form-data` |
 | Sin memoria | Historial con ventana deslizante + `project_metadata` en el system prompt |
-| Formulario de una sola estimación | Pestaña "Conversación" con panel de memoria |
+| Formulario de una sola estimación | Pestaña "Estimación conversacional" con panel de memoria |
 
 Detalle en [💬 Sesión 05](#-sesión-05--conversación-con-memoria-y-adjuntos). Lo que
 cambió en sesiones anteriores sigue debajo.

@@ -5,7 +5,7 @@ Tres modos:
 - **Formulario** (sesión 04): formulario tipado que construye un ``EstimationRequest``
   y hace ``POST /estimate`` contra el servicio IA. El prompt se renderiza en el
   servidor desde una plantilla Jinja2 versionada.
-- **Conversación** (sesión 05): sesión con ``session_id`` contra el servicio IA.
+- **Estimación conversacional** (sesión 05): sesión con ``session_id`` contra el servicio IA.
   Varios turnos sobre el mismo proyecto, adjuntos PDF/Word, y un panel lateral
   con el ``project_metadata`` (memoria) separado del historial.
 - **Chat** (sesión 03): chat conversacional con streaming, que llama al LLM
@@ -213,7 +213,7 @@ with st.sidebar:
 st.title("🧮 Estimador de Software")
 
 tab_form, tab_conv, tab_chat = st.tabs(
-    ["Formulario tipado", "Conversación (sesión 05)", "Chat libre (sesión 03)"]
+    ["Formulario tipado", "Estimación conversacional (sesión 06)", "Chat libre (sesión 03)"]
 )
 
 
