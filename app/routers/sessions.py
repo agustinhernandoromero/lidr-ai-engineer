@@ -72,32 +72,22 @@ async def get_session(
     )
 
 
-@router.post(
-    "/{session_id}/estimate",
-    response_model=SessionEstimationResponse,
-    summary="Estimar dentro de una sesión (multipart: transcripción + adjuntos)",
-    description=(
-        "Acepta `multipart/form-data` con la transcripción, los parámetros tipados y "
-        "adjuntos opcionales (.pdf, .docx). El texto de los adjuntos se extrae en el "
-        "servicio. El historial y el `project_metadata` de la sesión se actualizan "
-        "automáticamente."
-    ),
-)
-async def estimate_in_session(
+async def _session_turn(
+    *,
     session_id: str,
-    transcript: str = Form(..., min_length=20, max_length=20_000),
-    project_type: ProjectType = Form(ProjectType.WEB_SAAS),
-    detail_level: DetailLevel = Form(DetailLevel.MEDIUM),
-    output_format: OutputFormat = Form(OutputFormat.PHASES_TABLE),
-    attachments: Optional[list[UploadFile]] = File(default=None),
-    tier: Literal["auto", "executive", "pm", "developer", "default"] = Form("auto"),
-    prompt_version: Optional[str] = Query(
-        default=None, description="Versión de app/prompts/session5/ (por defecto la de config)."
-    ),
-    store: SessionStore = Depends(get_session_store),
-    llm=Depends(get_llm_wrapper),
-    cache=Depends(get_session_cache),
+    transcript: str,
+    project_type: ProjectType,
+    detail_level: DetailLevel,
+    output_format: OutputFormat,
+    attachments: Optional[list[UploadFile]],
+    tier: str,
+    prompt_version: Optional[str],
+    store: SessionStore,
+    llm,
+    cache,
+    acb: bool,
 ) -> SessionEstimationResponse:
+    """Cuerpo común de ``/estimate`` y ``/estimate-acb``: solo cambia el paso de estimar."""
     session = _get_session_or_404(store, session_id)
     settings = get_settings()
 
@@ -135,6 +125,7 @@ async def estimate_in_session(
                 settings=settings,
                 tier_override=None if tier == "auto" else Tier(tier),
                 cache=cache,
+                acb=acb,
             )
         except InputGuardrailViolation as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.detail())
@@ -149,3 +140,69 @@ async def estimate_in_session(
             )
 
     return SessionEstimationResponse(**result)
+
+
+@router.post(
+    "/{session_id}/estimate",
+    response_model=SessionEstimationResponse,
+    summary="Estimar dentro de una sesión (multipart: transcripción + adjuntos)",
+    description=(
+        "Acepta `multipart/form-data` con la transcripción, los parámetros tipados y "
+        "adjuntos opcionales (.pdf, .docx). El texto de los adjuntos se extrae en el "
+        "servicio. El historial y el `project_metadata` de la sesión se actualizan "
+        "automáticamente."
+    ),
+)
+async def estimate_in_session(
+    session_id: str,
+    transcript: str = Form(..., min_length=20, max_length=20_000),
+    project_type: ProjectType = Form(ProjectType.WEB_SAAS),
+    detail_level: DetailLevel = Form(DetailLevel.MEDIUM),
+    output_format: OutputFormat = Form(OutputFormat.PHASES_TABLE),
+    attachments: Optional[list[UploadFile]] = File(default=None),
+    tier: Literal["auto", "executive", "pm", "developer", "default"] = Form("auto"),
+    prompt_version: Optional[str] = Query(
+        default=None, description="Versión de app/prompts/session5/ (por defecto la de config)."
+    ),
+    store: SessionStore = Depends(get_session_store),
+    llm=Depends(get_llm_wrapper),
+    cache=Depends(get_session_cache),
+) -> SessionEstimationResponse:
+    return await _session_turn(
+        session_id=session_id, transcript=transcript, project_type=project_type,
+        detail_level=detail_level, output_format=output_format, attachments=attachments,
+        tier=tier, prompt_version=prompt_version, store=store, llm=llm, cache=cache, acb=False,
+    )
+
+
+@router.post(
+    "/{session_id}/estimate-acb",
+    response_model=SessionEstimationResponse,
+    summary="Estimar con Actor-Critic-Boss (un crítico revisa y, si hace falta, se rehace)",
+    description=(
+        "Mismo contrato que `/estimate`. Un segundo modelo audita la estimación; si "
+        "encuentra fallos graves, el estimador la rehace (máx. `ACB_MAX_ITERATIONS` rondas). "
+        "La respuesta incluye `acb` con el rastro de cada ronda. Cuesta entre 1,5 y 3 veces "
+        "un turno normal y no usa la caché del turno 1."
+    ),
+)
+async def estimate_in_session_acb(
+    session_id: str,
+    transcript: str = Form(..., min_length=20, max_length=20_000),
+    project_type: ProjectType = Form(ProjectType.WEB_SAAS),
+    detail_level: DetailLevel = Form(DetailLevel.MEDIUM),
+    output_format: OutputFormat = Form(OutputFormat.PHASES_TABLE),
+    attachments: Optional[list[UploadFile]] = File(default=None),
+    tier: Literal["auto", "executive", "pm", "developer", "default"] = Form("auto"),
+    prompt_version: Optional[str] = Query(
+        default=None, description="Versión de app/prompts/session5/ (por defecto la de config)."
+    ),
+    store: SessionStore = Depends(get_session_store),
+    llm=Depends(get_llm_wrapper),
+    cache=Depends(get_session_cache),
+) -> SessionEstimationResponse:
+    return await _session_turn(
+        session_id=session_id, transcript=transcript, project_type=project_type,
+        detail_level=detail_level, output_format=output_format, attachments=attachments,
+        tier=tier, prompt_version=prompt_version, store=store, llm=llm, cache=cache, acb=True,
+    )

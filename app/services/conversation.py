@@ -16,7 +16,9 @@ from app.guardrails.input import check_input
 from app.prompts.loader import render_session_prompt
 from app.schemas import EstimationResult, cost_range_eur
 from app.services.attachments import ExtractedAttachment, format_attachments
+from app.services.boss import Boss
 from app.services.compression.policy import compress
+from app.services.critic import review, revision_messages
 from app.services.metadata_extractor import extract_metadata
 from app.services.sessions import ProjectMetadata, Session
 from app.services.structured_estimator import estimate_structured, render_markdown
@@ -76,6 +78,7 @@ def run_turn(
     settings,
     tier_override=None,
     cache=None,
+    acb: bool = False,
 ) -> dict:
     """Ejecuta un turno completo. Bloqueante: el router lo lanza en un threadpool."""
     turn_started = time.perf_counter()
@@ -108,7 +111,8 @@ def run_turn(
 
     started = time.perf_counter()
     # Solo el turno 1 es cacheable: después la respuesta depende del historial.
-    turn1_cache = cache if session.turn_count == 0 else None
+    # El ACB tampoco cachea: mezclaría estimaciones revisadas y sin revisar.
+    turn1_cache = cache if session.turn_count == 0 and not acb else None
     cache_key = cache_bucket = ""
     cached = None
     cache_hit_kind, cache_similarity = "none", None
@@ -123,6 +127,7 @@ def run_turn(
             if cached is not None:
                 cache_hit_kind, cache_similarity = hit.kind, hit.similarity
 
+    acb_trace = None
     if cached is not None:
         result, metadata, meta = cached
         markdown = render_markdown(result, output_format, settings.HOURLY_RATE_EUR)
@@ -138,7 +143,12 @@ def run_turn(
                 answer=markdown,
             )
     else:
-        result, meta = estimate_structured(llm, messages, settings.STRUCTURED_MAX_RETRIES)
+        if acb:
+            result, meta, acb_trace = _run_acb(
+                llm, messages, session, transcript=transcript, tier=tier.value, settings=settings
+            )
+        else:
+            result, meta = estimate_structured(llm, messages, settings.STRUCTURED_MAX_RETRIES)
         markdown = render_markdown(result, output_format, settings.HOURLY_RATE_EUR)
         metadata = extract_metadata(
             llm,
@@ -189,6 +199,9 @@ def run_turn(
         "llm_calls": llm.llm_calls,
         "structured_attempts": meta["attempts"],
     }
+    if acb_trace is not None:
+        observation["acb_iterations"] = acb_trace.iterations_run
+        observation["acb_final_decision"] = acb_trace.final_decision
     session.last_observation = observation
     # Un único evento agregado por turno: se convierte a CSV en una pasada, sin
     # reconciliar marcas de tiempo de varios eventos sueltos.
@@ -232,4 +245,37 @@ def run_turn(
         "cache_hit_kind": cache_hit_kind,
         "cache_similarity": cache_similarity,
         "observation": observation,
+        "acb": acb_trace.model_dump() if acb_trace is not None else None,
     }
+
+
+def _run_acb(llm, messages: list[dict], session: Session, *, transcript: str, tier: str, settings):
+    """Bucle actor → crítico → jefe sobre los mensajes del turno.
+
+    El actor es el estimador de siempre; en cada ronda nueva recibe su borrador
+    anterior y la revisión. Los intentos estructurados se suman en ``meta`` para
+    que la observación cuente todos los reintentos del turno.
+    """
+    state: dict = {"draft": None, "meta": None, "attempts": 0}
+
+    def actor(feedback):
+        round_messages = messages
+        if feedback is not None:
+            round_messages = messages + revision_messages(state["draft"], feedback)
+        draft, meta = estimate_structured(llm, round_messages, settings.STRUCTURED_MAX_RETRIES)
+        state.update(draft=draft, meta=meta, attempts=state["attempts"] + meta["attempts"])
+        return draft
+
+    def critic(draft):
+        return review(
+            llm,
+            transcript=transcript,
+            metadata=session.metadata.model_dump(),
+            anchors=[{"user": a.user, "rule": a.rule} for a in session.history.anchors],
+            summary=session.history.summary,
+            tier=tier,
+            result=draft,
+        )
+
+    result, trace = Boss(max_iterations=settings.ACB_MAX_ITERATIONS).run(actor, critic)
+    return result, {**state["meta"], "attempts": state["attempts"]}, trace

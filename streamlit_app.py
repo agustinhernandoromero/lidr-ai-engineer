@@ -362,6 +362,21 @@ with tab_conv:
                 m3.metric("Semanas", result["total_duration_weeks"])
                 m4.metric("Confianza", f"{result['confidence_pct']}%")
             st.markdown(turn["text"])
+            acb = turn.get("acb")
+            if acb:
+                decision = {"aceptar": "✅ aceptada", "sintetizar": "⚠️ con fallos pendientes",
+                            "rehacer": "🔁 rehecha"}.get(acb["final_decision"], acb["final_decision"])
+                with st.expander(f"Revisión del crítico — {decision} en {acb['iterations_run']} ronda(s)"):
+                    st.table([
+                        {
+                            "Ronda": it["iteration"],
+                            "Veredicto": it["critic_verdict"],
+                            "Confianza del crítico": f"{it['critic_confidence']}%",
+                            "Fallos": "\n".join(it["issues"]) or "—",
+                            "Decisión del jefe": it["decision"],
+                        }
+                        for it in acb["iterations"]
+                    ])
             st.caption(
                 f"Turno {turn['turn']} · {turn['provider']} · `{turn['model']}` · "
                 f"{turn['history_turns']} pares de historial enviados · {turn['elapsed']:.1f} s"
@@ -410,6 +425,14 @@ with tab_conv:
             accept_multiple_files=True,
             key=f"conv_files_{nonce}",
         )
+        conv_acb = st.checkbox(
+            "Revisar con crítico (Actor-Critic-Boss)",
+            key="conv_acb",
+            help=(
+                "Un segundo modelo audita la estimación y, si encuentra fallos graves, se "
+                "rehace (máx. 2 rondas). Cuesta entre 1,5 y 3 veces más por turno."
+            ),
+        )
         conv_submitted = st.form_submit_button("Enviar turno", type="primary")
 
     if conv_submitted:
@@ -426,9 +449,15 @@ with tab_conv:
             started = time.time()
             data = None
             try:
-                with st.spinner("Estimando (2 llamadas: estimación + extracción de memoria)…"):
+                endpoint = "estimate-acb" if conv_acb else "estimate"
+                spinner = (
+                    "Estimando y revisando con el crítico (puede tardar el doble)…"
+                    if conv_acb
+                    else "Estimando (2 llamadas: estimación + extracción de memoria)…"
+                )
+                with st.spinner(spinner):
                     response = requests.post(
-                        f"{conv_base_url}/sessions/{sid}/estimate",
+                        f"{conv_base_url}/sessions/{sid}/{endpoint}",
                         data={
                             "transcript": conv_transcript.strip(),
                             "project_type": conv_project_type.value,

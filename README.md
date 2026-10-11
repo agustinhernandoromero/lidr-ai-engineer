@@ -56,6 +56,39 @@ latencia. Si Redis no responde, se para antes de hacer ninguna petición (códig
 `--keep-turn1-cache` lo desactiva, y si aun así un turno 1 de escenario sale de caché,
 la fila lo marca en `error` y el runner avisa.
 
+## 🛡️ Añadido tras la entrega de la sesión 06: guardrails y Actor-Critic-Boss
+
+> No forma parte de la entrega de la sesión 06 (estrés del CAG): son las piezas
+> pendientes de las sesiones 04 y 05, añadidas después en esta misma rama.
+
+**Guardrails de entrada** (`app/guardrails/input.py`). Antes de llamar al LLM y antes
+de la caché se revisan la transcripción **y el texto de los adjuntos**, de lo gratis a
+lo de pago:
+
+| Capa | Cómo | Si no pasa |
+|---|---|---|
+| Inyección de prompt | Reglas fijas en español e inglés ("ignora las instrucciones anteriores", "you are now", `<system>`…) | 400 `prompt_injection` |
+| Datos personales | Reglas fijas: email, IBAN y teléfono (con prefijo internacional o español de 9 cifras; las cifras de presupuesto no saltan) | 400 `pii` |
+| Moderación | Una llamada corta a Haiku (≈ $0,0003 por turno sin adjuntos). Falla abierto; se apaga con `GUARDRAILS_MODERATION_ENABLED=false` | 400 `moderation` |
+
+El cuerpo del 400 es `{"detail": {"reason": ..., "message": ...}}` en las cuatro rutas
+de estimación; Streamlit lo muestra como aviso. Como van antes de la caché, un acierto
+de caché también paga la moderación.
+
+**Guardrail de salida** (`app/guardrails/output.py`). Si la confianza es < 30 y el
+resumen no empieza por "Fuera de alcance:", se añade el prefijo antes de validar, en
+vez de gastar un reintento: en la ejecución real de la sesión 06, 12 de 30 turnos
+reintentaron solo por eso.
+
+**Actor-Critic-Boss** (`POST /api/v1/sessions/{id}/estimate-acb`, casilla "Revisar con
+crítico" en Streamlit). El estimador hace un borrador (actor); un segundo modelo lo
+audita y devuelve fallos estructurados (crítico, `app/services/critic.py`); un código
+sin LLM decide (jefe, `app/services/boss.py`): aceptar, rehacer con la revisión (máx.
+`ACB_MAX_ITERATIONS=2` rondas) o devolver el último borrador con los fallos pendientes
+y la confianza rebajada. El crítico tiene una categoría propia, `dato_superado`, para el
+fallo silencioso de memoria que encontró la sesión 06 (un ancla con un presupuesto ya
+corregido). Cuesta entre 1,5 y 3 veces un turno normal y no usa la caché del turno 1.
+
 ## 🕘 Sesiones anteriores
 
 ### Sesión 05

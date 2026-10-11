@@ -75,6 +75,20 @@ def fake_result_json(summary: str, total_min: int = 100, total_max: int = 150) -
     )
 
 
+ACCEPT_JSON = json.dumps({"verdict": "aceptar", "issues": [], "confidence_in_review": 80})
+
+
+def critic_json(verdict: str, *severities: str) -> str:
+    """JSON de CriticFeedback con una issue por gravedad dada."""
+    issues = [
+        {"category": "fase_desproporcionada", "severity": s, "field_path": "phases[0].hours_max",
+         "description": "La fase de desarrollo concentra todo el esfuerzo.",
+         "suggested_fix": "Separa backend y frontend."}
+        for s in severities
+    ]
+    return json.dumps({"verdict": verdict, "issues": issues, "confidence_in_review": 70})
+
+
 class FakeLLM:
     """Sustituto de ``LLMWrapper``: graba cada llamada y responde sin red.
 
@@ -84,6 +98,8 @@ class FakeLLM:
       de los turnos, o error si ``fail_summarizer``.
     - Moderador (system con "moderador de contenido"): ``{"flagged": ...}``, o
       error si ``fail_moderator``.
+    - Crítico (system con "auditor independiente"): ``critic_responses`` en cola o
+      "aceptar"; error si ``fail_critic``.
     - Estimador: ``structured_responses`` en cola si se dan; si no, una
       estimación cuyo summary nombra las tecnologías del mensaje actual (así un
       adjunto influye en la salida), como JSON si se pidió ``json_schema``.
@@ -99,6 +115,8 @@ class FakeLLM:
         moderation_flagged: bool = False,
         fail_moderator: bool = False,
         moderator_text: str | None = None,
+        critic_responses: list[str] | None = None,
+        fail_critic: bool = False,
     ):
         self.calls: list[list[dict]] = []
         self.kinds: list[str] = []
@@ -110,12 +128,16 @@ class FakeLLM:
         self.moderation_flagged = moderation_flagged
         self.fail_moderator = fail_moderator
         self.moderator_text = moderator_text
+        self.critic_responses = list(critic_responses or [])
+        self.fail_critic = fail_critic
 
     @staticmethod
     def _kind(messages: list[dict]) -> str:
         system = messages[0]["content"]
         if "moderador de contenido" in system:
             return "moderator"
+        if "auditor independiente" in system:
+            return "critic"
         if "extractor de hechos" in system:
             return "extractor"
         if "resumidor" in system:
@@ -125,6 +147,10 @@ class FakeLLM:
     @property
     def estimator_calls(self) -> list[list[dict]]:
         return [c for c, k in zip(self.calls, self.kinds) if k == "estimator"]
+
+    @property
+    def critic_calls(self) -> list[list[dict]]:
+        return [c for c, k in zip(self.calls, self.kinds) if k == "critic"]
 
     @property
     def summarizer_calls(self) -> list[list[dict]]:
@@ -145,6 +171,13 @@ class FakeLLM:
             categories = ["violencia"] if self.moderation_flagged else []
             return {**base, "text": json.dumps(
                 {"flagged": self.moderation_flagged, "categories": categories})}
+
+        if kind == "critic":
+            if self.fail_critic:
+                raise RuntimeError("crítico caído")
+            if self.critic_responses:
+                return {**base, "text": self.critic_responses.pop(0)}
+            return {**base, "text": ACCEPT_JSON}
 
         if kind == "extractor":
             if self.extractor_text is not None:
@@ -174,7 +207,8 @@ class FakeLLM:
         # El turno actual es el último mensaje del cliente que no sea una
         # petición de corrección del bucle de reintento.
         user_texts = [m["content"] for m in messages
-                      if m["role"] == "user" and not m["content"].startswith("Tu JSON no cumple")]
+                      if m["role"] == "user"
+                      and not m["content"].startswith(("Tu JSON no cumple", "Un revisor independiente"))]
         techs = [t for t in KNOWN_TECHNOLOGIES if t in user_texts[-1]] or ["sin stack definido"]
         n = len(self.estimator_calls)
         summary = f"Estimación #{n}. Stack: {', '.join(techs)}."

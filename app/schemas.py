@@ -1,7 +1,7 @@
 """Contrato tipado entre el cliente y el servicio IA (Pydantic v2)."""
 
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -142,6 +142,72 @@ def cost_range_eur(result: EstimationResult, rate: int) -> tuple[int, int]:
 
 
 # --------------------------------------------------------------------------- #
+# Sesión 05 (pendiente): Actor-Critic-Boss
+# --------------------------------------------------------------------------- #
+
+CriticVerdict = Literal["aceptar", "rehacer", "rechazar"]
+CriticSeverity = Literal["critica", "mayor", "menor"]
+CriticCategory = Literal[
+    "error_de_cuentas",
+    "dato_inventado",
+    "alcance_no_coincide",
+    "fase_desproporcionada",
+    "faltan_supuestos",
+    "estimacion_irreal",
+    "tier_no_corresponde",
+    # Añadida sobre la referencia del curso: el fallo silencioso de memoria de
+    # la sesión 06 (un ancla con el presupuesto viejo).
+    "dato_superado",
+]
+BossDecision = Literal["aceptar", "rehacer", "sintetizar"]
+
+
+class CriticIssue(BaseModel):
+    """Un defecto concreto. ``field_path`` apunta a un campo del borrador."""
+
+    category: CriticCategory
+    severity: CriticSeverity
+    field_path: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=5, max_length=500)
+    suggested_fix: Optional[str] = Field(default=None, max_length=300)
+
+
+class CriticFeedback(BaseModel):
+    """Salida del crítico. El jefe la trata como autoritativa."""
+
+    verdict: CriticVerdict
+    issues: list[CriticIssue] = Field(default_factory=list, max_length=12)
+    confidence_in_review: int = Field(ge=0, le=100)
+
+    @model_validator(mode="after")
+    def _verdict_matches_issues(self) -> "CriticFeedback":
+        # Solo los fallos críticos o mayores justifican pagar otra ronda.
+        if self.verdict == "rehacer" and not any(
+            i.severity in ("critica", "mayor") for i in self.issues
+        ):
+            raise ValueError("'rehacer' exige al menos un fallo de gravedad 'critica' o 'mayor'")
+        if self.verdict == "rechazar" and not self.issues:
+            raise ValueError("'rechazar' exige al menos un fallo que lo explique")
+        return self
+
+
+class ACBIteration(BaseModel):
+    """Rastro de una ronda actor + crítico, para enseñarlo en la UI."""
+
+    iteration: int = Field(ge=1)
+    critic_verdict: CriticVerdict
+    critic_confidence: int = Field(ge=0, le=100)
+    issues: list[str] = Field(default_factory=list)
+    decision: BossDecision
+
+
+class BossTrace(BaseModel):
+    iterations: list[ACBIteration] = Field(default_factory=list)
+    final_decision: BossDecision
+    iterations_run: int = Field(ge=0)
+
+
+# --------------------------------------------------------------------------- #
 # Sesión 05: conversación multiturno
 # --------------------------------------------------------------------------- #
 
@@ -195,3 +261,4 @@ class SessionEstimationResponse(BaseModel):
     cache_hit_kind: str = "none"
     cache_similarity: Optional[float] = None
     observation: dict = Field(default_factory=dict)
+    acb: Optional[BossTrace] = None

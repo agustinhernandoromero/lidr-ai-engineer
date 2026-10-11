@@ -185,3 +185,25 @@ def render_summary_prompt(
     return _render_pair(
         "conversation_summary", version, {"previous_summary": previous_summary, "evicted": turns}
     )
+
+
+def render_critic_prompt(
+    *,
+    transcript: str,
+    metadata: dict,
+    anchors: list[dict],
+    summary: str | None,
+    tier: str,
+    result_json: str,
+    version: str = "v1",
+) -> tuple[str, str]:
+    """Par (system, user) del crítico del Actor-Critic-Boss."""
+    context = {
+        "transcript": transcript,
+        "metadata": metadata,
+        "anchors": anchors,
+        "summary": summary,
+        "tier": tier,
+        "result_json": result_json,
+    }
+    return _render_pair("critic", version, context)

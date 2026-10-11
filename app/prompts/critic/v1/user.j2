@@ -1,0 +1,21 @@
+<mensaje_del_turno>
+{{ transcript }}
+</mensaje_del_turno>
+
+<memoria_del_proyecto>
+{{ metadata | tojson }}
+</memoria_del_proyecto>
+{% if anchors %}
+<anclas>
+{% for a in anchors %}- [{{ a.rule }}] {{ a.user }}
+{% endfor %}</anclas>
+{% endif %}{% if summary %}
+<resumen_de_la_conversacion>
+{{ summary }}
+</resumen_de_la_conversacion>
+{% endif %}
+<tier>{{ tier }}</tier>
+
+<estimacion_a_revisar>
+{{ result_json }}
+</estimacion_a_revisar>
