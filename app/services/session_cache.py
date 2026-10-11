@@ -136,6 +136,18 @@ class SessionTurnCache:
         logger.info("session_cache_hit", kind="semantic", similarity=round(best_score, 4))
         return CacheHit(kind="semantic", payload=best_payload, similarity=best_score)
 
+    def flush(self) -> int:
+        """Borra todas las claves de la caché del turno 1 (exactas y semánticas).
+
+        A diferencia de ``lookup``/``store``, NO se traga los errores de Redis: quien
+        vacía la caché (p. ej. el runner de estrés) necesita saber si lo consiguió.
+        """
+        keys = list(self._client.scan_iter(match=f"{_PREFIX}:*", count=500))
+        if keys:
+            self._client.delete(*keys)
+        logger.info("session_cache_flushed", keys=len(keys))
+        return len(keys)
+
     def store(self, *, key: str, bucket: str, transcript: str, payload: dict) -> None:
         try:
             self._client.set(f"{_PREFIX}:exact:{key}", json.dumps(payload), ex=self._ttl)

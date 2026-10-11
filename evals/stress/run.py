@@ -7,7 +7,9 @@
 ``--in-process`` usa la app sin servidor (mismo camino de código);
 ``--fake-llm`` (solo en proceso) ensaya todo con el LLM falso, coste $0.
 ``--max-cost`` para la ejecución si el coste acumulado lo supera, guardando
-las filas hechas. La observación de cada turno sale de la propia respuesta
+las filas hechas. En las ejecuciones reales la caché del turno 1 se vacía antes
+de empezar (con su TTL de 24 h, una ejecución anterior falsearía coste y
+latencia de los turnos 1); ``--keep-turn1-cache`` lo desactiva. La observación de cada turno sale de la propia respuesta
 (campo ``observation``) y el snapshot de memoria de ``GET /sessions/{id}``.
 """
 
@@ -31,7 +33,8 @@ FORM = {"detail_level": "summary", "output_format": "narrative"}
 ATTACHMENT_TRANSCRIPT = "Estima este proyecto de reservas a partir de la especificación adjunta."
 LATENCY = LatencyBudgetMetric(budget_ms=20_000)
 COST = CostBudgetMetric(budget_usd=0.02)
-EST_COST_PER_TURN = 0.017  # medido en la sesión 05
+EST_COST_PER_TURN = 0.033  # medido en la ejecución real de la sesión 06
+STALE_CACHE_WARNING = "aviso: el turno 1 se sirvió desde la caché (¿no se vació antes?)"
 
 OBS_COLUMNS = [
     "turn_index", "session_id", "enriched_transcript_chars", "attachments_total_chars",
@@ -108,6 +111,11 @@ async def _multiturn(client, name: str, turns: int, rows: list, spent: list, max
         due = facts_due(scenario, turn.index) if data else []
         recall, missing = _recall(snapshot, due)
         recall_window, _ = _recall(snapshot, due, ["summary", "anchors", "metadata", "window"])
+        if turn.index == 1 and row["cache_hit_kind"] in ("exact", "semantic"):
+            # El turno 1 de un escenario es nuevo: un acierto solo puede venir de
+            # una ejecución anterior, y falsea coste y latencia de esa fila.
+            row["error"] = STALE_CACHE_WARNING
+            print(f"  {STALE_CACHE_WARNING} [{name}]", file=sys.stderr, flush=True)
         row.update({
             "memory_recall": recall,
             "memory_recall_with_window": recall_window,
@@ -166,6 +174,18 @@ async def run(client, rows: list[dict], *, scenarios, turns, sizes_kb, repeats, 
     return await _attachments(client, sizes_kb, repeats, pdfs, rows, spent, max_cost)
 
 
+def _flush_turn1(redis_url: str) -> int:
+    """Vacía la caché del turno 1 del Redis del servidor. Lanza si Redis no responde."""
+    import redis
+
+    from app.services.session_cache import SessionTurnCache
+
+    client = redis.Redis.from_url(
+        redis_url, decode_responses=True, socket_connect_timeout=3, socket_timeout=3
+    )
+    return SessionTurnCache(client, embedder=None, threshold=1.0, log_only=True, ttl=1).flush()
+
+
 def write_csv(rows: list[dict], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as fh:
@@ -187,6 +207,10 @@ def _parse(argv) -> argparse.Namespace:
     parser.add_argument("--max-cost", type=float, default=1.0)
     parser.add_argument("--output", default="evals/stress/results.csv")
     parser.add_argument("--pdf-dir", default=str(DEFAULT_DIR))
+    parser.add_argument("--keep-turn1-cache", action="store_true",
+                        help="no vaciar la caché del turno 1 antes de una ejecución real")
+    parser.add_argument("--redis-url", default=None,
+                        help="Redis del servidor (por defecto REDIS_URL de la configuración)")
     args = parser.parse_args(argv)
     if args.fake_llm and not args.in_process:
         parser.error("--fake-llm solo funciona con --in-process")
@@ -223,6 +247,18 @@ def main(argv=None) -> int:
     sizes = [int(s) for s in args.attachment_sizes.split(",") if s.strip()]
     n_turns = len(scenarios) * args.turns + len(sizes) * args.repeats
     llm_turns = len(scenarios) * args.turns + len(sizes)  # las repeticiones aciertan en caché
+    if not args.fake_llm and not args.keep_turn1_cache:
+        from app.config import get_settings
+
+        redis_url = args.redis_url or get_settings().REDIS_URL
+        try:
+            flushed = _flush_turn1(redis_url)
+        except Exception as exc:  # noqa: BLE001
+            print(f"No se pudo vaciar la caché del turno 1 en {redis_url} ({exc}). "
+                  "Arranca Redis o usa --keep-turn1-cache. No se ha gastado nada.",
+                  file=sys.stderr, flush=True)
+            return 3
+        print(f"Caché del turno 1 vaciada: {flushed} claves.", flush=True)
     if not args.fake_llm:
         print(f"Estimación: {n_turns} turnos, ~{llm_turns} con LLM, "
               f"~${llm_turns * EST_COST_PER_TURN:.2f}, ~{llm_turns * 15 // 60} min. "

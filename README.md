@@ -344,14 +344,17 @@ al LLM.
 # Ensayo completo con el LLM falso: coste $0, unos segundos
 uv run python -m evals.stress.run --in-process --fake-llm --output /tmp/fake.csv
 
-# Ejecución real (~$0,6 y ~12 min con Haiku; para sola si pasa de --max-cost)
-docker exec redis sh -c "redis-cli --scan --pattern 'session_turn1:*' | xargs -r redis-cli del"
-uv run python -m evals.stress.run --http http://localhost:8000 --max-cost 1.0
+# Ejecución real (medido: ~$1,1 y ~17 min con Haiku; para sola si pasa de --max-cost)
+uv run python -m evals.stress.run --http http://localhost:8000 --max-cost 1.5
 uv run python -m evals.stress.report
 ```
 
-Vaciar la caché del turno 1 antes de repetir es importante: con su TTL de 24 h, una
-segunda ejecución acertaría en caché en todos los turnos 1 y falsearía coste y latencia.
+El runner **vacía la caché del turno 1 antes de una ejecución real** (claves
+`session_turn1:*` en `REDIS_URL`, vía `SessionTurnCache.flush()`): con su TTL de 24 h,
+una ejecución anterior haría que los turnos 1 acertaran en caché y falsearía coste y
+latencia. Si Redis no responde, se para antes de hacer ninguna petición (código 3).
+`--keep-turn1-cache` lo desactiva, y si aun así un turno 1 de escenario sale de caché,
+la fila lo marca en `error` y el runner avisa.
 
 ## 📝 Notas
 

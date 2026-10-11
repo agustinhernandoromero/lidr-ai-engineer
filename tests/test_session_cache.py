@@ -90,3 +90,16 @@ def test_semantic_hit_requires_the_same_numbers():
     assert cache.lookup(key="k2", bucket="b", transcript="SaaS para 300 usuarios") is None
     hit = cache.lookup(key="k3", bucket="b", transcript="Un SaaS para 3 usuarios")
     assert hit is not None and hit.kind == "semantic"
+
+
+def test_flush_removes_only_turn_one_keys():
+    client = fakeredis.FakeRedis(decode_responses=True)
+    emb = vectors({"t": [1.0, 0.0]})
+    cache = make_cache(embedder=emb, client=client)
+    cache.store(key="k1", bucket="b", transcript="t", payload=PAYLOAD)
+    client.set("otra:clave", "se queda")
+
+    assert cache.flush() == 2  # la exacta y la lista semántica
+    assert cache.lookup(key="k1", bucket="b", transcript="t") is None
+    assert client.get("otra:clave") == "se queda"
+    assert cache.flush() == 0
