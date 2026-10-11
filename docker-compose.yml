@@ -1,0 +1,31 @@
+# Servicio IA + Redis (caché del /estimate y caché del turno 1 de las sesiones).
+# Uso: cp .env.example .env  (con tus claves)  y  docker compose up --build
+# Swagger en http://localhost:8000/docs. Streamlit corre fuera, contra este puerto.
+
+name: estimador-cag
+
+services:
+  api:
+    build: .
+    image: estimador-cag-api
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      # Dentro de la red de compose Redis se llama "redis", no localhost.
+      REDIS_URL: redis://redis:6379/0
+      # Logs en JSON aunque el .env local diga development.
+      APP_ENV: production
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped

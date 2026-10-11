@@ -127,6 +127,7 @@ evals/
     └── REPORT.md · results.csv · reading.md   # entregables
 streamlit_app.py             # Cliente: formulario · conversación (sesión 05) · chat
 tests/                       # Tests de template, sesiones, adjuntos, memoria y servicio
+Dockerfile · docker-compose.yml # Servicio IA + Redis en contenedores
 ```
 
 ## ⚙️ Instalación
@@ -162,6 +163,17 @@ uv run streamlit run streamlit_app.py
 ```
 
 Servicio en `http://localhost:8000/docs`, cliente en `http://localhost:8501`.
+
+### Con Docker
+
+```bash
+docker compose up --build        # servicio IA + Redis
+uv run streamlit run streamlit_app.py   # el cliente corre fuera, contra :8000
+```
+
+`Dockerfile` en dos etapas con uv (dependencias exactas de `uv.lock`, sin root y con
+healthcheck en `/health`). El compose lee tu `.env`, apunta `REDIS_URL` al contenedor de
+Redis y pone `APP_ENV=production` (logs en JSON). El `.env` no entra en la imagen.
 
 ## ✅ Tests
 

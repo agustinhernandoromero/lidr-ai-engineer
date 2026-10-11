@@ -1,0 +1,17 @@
+# Fuera de la imagen: secretos, entornos locales, notas y artefactos.
+.env
+.env.*
+!.env.example
+.venv/
+.git/
+.github/
+.vscode/
+.idea/
+.pytest_cache/
+**/__pycache__/
+docs/
+tests/
+evals/
+data/
+uvicorn_*
+*.log
