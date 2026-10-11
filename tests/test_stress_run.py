@@ -61,7 +61,7 @@ def test_failed_turn_is_recorded_and_the_run_continues(tmp_path, monkeypatch):
     state = {"n": 0}
 
     def flaky(self, messages, max_tokens=4000, json_schema=None):
-        if json_schema is not None:
+        if json_schema is not None and self._kind(messages) == "estimator":
             state["n"] += 1
             if state["n"] in (2, 3, 4):  # turno 2 de growing: 3 intentos inválidos
                 return {"text": "no json", "model": "f", "provider": "fake", "fallback_used": False}
@@ -82,7 +82,7 @@ def test_scenario_turn_stays_aligned_after_a_failed_turn(tmp_path, monkeypatch):
     state = {"n": 0}
 
     def flaky(self, messages, max_tokens=4000, json_schema=None):
-        if json_schema is not None:
+        if json_schema is not None and self._kind(messages) == "estimator":
             state["n"] += 1
             if state["n"] in (2, 3, 4):
                 return {"text": "no json", "model": "f", "provider": "fake", "fallback_used": False}

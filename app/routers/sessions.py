@@ -7,6 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from app.config import get_settings
 from app.dependencies import get_llm_wrapper, get_session_cache, get_session_store
+from app.guardrails.input import InputGuardrailViolation
 from app.schemas import (
     DetailLevel,
     OutputFormat,
@@ -135,6 +136,8 @@ async def estimate_in_session(
                 tier_override=None if tier == "auto" else Tier(tier),
                 cache=cache,
             )
+        except InputGuardrailViolation as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.detail())
         except StructuredOutputError as exc:
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
         except ValueError as exc:

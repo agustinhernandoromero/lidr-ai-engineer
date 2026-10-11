@@ -284,7 +284,7 @@ async def cached_client(llm):
 
 
 @pytest.mark.asyncio
-async def test_turn_one_exact_hit_calls_no_llm(cached_client, llm):
+async def test_turn_one_exact_hit_only_pays_moderation(cached_client, llm):
     text = "Proyecto Hotelia: portal de reservas en React."
     first = (await estimate(cached_client, await new_session(cached_client), text)).json()
     calls_before = len(llm.calls)
@@ -292,7 +292,8 @@ async def test_turn_one_exact_hit_calls_no_llm(cached_client, llm):
     second = (await estimate(cached_client, sid2, text)).json()
 
     assert first["cache_hit_kind"] == "none" and second["cache_hit_kind"] == "exact"
-    assert len(llm.calls) == calls_before
+    # Los guardrails van antes de la caché: un acierto solo paga la moderación.
+    assert llm.kinds[calls_before:] == ["moderator"]
     assert second["project_metadata"]["project_name"] == "Hotelia"
     state = (await cached_client.get(f"/api/v1/sessions/{sid2}")).json()
     assert state["turn_count"] == 1 and len(state["history"]) == 1
@@ -350,7 +351,7 @@ async def test_each_turn_returns_an_aggregated_observation(client):
     assert obs["enriched_transcript_chars"] > obs["attachments_total_chars"]
     assert obs["messages_in_window"] == 2
     assert obs["cache_hit_kind"] == "none" and obs["last_resolved_tier"] == "default"
-    assert obs["llm_calls"] == 2  # estimador + extractor
+    assert obs["llm_calls"] == 3  # moderador + estimador + extractor
     assert obs["latency_ms"] >= 0
 
     state = (await client.get(f"/api/v1/sessions/{sid}")).json()
@@ -364,7 +365,7 @@ async def test_observation_counts_summarizer_and_window_after_compression(client
         data = (await estimate(client, sid, f"Turno {i}: el cliente añade el requisito {i}.")).json()
     obs = data["observation"]
     assert obs["turn_index"] == 7
-    assert obs["llm_calls"] == 3  # estimador + extractor + resumidor
+    assert obs["llm_calls"] == 4  # moderador + estimador + extractor + resumidor
     assert obs["messages_in_window"] == 2 * MAX_TURNS
     assert obs["summary_chars"] > 0
 

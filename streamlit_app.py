@@ -117,6 +117,18 @@ def fetch_session_state(base_url: str, session_id: str, retry: bool = True) -> d
     return response.json()
 
 
+def show_http_error(exc: requests.exceptions.HTTPError) -> None:
+    """Un 400 de guardrail se explica como aviso; el resto, como error técnico."""
+    try:
+        detail = exc.response.json().get("detail", "")
+    except Exception:  # noqa: BLE001
+        detail = exc.response.text
+    if exc.response.status_code == 400 and isinstance(detail, dict) and "message" in detail:
+        st.warning(f"🛡️ {detail['message']}")
+    else:
+        st.error(f"El servicio devolvió {exc.response.status_code}: {detail}")
+
+
 # --------------------------------------------------------------------------- #
 # Sidebar
 # --------------------------------------------------------------------------- #
@@ -286,12 +298,7 @@ with tab_form:
                 )
                 data = None
             except requests.exceptions.HTTPError as exc:
-                detail = ""
-                try:
-                    detail = exc.response.json().get("detail", "")
-                except Exception:  # noqa: BLE001
-                    detail = exc.response.text
-                st.error(f"El servicio devolvió {exc.response.status_code}: {detail}")
+                show_http_error(exc)
                 data = None
             except Exception as exc:  # noqa: BLE001
                 st.error(f"Error inesperado: {exc}")
@@ -444,11 +451,7 @@ with tab_conv:
                 response.raise_for_status()
                 data = response.json()
             except requests.exceptions.HTTPError as exc:
-                try:
-                    detail = exc.response.json().get("detail", "")
-                except Exception:  # noqa: BLE001
-                    detail = exc.response.text
-                st.error(f"El servicio devolvió {exc.response.status_code}: {detail}")
+                show_http_error(exc)
             except requests.exceptions.ConnectionError:
                 st.error(f"No se pudo conectar con el servicio en {conv_base_url}.")
             except requests.exceptions.Timeout:

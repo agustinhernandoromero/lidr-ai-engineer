@@ -54,7 +54,7 @@ def fake_cache(hit: dict | None = None) -> Mock:
 async def test_primary_success_is_cached_and_not_flagged_as_fallback(
     mock_call_anthropic, mock_get_settings, mock_get_cache
 ):
-    mock_get_settings.return_value = Settings()
+    mock_get_settings.return_value = Settings(GUARDRAILS_MODERATION_ENABLED=False)  # moderación: tests propios
     mock_call_anthropic.return_value = {
         "text": "Estimación real",
         "model": "claude-haiku-4-5",
@@ -78,7 +78,7 @@ async def test_primary_success_is_cached_and_not_flagged_as_fallback(
 async def test_falls_back_to_gemini_when_primary_fails(
     mock_call_anthropic, mock_call_gemini, mock_get_settings, mock_get_cache
 ):
-    mock_get_settings.return_value = Settings()
+    mock_get_settings.return_value = Settings(GUARDRAILS_MODERATION_ENABLED=False)  # moderación: tests propios
     mock_call_anthropic.side_effect = Exception("Anthropic caído")
     mock_call_gemini.return_value = {
         "text": "Estimación de respaldo",
@@ -103,7 +103,7 @@ async def test_fallback_response_is_not_cached(
     mock_call_anthropic, mock_call_gemini, mock_get_settings, mock_get_cache
 ):
     """Evita servir 24h una respuesta de Gemini una vez que Anthropic se recupera."""
-    mock_get_settings.return_value = Settings()
+    mock_get_settings.return_value = Settings(GUARDRAILS_MODERATION_ENABLED=False)  # moderación: tests propios
     mock_call_anthropic.side_effect = Exception("Anthropic caído")
     mock_call_gemini.return_value = {
         "text": "Estimación de respaldo",
@@ -124,7 +124,7 @@ async def test_fallback_response_is_not_cached(
 async def test_cache_hit_short_circuits_before_calling_any_provider(
     mock_get_settings, mock_get_cache
 ):
-    mock_get_settings.return_value = Settings()
+    mock_get_settings.return_value = Settings(GUARDRAILS_MODERATION_ENABLED=False)  # moderación: tests propios
     cached_value = {
         "text": "Estimación cacheada",
         "model": "claude-haiku-4-5",

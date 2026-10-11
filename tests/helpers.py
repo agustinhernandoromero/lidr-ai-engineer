@@ -82,6 +82,8 @@ class FakeLLM:
       clave del mensaje del cliente, o ``extractor_text`` literal.
     - Resumidor (system con "resumidor"): un resumen corto que NO copia el texto
       de los turnos, o error si ``fail_summarizer``.
+    - Moderador (system con "moderador de contenido"): ``{"flagged": ...}``, o
+      error si ``fail_moderator``.
     - Estimador: ``structured_responses`` en cola si se dan; si no, una
       estimación cuyo summary nombra las tecnologías del mensaje actual (así un
       adjunto influye en la salida), como JSON si se pidió ``json_schema``.
@@ -94,6 +96,9 @@ class FakeLLM:
         estimator_text: str | None = None,
         structured_responses: list[str] | None = None,
         fail_summarizer: bool = False,
+        moderation_flagged: bool = False,
+        fail_moderator: bool = False,
+        moderator_text: str | None = None,
     ):
         self.calls: list[list[dict]] = []
         self.kinds: list[str] = []
@@ -102,10 +107,15 @@ class FakeLLM:
         self.estimator_text = estimator_text
         self.structured_responses = list(structured_responses or [])
         self.fail_summarizer = fail_summarizer
+        self.moderation_flagged = moderation_flagged
+        self.fail_moderator = fail_moderator
+        self.moderator_text = moderator_text
 
     @staticmethod
     def _kind(messages: list[dict]) -> str:
         system = messages[0]["content"]
+        if "moderador de contenido" in system:
+            return "moderator"
         if "extractor de hechos" in system:
             return "extractor"
         if "resumidor" in system:
@@ -126,6 +136,15 @@ class FakeLLM:
         self.kinds.append(kind)
         last = messages[-1]["content"]
         base = {"model": "fake-model", "provider": "fake", "fallback_used": False}
+
+        if kind == "moderator":
+            if self.fail_moderator:
+                raise RuntimeError("moderador caído")
+            if self.moderator_text is not None:
+                return {**base, "text": self.moderator_text}
+            categories = ["violencia"] if self.moderation_flagged else []
+            return {**base, "text": json.dumps(
+                {"flagged": self.moderation_flagged, "categories": categories})}
 
         if kind == "extractor":
             if self.extractor_text is not None:

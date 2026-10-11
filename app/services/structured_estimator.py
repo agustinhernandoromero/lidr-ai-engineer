@@ -15,6 +15,7 @@ import anthropic
 import structlog
 from pydantic import ValidationError
 
+from app.guardrails.output import enforce_scope
 from app.schemas import EstimationResult, cost_range_eur
 
 logger = structlog.get_logger(__name__)
@@ -60,7 +61,7 @@ def estimate_structured(llm, messages: list[dict], max_retries: int) -> tuple[Es
         out = llm.complete(attempt_messages, json_schema=ESTIMATION_JSON_SCHEMA)
         text = out["text"] or ""
         try:
-            result = EstimationResult.model_validate(json.loads(_json_slice(text)))
+            result = EstimationResult.model_validate(enforce_scope(json.loads(_json_slice(text))))
         except (ValidationError, ValueError) as exc:
             last_error = _describe(exc)
             logger.warning("structured_output_invalid", attempt=attempt, error=last_error)

@@ -14,6 +14,7 @@ import structlog
 
 from app.config import get_settings
 from app.dependencies import get_cache, get_llm_wrapper
+from app.guardrails.input import check_input
 from app.prompts.loader import DEFAULT_VERSION, render_estimation_prompt
 from app.schemas import EstimationRequest
 
@@ -311,6 +312,12 @@ class LLMWrapper:
 # Orquestación
 # --------------------------------------------------------------------------- #
 
+def guarded_text(request: EstimationRequest) -> str:
+    """Texto que revisan los guardrails: la descripción y los proyectos de referencia."""
+    references = "\n".join(p.summary for p in request.reference_projects or [])
+    return f"{request.description}\n{references}".strip()
+
+
 async def generate_estimation(
     request: EstimationRequest,
     prompt_version: str = DEFAULT_VERSION,
@@ -324,6 +331,13 @@ async def generate_estimation(
     durante el TTL aunque Anthropic ya se hubiera recuperado.
     """
     settings = get_settings()
+
+    # Antes de la caché: un texto rechazado no debe servirse aunque esté cacheado.
+    check_input(
+        guarded_text(request),
+        llm=get_llm_wrapper(),
+        moderation_enabled=settings.GUARDRAILS_MODERATION_ENABLED,
+    )
 
     system, user = render_estimation_prompt(request, version=prompt_version)
 

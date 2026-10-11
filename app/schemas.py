@@ -67,6 +67,7 @@ class EstimationResponse(BaseModel):
 
 OUT_OF_SCOPE_PREFIX = "Fuera de alcance:"
 LOW_CONFIDENCE_THRESHOLD = 30
+SUMMARY_MAX_CHARS = 1500
 
 
 class Phase(BaseModel):
@@ -97,7 +98,7 @@ class EstimationResult(BaseModel):
     redonda y a cuadrar las fases a la fuerza.
     """
 
-    summary: str = Field(min_length=10, max_length=1500)
+    summary: str = Field(min_length=10, max_length=SUMMARY_MAX_CHARS)
     confidence_pct: int = Field(ge=0, le=100)
     phases: list[Phase] = Field(min_length=1, max_length=10)
     total_hours_min: int = Field(ge=1, le=200_000)

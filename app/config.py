@@ -52,6 +52,13 @@ class Settings(BaseSettings):
     SEMANTIC_CACHE_THRESHOLD: float = 0.92  # similitud coseno mínima para servir
     SEMANTIC_CACHE_LOG_ONLY: bool = False  # True: mide similitudes sin servir hits
 
+    # Sesión 04 (pendiente): guardrails de entrada. La moderación es una llamada
+    # corta a Haiku; se puede apagar para no pagarla en pruebas.
+    GUARDRAILS_MODERATION_ENABLED: bool = True
+
+    # Sesión 05 (pendiente): Actor-Critic-Boss. Rondas máximas actor + crítico.
+    ACB_MAX_ITERATIONS: int = 2
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

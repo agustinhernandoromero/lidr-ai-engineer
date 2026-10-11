@@ -1,11 +1,15 @@
 """Estimations API router."""
 
 from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 
+from app.config import get_settings
+from app.dependencies import get_llm_wrapper
+from app.guardrails.input import InputGuardrailViolation, check_input
 from app.prompts.loader import DEFAULT_VERSION, available_versions
 from app.schemas import EstimationRequest, EstimationResponse
-from app.services.llm_service import generate_estimation, stream_estimation
+from app.services.llm_service import generate_estimation, guarded_text, stream_estimation
 
 router = APIRouter(prefix="", tags=["Estimations"])
 
@@ -41,6 +45,8 @@ async def create_estimation(
             cached=result["cached"],
             fallback_used=result["fallback_used"],
         )
+    except InputGuardrailViolation as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.detail())
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     except Exception as exc:  # noqa: BLE001
@@ -62,6 +68,17 @@ async def create_estimation_stream(
     prompt_version: str = _VERSION_QUERY,
 ) -> StreamingResponse:
     """Streaming de la estimación como text/plain."""
+    # El generador no se ejecuta hasta que empieza el stream: el guardrail va antes.
+    try:
+        # En el threadpool: la moderación es una llamada síncrona al LLM.
+        await run_in_threadpool(
+            check_input,
+            guarded_text(payload),
+            llm=get_llm_wrapper(),
+            moderation_enabled=get_settings().GUARDRAILS_MODERATION_ENABLED,
+        )
+    except InputGuardrailViolation as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.detail())
     try:
         generator = stream_estimation(payload, prompt_version=prompt_version)
     except ValueError as exc:

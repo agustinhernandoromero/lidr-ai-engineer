@@ -12,6 +12,7 @@ import time
 
 import structlog
 
+from app.guardrails.input import check_input
 from app.prompts.loader import render_session_prompt
 from app.schemas import EstimationResult, cost_range_eur
 from app.services.attachments import ExtractedAttachment, format_attachments
@@ -82,6 +83,13 @@ def run_turn(
     # el medidor: así la observación agrega su gasto sin cambiar firmas.
     llm = UsageMeter(llm, settings)
     attachments_text = format_attachments(attachments)
+    # Guardrails antes de la caché y de tocar la sesión: un turno bloqueado no
+    # muta nada. Pasa por el medidor, así que la moderación cuenta en el coste.
+    check_input(
+        f"{transcript}\n{attachments_text}".strip(),
+        llm=llm,
+        moderation_enabled=settings.GUARDRAILS_MODERATION_ENABLED,
+    )
     tier, tier_rule = resolve_tier(transcript, session.metadata, tier_override)
     system, user = render_session_prompt(
         transcript=transcript,
