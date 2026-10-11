@@ -70,7 +70,8 @@ async def _turn(client, sid: str, transcript: str, project_type: str, files=None
 
 
 def _row(base: dict, data: dict | None, snapshot: dict, error: str = "") -> dict:
-    row = {c: "" for c in COLUMNS}
+    # Valores de tipos mezclados (texto, números, 0/1): el CSV los convierte a texto al escribir.
+    row: dict[str, object] = {c: "" for c in COLUMNS}
     row.update(base)
     row["status"] = "error" if error else "ok"
     row["error"] = error
