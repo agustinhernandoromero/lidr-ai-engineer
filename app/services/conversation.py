@@ -45,6 +45,23 @@ def history_entry(transcript: str, attachments: list[ExtractedAttachment]) -> st
     return f"{transcript}\n\n[adjuntos: {names}]"
 
 
+def _from_cache(payload: dict) -> tuple[EstimationResult, ProjectMetadata, dict] | None:
+    """Reconstruye un turno cacheado; ``None`` si el payload es de un esquema antiguo."""
+    try:
+        result = EstimationResult.model_validate(payload["result"])
+        metadata = ProjectMetadata.model_validate(payload["metadata"])
+        meta = {
+            "model": payload["model"],
+            "provider": payload["provider"],
+            "fallback_used": False,
+            "attempts": 0,
+        }
+    except Exception as exc:  # noqa: BLE001 — payload de un esquema antiguo
+        logger.warning("session_cache_payload_invalid", error=str(exc))
+        return None
+    return result, metadata, meta
+
+
 def run_turn(
     session: Session,
     llm,
@@ -83,44 +100,38 @@ def run_turn(
 
     started = time.perf_counter()
     # Solo el turno 1 es cacheable: después la respuesta depende del historial.
-    cacheable = cache is not None and session.turn_count == 0
-    cache_key = cache_bucket = None
-    hit = None
-    if cacheable:
-        cache_key = cache.exact_key(settings.ANTHROPIC_MODEL, prompt_version, system, user)
-        cache_bucket = cache.bucket(
+    turn1_cache = cache if session.turn_count == 0 else None
+    cache_key = cache_bucket = ""
+    cached = None
+    cache_hit_kind, cache_similarity = "none", None
+    if turn1_cache is not None:
+        cache_key = turn1_cache.exact_key(settings.ANTHROPIC_MODEL, prompt_version, system, user)
+        cache_bucket = turn1_cache.bucket(
             prompt_version, project_type, detail_level, output_format, tier.value, attachments_text
         )
-        hit = cache.lookup(key=cache_key, bucket=cache_bucket, transcript=transcript)
+        hit = turn1_cache.lookup(key=cache_key, bucket=cache_bucket, transcript=transcript)
         if hit is not None:
-            try:
-                result = EstimationResult.model_validate(hit.payload["result"])
-                metadata = ProjectMetadata.model_validate(hit.payload["metadata"])
-                meta = {
-                    "model": hit.payload["model"],
-                    "provider": hit.payload["provider"],
-                    "fallback_used": False,
-                    "attempts": 0,
-                }
-            except Exception as exc:  # noqa: BLE001 — payload de un esquema antiguo
-                logger.warning("session_cache_payload_invalid", error=str(exc))
-                hit = None
+            cached = _from_cache(hit.payload)
+            if cached is not None:
+                cache_hit_kind, cache_similarity = hit.kind, hit.similarity
 
-    if hit is None:
+    if cached is not None:
+        result, metadata, meta = cached
+        markdown = render_markdown(result, output_format, settings.HOURLY_RATE_EUR)
+        if cache_hit_kind == "semantic":
+            # Un acierto semántico reutiliza la estimación de un mensaje parecido,
+            # pero los hechos del proyecto (nombre, tecnologías…) tienen que salir
+            # del mensaje real: si no, la sesión arrastraría los de otro proyecto.
+            metadata = extract_metadata(
+                llm,
+                session.metadata,
+                transcript=transcript,
+                attachments_text=attachments_text,
+                answer=markdown,
+            )
+    else:
         result, meta = estimate_structured(llm, messages, settings.STRUCTURED_MAX_RETRIES)
-    markdown = render_markdown(result, output_format, settings.HOURLY_RATE_EUR)
-    if hit is not None and hit.kind == "semantic":
-        # Un acierto semántico reutiliza la estimación de un mensaje parecido,
-        # pero los hechos del proyecto (nombre, tecnologías…) tienen que salir
-        # del mensaje real: si no, la sesión arrastraría los de otro proyecto.
-        metadata = extract_metadata(
-            llm,
-            session.metadata,
-            transcript=transcript,
-            attachments_text=attachments_text,
-            answer=markdown,
-        )
-    if hit is None:
+        markdown = render_markdown(result, output_format, settings.HOURLY_RATE_EUR)
         metadata = extract_metadata(
             llm,
             session.metadata,
@@ -130,8 +141,8 @@ def run_turn(
         )
         # Una respuesta de fallback no se cachea: seguiría sirviéndose aunque
         # el proveedor principal ya se hubiera recuperado.
-        if cacheable and not meta["fallback_used"]:
-            cache.store(
+        if turn1_cache is not None and not meta["fallback_used"]:
+            turn1_cache.store(
                 key=cache_key,
                 bucket=cache_bucket,
                 transcript=transcript,
@@ -152,7 +163,6 @@ def run_turn(
     compression = compress(session.history, llm, summary_max_tokens=settings.SUMMARY_MAX_TOKENS)
 
     cost_min, cost_max = cost_range_eur(result, settings.HOURLY_RATE_EUR)
-    cache_hit_kind = hit.kind if hit is not None else "none"
     observation = {
         "turn_index": session.turn_count,
         "session_id": session.session_id,
@@ -212,6 +222,6 @@ def run_turn(
         "summary_chars": len(session.history.summary or ""),
         "structured_attempts": meta["attempts"],
         "cache_hit_kind": cache_hit_kind,
-        "cache_similarity": hit.similarity if hit is not None else None,
+        "cache_similarity": cache_similarity,
         "observation": observation,
     }

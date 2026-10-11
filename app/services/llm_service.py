@@ -8,7 +8,7 @@ red de seguridad gratuita si Anthropic falla, con Gemini.
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Iterator, List
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, cast
 
 import structlog
 
@@ -16,6 +16,9 @@ from app.config import get_settings
 from app.dependencies import get_cache, get_llm_wrapper
 from app.prompts.loader import DEFAULT_VERSION, render_estimation_prompt
 from app.schemas import EstimationRequest
+
+if TYPE_CHECKING:
+    from anthropic.types import MessageParam
 
 logger = structlog.get_logger(__name__)
 
@@ -116,7 +119,9 @@ def call_anthropic(
         model=settings.ANTHROPIC_MODEL,
         max_tokens=max_tokens,
         system=system,
-        messages=chat,
+        # Los dicts {"role", "content"} son MessageParam válidos; el cast solo
+        # se lo dice al comprobador de tipos.
+        messages=cast("list[MessageParam]", chat),
         **extra,
     )
     text = "".join(block.text for block in response.content if hasattr(block, "text"))
@@ -144,13 +149,16 @@ def call_gemini(
         )
 
     system, chat = _split_system(messages)
-    contents = [
-        {
-            "role": "model" if m["role"] == "assistant" else "user",
-            "parts": [{"text": m["content"]}],
-        }
-        for m in chat
-    ]
+    contents = cast(
+        "types.ContentListUnionDict",
+        [
+            {
+                "role": "model" if m["role"] == "assistant" else "user",
+                "parts": [{"text": m["content"]}],
+            }
+            for m in chat
+        ],
+    )
 
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
     json_config: Dict[str, Any] = {}
@@ -207,7 +215,11 @@ def embed_text(text: str, settings) -> list[float]:
             task_type="SEMANTIC_SIMILARITY",
         ),
     )
-    return list(response.embeddings[0].values)
+    embeddings = response.embeddings or []
+    values = embeddings[0].values if embeddings else None
+    if not values:
+        raise ValueError("Gemini no devolvió ningún embedding.")
+    return list(values)
 
 
 def stream_anthropic(messages: Messages, settings) -> Iterator[str]:
@@ -223,7 +235,7 @@ def stream_anthropic(messages: Messages, settings) -> Iterator[str]:
         model=settings.ANTHROPIC_MODEL,
         max_tokens=MAX_TOKENS,
         system=system,
-        messages=chat,
+        messages=cast("list[MessageParam]", chat),
     ) as stream:
         for text in stream.text_stream:
             yield text

@@ -328,3 +328,15 @@ def test_embed_text_returns_vector_with_configured_dims(mock_client_cls):
     assert vector == [0.1, 0.2, 0.3]
     config = mock_client.models.embed_content.call_args.kwargs["config"]
     assert config.output_dimensionality == 3
+
+
+@pytest.mark.parametrize("embeddings", [None, [], [Mock(values=None)]])
+@patch("google.genai.Client")
+def test_embed_text_without_vector_raises_a_clear_error(mock_client_cls, embeddings):
+    settings = Settings(GEMINI_API_KEY="fake-key")
+    mock_client = Mock()
+    mock_client_cls.return_value = mock_client
+    mock_client.models.embed_content.return_value = Mock(embeddings=embeddings)
+
+    with pytest.raises(ValueError, match="no devolvió ningún embedding"):
+        embed_text("Portal de reservas", settings)

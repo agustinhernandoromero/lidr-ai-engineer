@@ -367,3 +367,39 @@ async def test_observation_counts_summarizer_and_window_after_compression(client
     assert obs["llm_calls"] == 3  # estimador + extractor + resumidor
     assert obs["messages_in_window"] == 2 * MAX_TURNS
     assert obs["summary_chars"] > 0
+
+
+@pytest.mark.asyncio
+async def test_invalid_cached_payload_falls_back_to_the_llm(llm):
+    """Un payload de caché de un esquema antiguo se trata como fallo de caché."""
+    from app.services.session_cache import CacheHit
+
+    class StaleCache:
+        stored = []
+
+        def exact_key(self, *a):
+            return "k"
+
+        def bucket(self, *a):
+            return "b"
+
+        def lookup(self, **k):
+            return CacheHit(kind="exact", payload={"result": {"viejo": True}})
+
+        def store(self, **k):
+            self.stored.append(k)
+
+    cache = StaleCache()
+    store = SessionStore(max_turns=MAX_TURNS)  # una sola instancia para las dos peticiones
+    app.dependency_overrides[get_session_store] = lambda: store
+    app.dependency_overrides[get_llm_wrapper] = lambda: llm
+    app.dependency_overrides[get_session_cache] = lambda: cache
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as c:
+            data = (await estimate(c, await new_session(c), "Proyecto Hotelia: portal de reservas.")).json()
+    finally:
+        app.dependency_overrides.clear()
+
+    assert data["cache_hit_kind"] == "none"
+    assert len(llm.estimator_calls) == 1  # se llamó al LLM
+    assert len(cache.stored) == 1  # y se guardó la respuesta buena
