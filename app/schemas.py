@@ -142,7 +142,7 @@ def cost_range_eur(result: EstimationResult, rate: int) -> tuple[int, int]:
 
 
 # --------------------------------------------------------------------------- #
-# Sesión 05 (pendiente): Actor-Critic-Boss
+# Sesión 05 (directo): Actor-Critic-Boss
 # --------------------------------------------------------------------------- #
 
 CriticVerdict = Literal["aceptar", "rehacer", "rechazar"]

@@ -56,39 +56,6 @@ latencia. Si Redis no responde, se para antes de hacer ninguna petición (códig
 `--keep-turn1-cache` lo desactiva, y si aun así un turno 1 de escenario sale de caché,
 la fila lo marca en `error` y el runner avisa.
 
-## 🛡️ Añadido tras la entrega de la sesión 06: guardrails y Actor-Critic-Boss
-
-> No forma parte de la entrega de la sesión 06 (estrés del CAG): son las piezas
-> pendientes de las sesiones 04 y 05, añadidas después en esta misma rama.
-
-**Guardrails de entrada** (`app/guardrails/input.py`). Antes de llamar al LLM y antes
-de la caché se revisan la transcripción **y el texto de los adjuntos**, de lo gratis a
-lo de pago:
-
-| Capa | Cómo | Si no pasa |
-|---|---|---|
-| Inyección de prompt | Reglas fijas en español e inglés ("ignora las instrucciones anteriores", "you are now", `<system>`…) | 400 `prompt_injection` |
-| Datos personales | Reglas fijas: email, IBAN y teléfono (con prefijo internacional o español de 9 cifras; las cifras de presupuesto no saltan) | 400 `pii` |
-| Moderación | Una llamada corta a Haiku (≈ $0,0003 por turno sin adjuntos). Falla abierto; se apaga con `GUARDRAILS_MODERATION_ENABLED=false` | 400 `moderation` |
-
-El cuerpo del 400 es `{"detail": {"reason": ..., "message": ...}}` en las cuatro rutas
-de estimación; Streamlit lo muestra como aviso. Como van antes de la caché, un acierto
-de caché también paga la moderación.
-
-**Guardrail de salida** (`app/guardrails/output.py`). Si la confianza es < 30 y el
-resumen no empieza por "Fuera de alcance:", se añade el prefijo antes de validar, en
-vez de gastar un reintento: en la ejecución real de la sesión 06, 12 de 30 turnos
-reintentaron solo por eso.
-
-**Actor-Critic-Boss** (`POST /api/v1/sessions/{id}/estimate-acb`, casilla "Revisar con
-crítico" en Streamlit). El estimador hace un borrador (actor); un segundo modelo lo
-audita y devuelve fallos estructurados (crítico, `app/services/critic.py`); un código
-sin LLM decide (jefe, `app/services/boss.py`): aceptar, rehacer con la revisión (máx.
-`ACB_MAX_ITERATIONS=2` rondas) o devolver el último borrador con los fallos pendientes
-y la confianza rebajada. El crítico tiene una categoría propia, `dato_superado`, para el
-fallo silencioso de memoria que encontró la sesión 06 (un ancla con un presupuesto ya
-corregido). Cuesta entre 1,5 y 3 veces un turno normal y no usa la caché del turno 1.
-
 ## 🕘 Sesiones anteriores
 
 ### Sesión 05
@@ -117,6 +84,7 @@ wrapper. Esta rama sustituye ambas cosas:
 | Prompt f-string en `llm_service.py` | Plantillas `.j2` versionadas + `loader.py` |
 | Un solo mensaje concatenado al LLM | `system` y `user` como mensajes separados |
 | Sin tests de prompt | Suite de template que corre en milisegundos, sin red |
+| Cualquier texto llega al LLM | Guardrails de entrada (inyección, datos personales, moderación → 400) y de salida |
 
 El chat libre **no se elimina**: convive con el formulario en una segunda pestaña del
 cliente, para que la entrega de la sesión 03 siga siendo verificable.
@@ -132,7 +100,10 @@ app/
 ├── dependencies.py          # Singletons: caché, LLM, sesiones y caché del turno 1
 ├── routers/
 │   ├── estimations.py       # POST /estimate, POST /estimate/stream, GET /prompt-versions
-│   └── sessions.py          # POST /sessions, GET /sessions/{id}, POST /sessions/{id}/estimate
+│   └── sessions.py          # POST /sessions, GET /sessions/{id}, POST /sessions/{id}/estimate(-acb)
+├── guardrails/
+│   ├── input.py             # inyección, datos personales y moderación → 400
+│   └── output.py            # "Fuera de alcance:" sin gastar un reintento
 ├── services/
 │   ├── llm_service.py       # Wrapper de Anthropic (+ fallback a Gemini), recibe messages
 │   ├── cache.py             # Caché de coincidencia exacta (Redis)
@@ -144,6 +115,8 @@ app/
 │   ├── tier_resolver.py     # para quién se redacta (reglas explicables)
 │   ├── session_cache.py     # caché exacta + semántica del turno 1
 │   ├── usage_meter.py       # tokens, coste y llamadas agregados por turno (sesión 06)
+│   ├── critic.py            # Actor-Critic-Boss: auditoría del borrador (JSON validado)
+│   ├── boss.py              # Actor-Critic-Boss: aceptar, rehacer o sintetizar (sin LLM)
 │   └── conversation.py      # run_turn: orquesta un turno de la conversación
 ├── prompts/
 │   ├── loader.py            # render_estimation_prompt / render_session_prompt / render_extraction_prompt
@@ -153,7 +126,8 @@ app/
 │   ├── session5/v1/         # prompt conversacional con bloque <project_metadata>
 │   ├── session5/v2/         # + anclas, resumen, tier y respuesta JSON en horas
 │   ├── conversation_summary/v1/ # prompt del resumen acumulativo
-│   └── extraction/v1/       # prompt del extractor de metadata
+│   ├── extraction/v1/       # prompt del extractor de metadata
+│   └── critic/v1/           # prompt del crítico del Actor-Critic-Boss
 └── context/
     └── examples.py          # Ejemplos CAG del chat libre (sesión 02)
 evals/
@@ -319,6 +293,26 @@ El endpoint de streaming no cachea ni hace fallback: el cuerpo se consume una so
 y no hay forma limpia de reintentar a mitad de una respuesta sin mezclar texto de dos
 modelos.
 
+## 🛡️ Sesión 04 — Guardrails
+
+**Entrada** (`app/guardrails/input.py`). Antes de llamar al LLM y antes de la caché se
+revisan la transcripción **y el texto de los adjuntos**, de lo gratis a lo de pago:
+
+| Capa | Cómo | Si no pasa |
+|---|---|---|
+| Inyección de prompt | Reglas fijas en español e inglés: pedir que se olviden o ignoren las instrucciones, imponer un rol ("ahora eres un…", "you are now a…"), etiquetas `<system>`. Una corrección normal ("olvida lo anterior: el presupuesto es 80.000") pasa | 400 `prompt_injection` |
+| Datos personales | Reglas fijas: email, IBAN y teléfono (con prefijo internacional o español de 9 cifras en sus formatos habituales; rangos como "8.000-12.000 horas" no saltan) | 400 `pii` |
+| Moderación | Una llamada corta a Haiku (≈ $0,0004 por turno sin adjuntos). Si falla, deja pasar el texto; se apaga con `GUARDRAILS_MODERATION_ENABLED=false` | 400 `moderation` |
+
+El cuerpo del 400 es `{"detail": {"reason": ..., "message": ...}}` en las cuatro rutas
+de estimación, y Streamlit lo muestra como aviso. Como van antes de la caché, un
+acierto de caché también paga la moderación.
+
+**Salida** (`app/guardrails/output.py`). Si la confianza es < 30 y el resumen no empieza
+por "Fuera de alcance:", se añade el prefijo antes de validar en vez de gastar un
+reintento, que reenviaría todo el contexto. La regla del esquema sigue como última
+defensa.
+
 ## 💬 Sesión 05 — Conversación con memoria y adjuntos
 
 | Endpoint | Qué hace |
@@ -368,7 +362,8 @@ de sesiones no usa la caché de Redis: con historial, la clave no se repetiría 
 ## 🧠 Sesión 05 — directo: estructura, memoria comprimida, tier y caché
 
 Sobre la conversación anterior, `POST /api/v1/sessions/{id}/estimate` (prompt
-`session5/v2`, por defecto) añade cuatro piezas. `/estimate` no cambia.
+`session5/v2`, por defecto) añade cuatro piezas, y `POST /api/v1/sessions/{id}/estimate-acb`
+una quinta, el Actor-Critic-Boss. `/estimate` no cambia.
 
 **Salida estructurada.** El modelo devuelve un `EstimationResult` en **horas**: fases
 (cada una con mínimo, máximo y confianza) **antes** que los totales, supuestos y
@@ -415,6 +410,25 @@ similitud coseno ≥ 0,92 contra entradas del mismo formulario, tier y adjuntos,
 en Python sobre el Redis normal. Un acierto no llama a ningún LLM. Las respuestas del
 fallback no se cachean; si Redis o los embeddings fallan, el turno sigue sin caché.
 `SEMANTIC_CACHE_LOG_ONLY=true` mide similitudes sin servir aciertos (calibración).
+
+**Actor-Critic-Boss.** `POST /api/v1/sessions/{id}/estimate-acb` recibe el mismo
+formulario que `/estimate` (en Streamlit, la casilla "Revisar con crítico"). El estimador
+hace un borrador (**actor**); un segundo modelo lo audita y devuelve fallos estructurados
+con categoría, gravedad y campo afectado (**crítico**, `app/services/critic.py`, prompt
+`critic/v1`); un código sin LLM decide (**jefe**, `app/services/boss.py`):
+
+| Veredicto del crítico | Decisión del jefe |
+|---|---|
+| Aceptar | Devuelve el borrador |
+| Rehacer, y quedan rondas (`ACB_MAX_ITERATIONS`, 2) | El actor lo rehace con los fallos |
+| Rechazar, o sin rondas | Último borrador con los fallos pendientes delante y la confianza a la mitad (nunca por debajo de 30 ni por encima de la original) |
+
+El crítico ve lo mismo que el actor (mensaje, adjuntos, turnos recientes, memoria y
+tier) y tiene una categoría propia, `dato_superado`, para cuando la estimación usa un
+dato que la conversación ya corrigió, como un presupuesto anterior. Si el crítico falla,
+pasa el borrador; si falla una ronda de rehacer, se devuelve el borrador anterior. La
+respuesta añade `acb` con el rastro de cada ronda. Cuesta entre 1,5 y 3 veces un turno
+normal y no usa la caché del turno 1.
 
 **Evals.** `evals/metrics.py` define `MetricResult(name, score, passed, details)`,
 `run_all_metrics` y `SchemaAdherenceMetric`, que vuelve a comprobar las reglas de negocio
