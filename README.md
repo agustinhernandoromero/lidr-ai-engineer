@@ -131,7 +131,12 @@ app/
 └── context/
     └── examples.py          # Ejemplos CAG del chat libre (sesión 02)
 evals/
-├── metrics.py               # MetricResult + SchemaAdherenceMetric (sesión 05)
+├── metrics.py               # MetricResult, SchemaAdherence y métricas del golden
+├── dataset.py               # GoldenCase + load_dataset
+├── golden_dataset.json      # 16 casos con lo esperado
+├── run.py                   # runner: actor frente a ACB → results.json
+├── report.py                # results.json + reading.md → REPORT.md
+├── REPORT.md · results.json # resultado del golden
 └── stress/                  # Sesión 06: estrés del CAG
     ├── scenarios.py         # 3 escenarios de 10 turnos con hechos a recordar
     ├── metrics.py           # LatencyBudget, CostBudget, MemoryDrift
@@ -432,7 +437,21 @@ normal y no usa la caché del turno 1.
 
 **Evals.** `evals/metrics.py` define `MetricResult(name, score, passed, details)`,
 `run_all_metrics` y `SchemaAdherenceMetric`, que vuelve a comprobar las reglas de negocio
-para detectar si un cambio futuro las relaja.
+para detectar si un cambio futuro las relaja. Encima va un **golden dataset**
+(`evals/golden_dataset.json`): 16 casos en español con lo que se espera de un buen
+estimador (palabras clave, alguna tecnología, rangos anchos de fases, horas y semanas, y
+el tier). Cuatro métricas deterministas (`schema_adherence`, `hours_bounds`,
+`content_recall`, `tier`) puntúan cada respuesta, y el runner pasa los casos por el
+estimador normal y por el Actor-Critic-Boss para compararlos:
+
+```bash
+uv run python -m evals.run --in-process --fake-llm --mode ambos   # ensayo, $0
+uv run python -m evals.run --http http://localhost:8000 --mode ambos
+uv run python -m evals.report                                      # evals/REPORT.md
+```
+
+Un bloqueo del guardrail cuenta como acierto solo si el caso esperaba quedar fuera de
+alcance. Resultado y lectura en [`evals/REPORT.md`](evals/REPORT.md).
 
 La respuesta del endpoint añade `result`, `cost_min_eur`/`cost_max_eur`, `tier`/`tier_rule`,
 `anchors_count`, `summary_chars`, `structured_attempts` y `cache_hit_kind`; y
