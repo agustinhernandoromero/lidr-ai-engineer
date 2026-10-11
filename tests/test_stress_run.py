@@ -29,6 +29,16 @@ def test_repeated_attachment_turns_hit_the_exact_cache(tmp_path):
     assert [r["cache_hit_kind"] for r in att20] == ["none", "exact", "exact", "exact"]
 
 
+def test_wall_clock_is_measured_from_the_client(tmp_path):
+    """wall_clock_ms incluye red y extracción del PDF: nunca menor que la latencia del servicio."""
+    _, rows = run_fake(tmp_path, "--scenarios", "growing", "--turns", "2",
+                       "--attachment-sizes", "0,5", "--repeats", "1")
+    for row in rows:
+        assert float(row["wall_clock_ms"]) > 0
+        if row["cache_hit_kind"] == "none":
+            assert float(row["wall_clock_ms"]) >= float(row["latency_ms"])
+
+
 def test_memory_columns_are_filled_for_later_turns(tmp_path):
     _, rows = run_fake(tmp_path)
     turn10 = [r for r in rows if r["block"] == "multiturn" and r["turn_index"] == "10"]

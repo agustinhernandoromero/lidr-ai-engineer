@@ -44,7 +44,7 @@ OBS_COLUMNS = [
 ]
 COLUMNS = [
     "block", "scenario", "attachment_kb", "repeat", "scenario_turn", "status", "error",
-    *OBS_COLUMNS, "provider", "fallback_used",
+    *OBS_COLUMNS, "wall_clock_ms", "provider", "fallback_used",
     "latency_ok", "cost_ok", "memory_recall", "memory_recall_with_window",
     "project_name_recalled", "facts_due", "facts_missing", "attachment_recall",
     "technologies", "anchors", "total_hours_min", "total_hours_max",
@@ -69,7 +69,8 @@ async def _turn(client, sid: str, transcript: str, project_type: str, files=None
     return response.json()
 
 
-def _row(base: dict, data: dict | None, snapshot: dict, error: str = "") -> dict:
+def _row(base: dict, data: dict | None, snapshot: dict, error: str = "",
+         wall_ms: float | None = None) -> dict:
     # Valores de tipos mezclados (texto, números, 0/1): el CSV los convierte a texto al escribir.
     row: dict[str, object] = {c: "" for c in COLUMNS}
     row.update(base)
@@ -78,6 +79,8 @@ def _row(base: dict, data: dict | None, snapshot: dict, error: str = "") -> dict
     if data:
         obs = data["observation"]
         row.update({c: obs.get(c, "") for c in OBS_COLUMNS})
+        # Visto desde el cliente: latency_ms + red + extracción del PDF en el router.
+        row["wall_clock_ms"] = wall_ms if wall_ms is not None else ""
         row["provider"] = data.get("provider", "")
         row["fallback_used"] = data.get("fallback_used", "")
         row["latency_ok"] = int(LATENCY.evaluate(obs).passed)
@@ -100,12 +103,14 @@ async def _multiturn(client, name: str, turns: int, rows: list, spent: list, max
         # avanza si un turno falla, así que no sirve para alinear las curvas.
         base = {"block": "multiturn", "scenario": name, "attachment_kb": 0, "repeat": 1,
                 "scenario_turn": turn.index}
+        start = time.perf_counter()
         try:
             data, error = await _turn(client, sid, turn.transcript, scenario.project_type), ""
         except (RuntimeError, httpx.HTTPError) as exc:
             data, error = None, str(exc)
+        wall_ms = round((time.perf_counter() - start) * 1000, 1)
         snapshot = (await client.get(f"{API}/sessions/{sid}")).json()
-        row = _row(base, data, snapshot, error)
+        row = _row(base, data, snapshot, error, wall_ms)
         if not data:
             row["turn_index"] = turn.index
         # Enunciado: hecho del turno k evaluado en el turno N > k (estrictamente anteriores).
@@ -144,12 +149,14 @@ async def _attachments(client, sizes_kb, repeats, pdfs, rows, spent, max_cost) -
                 files = [("attachments", (pdfs[kb].name, pdfs[kb].read_bytes(), "application/pdf"))]
             base = {"block": "attachment", "scenario": "attachment", "attachment_kb": kb,
                     "repeat": rep, "scenario_turn": 1}
+            start = time.perf_counter()
             try:
                 data, error = await _turn(client, sid, ATTACHMENT_TRANSCRIPT, "web_saas", files), ""
             except (RuntimeError, httpx.HTTPError) as exc:
                 data, error = None, str(exc)
+            wall_ms = round((time.perf_counter() - start) * 1000, 1)
             snapshot = (await client.get(f"{API}/sessions/{sid}")).json()
-            row = _row(base, data, snapshot, error)
+            row = _row(base, data, snapshot, error, wall_ms)
             if data and kb:
                 haystack = (data["text"] + " " + row["technologies"]).lower()
                 found = [m for m in MARKERS if m.lower() in haystack]
