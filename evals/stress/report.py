@@ -158,10 +158,34 @@ def _attachments(rows) -> list[str]:
     return lines
 
 
+SCOPE = """## ⚠️ Alcance reducido por coste
+
+Esta entrega **no ejecuta el enunciado completo, a propósito y por coste**. Cada turno
+se paga con llamadas reales al LLM, y a partir del turno 6 cada uno cuesta de media
+$0,05 porque reenvía entre 25.000 y 45.000 tokens. La ejecución reducida costó **$1,11**.
+Estas son las diferencias con el enunciado y lo que habría costado cumplirlo
+(estimaciones a partir de los costes medidos en esta misma ejecución):
+
+| Qué pide el enunciado | Qué hace esta entrega | Por qué | Coste estimado de hacerlo completo |
+|---|---|---|---|
+| **20 turnos** por escenario | **10 turnos** | Coste. Con la ventana de 6 turnos, el resumen y las anclas ya se ponen a prueba desde el turno 7 | $2,5–3,4 (frente a $1,0 del multiturno con 10 turnos) |
+| **3 repeticiones** de cada conversación | **1 repetición** | Coste. Sin repeticiones no hay varianza: las curvas son una sola conversación | $7,5–10 con 20 turnos |
+| Adjunto **en todos los turnos** (escenarios × tamaños × repeticiones) | Adjunto **solo en el turno 1**, en un bloque aparte (5 tamaños × 4 repeticiones) | Coste. El cruce completo son unos 900 turnos con el adjunto sumado al historial | ≈ $45–70 |
+| Presupuesto de latencia de **8 s** | **20 s** | Criterio, no coste: con Claude Haiku ningún turno sin caché bajó de 12 s, así que con 8 s fallarían todos y la métrica no distinguiría nada | — |
+| Límite de adjunto de **60.000** caracteres | **20.000** (constante del proyecto desde la sesión 05) | Se mantiene sin tocar. La caída del recuerdo del adjunto con 50 y 100 KB depende de este límite: con 60.000, el PDF de 50 KB entraría entero y el problema se desplazaría a documentos más grandes y a un contexto tres veces más caro | — |
+
+**Qué no se ve por este recorte:** el efecto de comprimir el resumen varias veces
+seguidas (turnos 11–20), la varianza entre ejecuciones y cómo crece el coste cuando el
+adjunto se reenvía en cada turno. Las conclusiones de la lectura no dependen de ello: la
+latencia y el coste ya se disparan hacia el turno 5–6 y la memoria ya se degrada en
+silencio antes del turno 10.
+"""
+
+
 METHOD = """## Método
 
-- **Escala** (decidida para no gastar de más): 3 conversaciones de 10 turnos, una por
-  escenario, y 5 tamaños de adjunto × 4 repeticiones en el turno 1 (50 filas). Las
+- **Escala**: 3 conversaciones de 10 turnos, una por escenario, y 5 tamaños de adjunto
+  × 4 repeticiones en el turno 1 (50 filas); ver "Alcance reducido por coste". Las
   curvas por N se leen en los turnos 1, 3, 6 y 10 de la misma conversación.
 - **Constantes sin tocar**: ventana `MAX_TURNS=6`, `MAX_ATTACHMENT_CHARS=20.000`,
   umbral semántico 0,92. "KB" de adjunto = miles de caracteres de texto del PDF.
@@ -177,7 +201,9 @@ METHOD = """## Método
   caché, no la latencia del LLM. Por eso la latencia P50/P95 se calcula solo sobre turnos
   sin caché, y coste y recuerdo de esas repeticiones son copias de la primera.
 - **Latencia**: `latency_ms` cubre el turno en el servicio (render, caché, LLM, extracción,
-  compresión); no incluye la extracción del PDF en el router ni el tiempo de red.
+  compresión); no incluye la extracción del PDF en el router ni el tiempo de red. Para
+  eso el runner escribe ahora `wall_clock_ms` (medido desde el cliente); la columna se
+  añadió después de la ejecución real, así que el `results.csv` actual no la tiene.
 - **Turno 1**: no tiene hechos anteriores que recordar; su recuerdo queda en blanco y no
   cuenta en las medias.
 - **No medido**: ráfagas concurrentes (sin bloque en el enunciado) y conversaciones de
@@ -191,6 +217,7 @@ def build_report(rows: list[dict], reading: str | None) -> str:
         "",
         "Datos: `evals/stress/results.csv`. Generado por `evals/stress/report.py`.",
         "",
+        SCOPE,
         "## Resumen",
         "", *_summary(rows), "",
         "## Curva 1 — latencia frente a tokens de entrada (turnos sin caché)",

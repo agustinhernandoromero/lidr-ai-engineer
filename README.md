@@ -31,6 +31,13 @@ al LLM.
 | `run.py` | Recorre escenarios y adjuntos y escribe una fila por turno en el CSV |
 | `report.py` | Genera el REPORT (tabla resumen y tres curvas) e incrusta la lectura de `reading.md` |
 
+> ⚠️ **Alcance reducido por coste.** El enunciado pide 20 turnos por escenario, 3
+> repeticiones y el adjunto en todos los turnos. Aquí se hacen **10 turnos, 1 repetición y
+> el adjunto solo en el turno 1**, a propósito, para no gastar de más: la ejecución
+> reducida costó $1,11, y la completa costaría entre $7,5 y $10 solo con 20 turnos y
+> 3 repeticiones (≈ $45–70 con el adjunto en todos los turnos). El detalle, junto con los
+> presupuestos de 20 s y de 20.000 caracteres, está en la primera sección del REPORT.
+
 **Cómo ejecutarlo:**
 
 ```bash

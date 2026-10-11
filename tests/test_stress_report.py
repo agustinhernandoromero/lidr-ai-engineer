@@ -23,6 +23,8 @@ def test_report_from_fake_run_has_all_sections(tmp_path):
                     "## Adjuntos", "## Lectura", "## Método"):
         assert heading in text
     assert "Párrafo de lectura de prueba." in text
+    # El recorte por coste es lo primero que se lee, antes de cualquier número.
+    assert text.index("Alcance reducido por coste") < text.index("## Resumen")
 
 
 def test_report_survives_error_rows_and_missing_blocks():
