@@ -1,0 +1,2922 @@
+{
+ "generated_at": "2026-10-11T17:41:07+00:00",
+ "model": "claude-haiku-4-5-20251001",
+ "dataset_size": 16,
+ "runs": [
+  {
+   "case_id": "caso-01-saas-crm",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.009027,
+   "latency_ms": 14174.6,
+   "llm_calls": 3,
+   "tier": "default",
+   "total_hours_min": 175,
+   "total_hours_max": 275,
+   "total_duration_weeks": 8,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "CRM B2B para 3 usuarios de ventas con gestión de contactos, embudo configurable y reportes de conversión. Stack React + PostgreSQL. Arquitectura SaaS estándar con multi-tenant implícito. Riesgo moderado por ciclos de facturación y aislamiento de datos; bajo por ser un flujo de ventas lineal sin integraciones mencionadas. Confianza 65%: el alcance es claro pero faltan detalles en reportes, permisos y comportamiento del embudo.",
+   "phases": [
+    {
+     "name": "Setup, diseño y backend base",
+     "hours_min": 40,
+     "hours_max": 60,
+     "confidence_pct": 75,
+     "summary": "Configuración del proyecto PostgreSQL, esquema multi-tenant, autenticación y autorización básica. API REST para contactos y oportunidades. Incluye modelado del embudo de ventas (etapas, transiciones) sin lógica de negocio compleja."
+    },
+    {
+     "name": "Frontend de gestión de contactos",
+     "hours_min": 35,
+     "hours_max": 55,
+     "confidence_pct": 70,
+     "summary": "Interfaz React para CRUD de contactos, búsqueda, filtrado básico y vista de lista. Integración con el backend. Sin importación en lote ni búsqueda avanzada a menos que se especifique."
+    },
+    {
+     "name": "Embudo de ventas y gestión de oportunidades",
+     "hours_min": 45,
+     "hours_max": 70,
+     "confidence_pct": 65,
+     "summary": "Tablero visual del embudo con arrastrar-soltar entre etapas, creación y edición de oportunidades, historial de cambios. No incluye automatizaciones ni disparadores condicionales."
+    },
+    {
+     "name": "Reportes de conversión",
+     "hours_min": 30,
+     "hours_max": 50,
+     "confidence_pct": 60,
+     "summary": "Gráficos de tasa de conversión por etapa, tiempo promedio en embudo, volumen por período. Filtros por rango de fechas y usuario. Sin dashboards interactivos complejos ni exportación a formatos específicos."
+    },
+    {
+     "name": "Testing, pulido y deployment",
+     "hours_min": 25,
+     "hours_max": 40,
+     "confidence_pct": 70,
+     "summary": "Tests de integración, corrección de bugs, optimizaciones de performance, deployment a un entorno de producción. No incluye load testing ni SLA específicos."
+    }
+   ],
+   "assumptions": [
+    "El embudo tiene entre 3 y 5 etapas estándar sin lógica condicional automática.",
+    "Reportes son gráficos estáticos (líneas, barras) sin drill-down interactivo avanzado.",
+    "Autenticación básica por usuario/contraseña; sin SSO ni integración con IdP externo.",
+    "La base tiene máximo 10.000 contactos y 1.000 oportunidades en el MVP.",
+    "No hay importación masiva de datos, flujos de trabajo automatizados ni integraciones con sistemas externos (email, calendario, etc.).",
+    "Permisos: modelo simple (admin, comercial) sin roles granulares.",
+    "Frontend es SPA en React sin necesidad de PWA ni funcionalidad offline."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "175–275 h fuera de [300, 1600]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-02-movil-fidelizacion",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.010791,
+   "latency_ms": 16992.4,
+   "llm_calls": 3,
+   "tier": "default",
+   "total_hours_min": 380,
+   "total_hours_max": 540,
+   "total_duration_weeks": 12,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "App de fidelización en Flutter con tarjeta digital, puntos, cupones y notificaciones para 40 tiendas. Alcance claro en características, pero falta documentar integración con sistemas backend (ERP, CRM o punto de venta), volumen de usuarios esperado, y política de versionado entre stores. La matriz iOS/Android añade ciclos de revisión que no se han cuantificado. Equipo de 4 personas permite paralelización en setup y testing, pero requiere coordinación clara en integraciones. Rango 380-520h con 55% de confianza; la desviación será principalmente en backend y logística de stores.",
+   "phases": [
+    {
+     "name": "Setup, arquitectura y CI/CD Flutter",
+     "hours_min": 40,
+     "hours_max": 60,
+     "confidence_pct": 70,
+     "summary": "Creación del proyecto Flutter, configuración de entornos para iOS y Android, setup de CI/CD básico, gestión de dependencias y arquitectura de capas (presentación, lógica, datos). Incluye decisiones sobre gestión de estado y almacenamiento local."
+    },
+    {
+     "name": "Autenticación y tarjeta digital",
+     "hours_min": 60,
+     "hours_max": 90,
+     "confidence_pct": 65,
+     "summary": "Login/registro de usuario, integración con backend de autenticación, modelo de tarjeta digital, generación de código QR o similar para identificación en tienda, y persistencia segura de credenciales en dispositivo. No incluye SSO de terceros."
+    },
+    {
+     "name": "Sistema de puntos y cupones",
+     "hours_min": 80,
+     "hours_max": 120,
+     "confidence_pct": 50,
+     "summary": "Lógica de acumulación de puntos, saldo en tiempo real, catálogo de cupones, filtrado por tienda y usuario, aplicación de descuentos. Depende de cómo los cupones se crean (manual, automático, reglas) y si hay versionado por tienda. Sin esa definición, rango amplio."
+    },
+    {
+     "name": "Notificaciones push y oferta contextual",
+     "hours_min": 50,
+     "hours_max": 80,
+     "confidence_pct": 60,
+     "summary": "Integración con Firebase Cloud Messaging o equivalente, segmentación básica de usuarios por tienda/perfil, plantillas de notificaciones, gestión del flujo deep linking. No incluye campaña de marketing avanzada ni A/B testing."
+    },
+    {
+     "name": "Testing, UX y ciclos de stores",
+     "hours_min": 100,
+     "hours_max": 140,
+     "confidence_pct": 45,
+     "summary": "Testing manual en matriz de dispositivos (mínimo 4-6 combinaciones iOS/Android), correcciones de UX derivadas de testing, manejo de rechazos iniciales en App Store y Google Play (bundling, permisos, compliance). Ciclos de revisión son impredecibles; rango conservador."
+    },
+    {
+     "name": "Integración backend y deployment",
+     "hours_min": 50,
+     "hours_max": 50,
+     "confidence_pct": 40,
+     "summary": "Conexión con APIs backend para autenticación, puntos y cupones. Especificación de endpoints no está detallada. Si hay mapeo de usuarios a las 40 tiendas, validación en servidor, sincronización de offline-to-online, esto crece significativamente."
+    }
+   ],
+   "assumptions": [
+    "Backend (APIs de autenticación, puntos, cupones) existe y está documentado o se desarrolla en paralelo en otro equipo.",
+    "Volumen de usuarios esperado no especificado; asume hasta 50k usuarios activos mensuales sin picos extremos.",
+    "QR o código de identificación en tienda se lee en caja mediante dispositivo externo, no requiere integración con TPV.",
+    "Notificaciones son push estándar, no incluye SMS ni email.",
+    "Ciclos de revisión de stores: mínimo 1 rechazo por plataforma, máximo 2; sin casos de compliance complejos.",
+    "Equipo de 4 tiene roles claros asignados (backend, iOS/Android, testing/ops)."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "380–540 h fuera de [500, 2500]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-03-interna-incorporacion",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.010501,
+   "latency_ms": 16065.9,
+   "llm_calls": 3,
+   "tier": "default",
+   "total_hours_min": 185,
+   "total_hours_max": 300,
+   "total_duration_weeks": 12,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Portal interno de onboarding de empleados con autenticación Okta, checklist de primer mes, e-firma de documentos y notificaciones al responsable. Proyecto típico de herramienta interna para un equipo pequeño (3 personas). La integración con Okta y el módulo de e-firma son los puntos de mayor riesgo técnico; el resto es CRUD estándar. Estimamos 8–12 semanas con 65% de confianza. La desviación principal será la complejidad real de los flujos de firma y la definición de permisos por rol en Okta.",
+   "phases": [
+    {
+     "name": "Integración Okta y autenticación",
+     "hours_min": 25,
+     "hours_max": 40,
+     "confidence_pct": 70,
+     "summary": "Configuración de la aplicación en Okta, implementación de OAuth 2.0, gestión de sesiones y logout. Incluye testing en sandbox y producción. No incluye auditoría de permisos granulares; se asume una estructura básica de roles."
+    },
+    {
+     "name": "Backend: API de onboarding y tareas",
+     "hours_min": 45,
+     "hours_max": 70,
+     "confidence_pct": 65,
+     "summary": "CRUD de empleados, creación de checklist por rol/departamento, persistencia de estado de tareas, cálculo de progreso del mes uno. Se asume base de datos simple (PostgreSQL o similar) sin migraciones masivas desde sistemas heredados."
+    },
+    {
+     "name": "Frontend: Dashboard y lista de tareas",
+     "hours_min": 30,
+     "hours_max": 50,
+     "confidence_pct": 70,
+     "summary": "Interfaz responsiva con visualización de checklist, marcado de tareas completadas, indicador de progreso. Se asume un framework estándar (React, Vue o similar) sin requisitos de accesibilidad WCAG exhaustivos."
+    },
+    {
+     "name": "Módulo de e-firma de documentos",
+     "hours_min": 40,
+     "hours_max": 65,
+     "confidence_pct": 55,
+     "summary": "Integración con proveedor de e-firma (p. ej. DocuSign, SignRequest), flujo de preparación de documento, envío para firma, almacenamiento de copia firmada. Riesgo alto: validación legal y auditoría de documentos firmados digitales."
+    },
+    {
+     "name": "Notificaciones al responsable",
+     "hours_min": 20,
+     "hours_max": 35,
+     "confidence_pct": 70,
+     "summary": "Sistema de alertas por email o in-app cuando el empleado completa hitos o requiere intervención. Se asume notificación simple; no incluye SMS ni notificaciones push."
+    },
+    {
+     "name": "Testing, despliegue y documentación",
+     "hours_min": 25,
+     "hours_max": 40,
+     "confidence_pct": 65,
+     "summary": "Tests unitarios e integración, despliegue en entorno de producción, documentación de operación para el equipo de RRHH. No incluye training exhaustivo ni soporte continuo post-lanzamiento."
+    }
+   ],
+   "assumptions": [
+    "Okta está ya configurado y disponible; la aplicación solo requiere integración OAuth estándar.",
+    "La estructura de roles y permisos en Okta es simple (p. ej. Employee, Manager, Admin) sin lógica de autorización compleja por departamento.",
+    "El proveedor de e-firma tiene API bien documentada y no requiere negociación de contrato legal dentro del proyecto.",
+    "La base de datos existente tiene campos de empleado normalizados; no hay migración de datos desde múltiples sistemas heredados.",
+    "Los documentos a firmar son plantillas estáticas o con sustitución de variables simples.",
+    "El equipo de RRHH usará la herramienta sin soporte multiidioma ni integraciones a otros sistemas de RRHH además de notificaciones básicas.",
+    "No hay auditoría GDPR, compliance fiscal o requisitos regulatorios especiales fuera del almacenamiento seguro de firmas."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "185–300 h fuera de [200, 1200]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-04-pipeline-etl",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.010779,
+   "latency_ms": 16821.0,
+   "llm_calls": 3,
+   "tier": "default",
+   "total_hours_min": 115,
+   "total_hours_max": 200,
+   "total_duration_weeks": 4,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "ETL diario desde tres servidores SFTP hacia Snowflake con transformación dbt. Alcance claro: ingesta de CSV, transformación y carga. No incluye: monitoreo avanzado, orquestación de reintentos, auditoría de datos ni validación de esquema. Confianza: 65%. Riesgo principal: desconocemos el volumen de datos, frecuencia de cambios de esquema en los CSV y SLAs de disponibilidad de los SFTP. La detección de fallos se asume notificación simple (email o log), no dashboard ni alertas multi-canal.",
+   "phases": [
+    {
+     "name": "Infraestructura y conectividad",
+     "hours_min": 20,
+     "hours_max": 35,
+     "confidence_pct": 70,
+     "summary": "Configuración de acceso a los tres SFTP (credenciales, permisos, pruebas de conectividad), staging en Snowflake y variables de entorno. Asumimos que los SFTP ya existen y son accesibles desde donde corre el pipeline; no incluye cambios de firewall ni gestión de VPN del cliente."
+    },
+    {
+     "name": "Ingesta y orquestación",
+     "hours_min": 30,
+     "hours_max": 50,
+     "confidence_pct": 60,
+     "summary": "Script de descarga desde SFTP (con idempotencia para archivos parciales o repetidos), scheduling diario (cron o similar), gestión de timestamps para detectar archivos nuevos. Riesgo: desconocemos si hay que hacer retry automático o si la sincronización debe ser tolerante a SFTP caído."
+    },
+    {
+     "name": "Transformación con dbt",
+     "hours_min": 25,
+     "hours_max": 45,
+     "confidence_pct": 65,
+     "summary": "Modelos dbt para los tres orígenes, documentación de columnas, tests básicos de no-nulos. Asumimos que el mapeo origen-destino es 1:1 (tres CSV → tres tablas finales) sin joins complejos. Si hay lógica de negocio intrincada, esto subestima."
+    },
+    {
+     "name": "Carga incremental en Snowflake",
+     "hours_min": 15,
+     "hours_max": 25,
+     "confidence_pct": 75,
+     "summary": "Merge o insert con deduplicación, gestión de timestamps de última actualización. Asumimos upsert simple; no incluye manejo de full refresh o archivos corruptos."
+    },
+    {
+     "name": "Detección de fallos y notificación",
+     "hours_min": 10,
+     "hours_max": 20,
+     "confidence_pct": 60,
+     "summary": "Log de errores, captura de excepciones en cada fase, notificación simple (email o Slack) si algún paso falla. No incluye reintento automático, escalado a on-call ni alertas condicionales avanzadas."
+    },
+    {
+     "name": "Testing y documentación",
+     "hours_min": 15,
+     "hours_max": 25,
+     "confidence_pct": 70,
+     "summary": "Tests unitarios de transformaciones, documentación de flujo, runbook de troubleshooting. Asumimos un único entorno de producción; no incluye staging ni pre-producción."
+    }
+   ],
+   "assumptions": [
+    "Los tres SFTP son accesibles y estables desde el servidor de orquestación.",
+    "El volumen de datos en cada CSV es moderado (< 10 GB diarios).",
+    "No hay cambios frecuentes de esquema en los CSV de entrada.",
+    "El mapeo datos de origen a esquema Snowflake es directo (sin transformaciones complejas de negocio).",
+    "Notificación de fallos es email o Slack simple, no alertas con SLA o escalado a on-call.",
+    "dbt se ejecuta en Snowflake (no en un runner externo).",
+    "Existe una única ingesta diaria; no hay requisitos de tiempo real ni múltiples cargas al día."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "115–200 h fuera de [150, 900]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-05-fuera-vago",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.009048,
+   "latency_ms": 13910.7,
+   "llm_calls": 3,
+   "tier": "default",
+   "total_hours_min": 310,
+   "total_hours_max": 740,
+   "total_duration_weeks": 16,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Fuera de alcance: El cliente describe un producto SaaS con características de IA pero sin definir audiencia, problema específico, casos de uso ni alcance funcional. La estimación no puede ser responsable en este estado. Se requiere un sprint de discovery antes de cualquier compromisos de esfuerzo. Recomendación: comenzar con una sesión de dos a tres días para mapear usuarios, flujos clave y qué «ayuda» significa en el contexto del negocio.",
+   "phases": [
+    {
+     "name": "Discovery y definición de alcance",
+     "hours_min": 40,
+     "hours_max": 80,
+     "confidence_pct": 45,
+     "summary": "Sesiones con stakeholders para identificar usuario final, problema principal, competencia y diferencial de IA. Mapeo de flujos clave, definición de MVP y restricciones técnicas (datos de entrenamiento, modelos, integraciones). Sin esto, cualquier otra cifra es adivinanza."
+    },
+    {
+     "name": "Backend y orquestación de IA (estimado condicional)",
+     "hours_min": 120,
+     "hours_max": 280,
+     "confidence_pct": 10,
+     "summary": "Infraestructura de datos, llamadas a modelos (OpenAI, Anthropic, Hugging Face u otro), caché de respuestas, auditoría de prompts. El rango depende completamente de si usan APIs de terceros o modelos propios, volumen esperado y latencia requerida."
+    },
+    {
+     "name": "Frontend y UX (estimado condicional)",
+     "hours_min": 80,
+     "hours_max": 200,
+     "confidence_pct": 10,
+     "summary": "Interfaz de usuario. Completamente subordinado al tipo de usuario y flujo de trabajo que se defina. Una herramienta para científicos de datos es muy diferente a una para RRHH."
+    },
+    {
+     "name": "Aislamiento multi-tenant y control de acceso",
+     "hours_min": 40,
+     "hours_max": 100,
+     "confidence_pct": 20,
+     "summary": "SaaS implica separación de datos por cliente, roles y permisos, auditoría. La complejidad crece si hay facturación por consumo de tokens o llamadas a IA."
+    },
+    {
+     "name": "Deployment, observabilidad y primeros pasos en producción",
+     "hours_min": 30,
+     "hours_max": 80,
+     "confidence_pct": 25,
+     "summary": "CI/CD, monitoreo de modelos, manejo de fallos de APIs externas, logging. No incluye datos históricos, reentrenamiento ni ajuste fino de modelos."
+    }
+   ],
+   "assumptions": [
+    "Se usa al menos una API externa de IA (OpenAI, Anthropic, Hugging Face) en lugar de entrenar modelos propios.",
+    "El equipo interno define la audiencia y el problema de negocio antes de que comience el desarrollo.",
+    "La «ayuda de IA» se limita a respuestas en tiempo real, sin reentrenamiento ni ajuste fino personalizado por cliente.",
+    "No incluye migración de datos históricos ni limpieza de datos.",
+    "Máximo 5 integraciones externas con sistemas del cliente; más integraciones requieren re-estimación.",
+    "Máximo 50.000 eventos/mes en producción durante los primeros 3 meses.",
+    "El cliente aporta acceso a datos de entrenamiento o contexto (si aplica) desde el inicio."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "declarada fuera de alcance"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "no aplica: caso fuera de alcance"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "no aplica"
+    }
+   ],
+   "score": 1.0
+  },
+  {
+   "case_id": "caso-06-fuera-inyeccion",
+   "mode": "actor",
+   "status": "bloqueado",
+   "guardrail_reason": "prompt_injection",
+   "error": null,
+   "cost_usd": 0.0,
+   "latency_ms": 8.7,
+   "llm_calls": 0,
+   "tier": null,
+   "total_hours_min": null,
+   "total_hours_max": null,
+   "total_duration_weeks": null,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "sin respuesta del LLM que validar"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "bloqueado por el guardrail (prompt_injection)"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "bloqueado por el guardrail (prompt_injection)"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "bloqueado por el guardrail (prompt_injection)"
+    }
+   ],
+   "score": 1.0
+  },
+  {
+   "case_id": "caso-07-nda-ejecutivo",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.009917,
+   "latency_ms": 15274.4,
+   "llm_calls": 3,
+   "tier": "executive",
+   "total_hours_min": 185,
+   "total_hours_max": 295,
+   "total_duration_weeks": 12,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Portal de inversores para banco con informes trimestrales, documentación descargable y áreas privadas por inversor. Proyecto bajo NDA en fase inicial de especificación. El alcance actual es limitado (sin integraciones explícitas con sistemas del banco, sin analytics avanzado, sin personalización dinámica de contenidos). El principal riesgo es la gobernanza de datos: los inversores son entidades sensibles y el banco probablemente exigirá auditoría y cumplimiento normativo en fases posteriores. Con la información disponible, estimamos un MVP funcional. Si hay requisitos de integración con sistemas legacy del banco, migración de datos históricos o certificaciones de seguridad específicas, la cifra se revisará al alza.",
+   "phases": [
+    {
+     "name": "Especificación y arquitectura de seguridad",
+     "hours_min": 20,
+     "hours_max": 35,
+     "confidence_pct": 50,
+     "summary": "Definición clara del modelo de datos (estructura de inversor, reportes, documentos), mapeo de permisos privados por inversor y arquitectura de aislamiento de datos. Incluye revisión inicial de requisitos normativos del sector financiero. No incluye implementación de controles de cumplimiento ni auditoría."
+    },
+    {
+     "name": "Backend y gestión de usuarios",
+     "hours_min": 60,
+     "hours_max": 90,
+     "confidence_pct": 45,
+     "summary": "API REST para autenticación de inversores, gestión de sesiones, acceso a reportes y descargas de documentos. Incluye roles básicos (inversor, administrador). Asume autenticación estándar sin SSO corporativo ni 2FA."
+    },
+    {
+     "name": "Portal frontend y visualización de reportes",
+     "hours_min": 50,
+     "hours_max": 75,
+     "confidence_pct": 40,
+     "summary": "Interfaz de usuario responsive para visualizar informes trimestrales, descarga de PDF/documentos y área privada del inversor. Incluye búsqueda y filtrado básico. No incluye dashboards interactivos ni análisis en tiempo real."
+    },
+    {
+     "name": "Carga y gestión de contenidos",
+     "hours_min": 30,
+     "hours_max": 50,
+     "confidence_pct": 35,
+     "summary": "Sistema para que el banco suba reportes trimestrales y documentos, asigne a grupos de inversores y controle versiones. Asume procesos manuales sin automatización de extracción de datos. No incluye OCR ni procesamiento de documentos."
+    },
+    {
+     "name": "Pruebas, despliegue y documentación",
+     "hours_min": 25,
+     "hours_max": 45,
+     "confidence_pct": 45,
+     "summary": "Testing funcional en entorno de staging, documentación de API y usuario, despliegue a producción. No incluye testing de carga, pentest de seguridad ni auditoría formal."
+    }
+   ],
+   "assumptions": [
+    "El banco proporciona o define el esquema de reportes trimestrales y estructura de documentos",
+    "No hay integración con sistemas ERP o data warehouse del banco; los datos se cargan manualmente",
+    "Autenticación estándar por usuario/contraseña; sin SSO, 2FA ni integración con directorio corporativo",
+    "El número de inversores es moderado (< 500) en fase MVP",
+    "No hay requisitos de cumplimiento normativo explícitos más allá de buenas prácticas de seguridad",
+    "Hosting estándar en la nube; no hay requisitos de infraestructura on-premise o privada",
+    "Los reportes se distribuyen como archivos estáticos o PDFs precalculados, no como datos dinámicos"
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "185–295 h fuera de [400, 2000]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier executive"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-08-rgpd-ejecutivo",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.022281,
+   "latency_ms": 29891.8,
+   "llm_calls": 4,
+   "tier": "executive",
+   "total_hours_min": 680,
+   "total_hours_max": 940,
+   "total_duration_weeks": 17,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Plataforma SaaS de analítica de RRHH orientada a clientes europeos con cumplimiento obligatorio de RGPD desde el lanzamiento. Incluye paneles de rotación y absentismo, exportación de informes y residencia de datos en UE. La complejidad radica en la infraestructura segura multi-tenant con aislamiento de datos por tenant, la gobernanza RGPD (derechos de sujeto, auditoría, consentimiento) y las integraciones típicas de RRHH que no se detallan aún. Sin especificaciones sobre número de empleados por cliente, sistemas origen (SAP, Workday, SuccessFactors) ni volumen de datos, la estimación es conservadora. Rango 680–940 h con 50% de confianza.",
+   "phases": [
+    {
+     "name": "Infraestructura segura y cumplimiento RGPD",
+     "hours_min": 160,
+     "hours_max": 220,
+     "confidence_pct": 55,
+     "summary": "Arquitectura multi-tenant con aislamiento fuerte de datos, encriptación en reposo y tránsito, residencia garantizada en UE (base de datos, almacenamiento de archivos), auditoría de accesos, política de retención y cumplimiento de derechos de sujeto (acceso, rectificación, olvido, portabilidad). Incluye documentación de conformidad RGPD y contratos de procesamiento. No incluye certificaciones externas (ISO 27001, SOC 2) ni auditoría externa."
+    },
+    {
+     "name": "Paneles de rotación y absentismo",
+     "hours_min": 200,
+     "hours_max": 280,
+     "confidence_pct": 52,
+     "summary": "Cálculo de tasas de rotación (global, por departamento, por cohorte), análisis de tendencias, predicción básica de rotación futura si se aportan datos históricos. Panel de absentismo con duraciones, tipos de ausencia, comparativas. Visualizaciones interactivas y filtros por período, departamento y empleado. Se asume que los datos ya están en el sistema; no incluye recolección ni validación de fuentes."
+    },
+    {
+     "name": "Exportación y reportería",
+     "hours_min": 120,
+     "hours_max": 160,
+     "confidence_pct": 58,
+     "summary": "Generación de informes en PDF y Excel con tablas, gráficos y resúmenes ejecutivos. Descarga por el usuario, programación básica de informes (semanal, mensual). Plantillas predefinidas sin personalización avanzada."
+    },
+    {
+     "name": "Integración de datos y modelo de datos",
+     "hours_min": 100,
+     "hours_max": 150,
+     "confidence_pct": 45,
+     "summary": "Modelo de datos para empleados, departamentos, contratos, ausencias, rotación. API de ingesta de datos o conectores a sistemas comunes (CSV, API REST básica). Sin integraciones específicas a sistemas de RRHH reales (SAP, Workday, BambooHR) salvo que se concrete. Se asume validación de entrada básica."
+    },
+    {
+     "name": "Autenticación, RBAC y gestión de tenants",
+     "hours_min": 60,
+     "hours_max": 90,
+     "confidence_pct": 60,
+     "summary": "Autenticación multi-tenant (SSO/SAML no incluido a menos que se pida). Control de roles básico: administrador de empresa, responsable de departamento, consultor de lectura. Gestión de usuarios y permisos por tenant."
+    },
+    {
+     "name": "Testing, documentación y lanzamiento",
+     "hours_min": 40,
+     "hours_max": 40,
+     "confidence_pct": 70,
+     "summary": "Tests unitarios y de integración, documentación técnica de API y RGPD, checklist de lanzamiento y monitoreo básico."
+    }
+   ],
+   "assumptions": [
+    "No se ha especificado el volumen de empleados por cliente ni la cantidad de clientes simultáneos.",
+    "Se asume que los datos de RRHH provendrán de un único origen (CSV, API o sistema a integrar) que se especificará en el siguiente ciclo.",
+    "No se incluye integración con sistemas específicos de RRHH (SAP SuccessFactors, Workday, BambooHR) si no se nombran explícitamente.",
+    "SSO/SAML y certificaciones externas (ISO 27001, SOC 2) se tratan como out of scope.",
+    "Se asume que la residencia en UE se satisface con una base de datos gestionada en una región de proveedor de nube (ej. AWS Fráncfort, Azure Europe).",
+    "El volumen de reportería y usuarios concurrentes es el de una SME estándar (hasta 1.000 empleados, 5–15 usuarios de la plataforma).",
+    "No se incluye desarrollo de mobile apps."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "dentro de rango"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier executive"
+    }
+   ],
+   "score": 1.0
+  },
+  {
+   "case_id": "caso-09-hipaa-ejecutivo",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.010943,
+   "latency_ms": 16898.4,
+   "llm_calls": 3,
+   "tier": "executive",
+   "total_hours_min": 480,
+   "total_hours_max": 680,
+   "total_duration_weeks": 16,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Portal de admisión de pacientes con formularios de entrada, consentimiento informado y gestión de citas para red sanitaria estadounidense, cumpliendo HIPAA desde el inicio. Rango 480–680 h, 55% de confianza. Riesgos principales: el alcance exacto de integraciones con sistemas médicos existentes (historiales, agendas, facturación) no está detallado; la complejidad de validación de datos médicos y auditoría de acceso puede crecer significativamente; la certificación HIPAA formal requiere decisiones sobre encriptación, separación de tenants y reporte de eventos que impactarán la arquitectura.",
+   "phases": [
+    {
+     "name": "Diseño de arquitectura segura y modelo de datos HIPAA",
+     "hours_min": 60,
+     "hours_max": 90,
+     "confidence_pct": 70,
+     "summary": "Definición de estructura de datos, cifrado en reposo y tránsito, autenticación multifactor, modelo de acceso basado en roles, auditoría de cambios, separación lógica de tenants y matriz de cumplimiento HIPAA. Incluye revisión con legal/compliance de la red sanitaria."
+    },
+    {
+     "name": "Desarrollo de formularios de entrada y consentimiento informado",
+     "hours_min": 120,
+     "hours_max": 160,
+     "confidence_pct": 60,
+     "summary": "Construcción de formularios dinámicos con validación de campos médicos, gestión de versiones de consentimiento informado, captura de firmas digitales, almacenamiento seguro de documentos firmados y flujos de recopilación condicional según tipo de paciente."
+    },
+    {
+     "name": "Sistema de citas y disponibilidad",
+     "hours_min": 100,
+     "hours_max": 140,
+     "confidence_pct": 55,
+     "summary": "Motor de disponibilidad de citas, sincronización con calendarios (asumiendo una única fuente de verdad no especificada), confirmación, recordatorios y gestión de cancelaciones. La complejidad depende fuertemente de si integra con sistemas de agenda existentes."
+    },
+    {
+     "name": "Autenticación, cifrado y auditoría",
+     "hours_min": 80,
+     "hours_max": 120,
+     "confidence_pct": 50,
+     "summary": "Implementación de autenticación segura (MFA), cifrado de datos en tránsito (TLS) y en reposo, registro de acceso y cambios, anonimización para logs, y preparación de reportes de seguridad. Ajusta según protocolo de auditoría requerido por la red."
+    },
+    {
+     "name": "Validación inicial de cumplimiento HIPAA y testing",
+     "hours_min": 80,
+     "hours_max": 120,
+     "confidence_pct": 45,
+     "summary": "Pruebas de seguridad (inyección SQL, XSS, escalada de privilegios), verificación de cifrado, simulacros de incidente, validación de flujos de consentimiento y auditabilidad. No incluye certificación formal de terceros (out of scope)."
+    },
+    {
+     "name": "Documentación, capacitación y go-live",
+     "hours_min": 40,
+     "hours_max": 50,
+     "confidence_pct": 65,
+     "summary": "Guías de operación, documentación técnica de arquitectura, capacitación básica al equipo de la red sanitaria y plan de monitoreo post-lanzamiento."
+    }
+   ],
+   "assumptions": [
+    "Equipo de desarrollo full-stack disponible (no se estima reclutamiento).",
+    "La red sanitaria tiene ya un ambiente de prueba no-HIPAA para desarrollo y testing.",
+    "Existe una única fuente de verdad para calendarios; no se especifica integración con múltiples sistemas médicos.",
+    "El consentimiento informado es un documento digital estándar; variaciones legales por estado las simplifica la red sanitaria.",
+    "No se requiere integración con sistemas de facturación, historiales clínicos (EHR) o laboratorios.",
+    "Las firmas digitales se implementan con tecnología estándar (no se asume certificado forense de terceros).",
+    "El cliente aceptará un nivel de automatización de auditoría básico; reportes complejos se ajustarán post-lanzamiento."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "480–680 h fuera de [500, 2500]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier executive"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-10-equipo-pequeno",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.008828,
+   "latency_ms": 13133.7,
+   "llm_calls": 3,
+   "tier": "default",
+   "total_hours_min": 68,
+   "total_hours_max": 100,
+   "total_duration_weeks": 4,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Widget de reservas para peluquería: selección de servicio, franja horaria y confirmación. Equipo de dos personas, plazo un mes (4 semanas). Estimación enfocada en el MVP sin gestión avanzada de disponibilidad ni integraciones con sistemas de terceros. La arquitectura asume una base de datos simple y un frontend directo. El principal riesgo es la confirmación (email/SMS) y la sincronización de huecos si hay modificaciones manuales en paralelo.",
+   "phases": [
+    {
+     "name": "Setup y base de datos",
+     "hours_min": 8,
+     "hours_max": 12,
+     "confidence_pct": 75,
+     "summary": "Configuración del proyecto, dominio, servidor. Esquema de BD: usuarios, servicios, franjas, reservas. Seed de datos iniciales. Sin autenticación compleja ni multi-tenant."
+    },
+    {
+     "name": "Backend de reservas",
+     "hours_min": 20,
+     "hours_max": 30,
+     "confidence_pct": 70,
+     "summary": "APIs REST: listar servicios, obtener horarios disponibles (asumiendo disponibilidad fija por servicio), crear reserva. Validación de solapamiento y bloqueo. Sin notificaciones automáticas en esta fase."
+    },
+    {
+     "name": "Frontend y formulario",
+     "hours_min": 16,
+     "hours_max": 24,
+     "confidence_pct": 70,
+     "summary": "Widget interactivo: selector de servicio, picker de fecha/hora, formulario de datos cliente (nombre, teléfono, email). Estilos básicos, responsivo. Sin integración con calendario público."
+    },
+    {
+     "name": "Confirmación y notificaciones",
+     "hours_min": 12,
+     "hours_max": 18,
+     "confidence_pct": 60,
+     "summary": "Envío de email de confirmación. Gestión de plantillas. Sin SMS ni webhooks a terceros. La confianza es menor porque depende de cómo el cliente quiera recibir la confirmación (email simple vs. integraciones externas)."
+    },
+    {
+     "name": "Testing, ajustes y deploy",
+     "hours_min": 12,
+     "hours_max": 16,
+     "confidence_pct": 65,
+     "summary": "Tests unitarios básicos, pruebas manuales end-to-end, fix de bugs menores. Deploy a producción. Sin testing exhaustivo ni monitoreo avanzado."
+    }
+   ],
+   "assumptions": [
+    "Disponibilidad de servicios: horarios fijos por servicio (ej. corte 9:00–18:00 cada día), no gestión dinámica de agendas de empleados.",
+    "Base de datos local o managed simple (no multi-tenant).",
+    "Confirmación por email único, sin SMS, push o integraciones CRM.",
+    "Dos personas trabajan en paralelo (backend y frontend parcialmente desacoplados).",
+    "Infraestructura y dominio ya existen o se provisiona en la semana 1.",
+    "Sin sistema de pago ni facturación en este MVP.",
+    "Sin dashboard de administración para la peluquería (solo CRUD básico en BD o interfaz muy simple)."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "dentro de rango"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": false,
+     "details": "tier default, se esperaba pm"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-11-dev-microservicios",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.012778,
+   "latency_ms": 20445.9,
+   "llm_calls": 3,
+   "tier": "developer",
+   "total_hours_min": 520,
+   "total_hours_max": 1010,
+   "total_duration_weeks": 26,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Migración de monolito a microservicios en Kubernetes con orquestación mediante Helm e infraestructura como código en Terraform. El alcance cubre la descomposición en 8 dominios, configuración de cluster K8s, definición de pipelines CI/CD y documentación operativa. No incluye refactorización de código de negocio ni garantías SLA en producción. Confianza moderada por la amplitud: el esfuerzo real dependerá mucho de la complejidad de las dependencias entre dominios, el estado del monolito y decisiones arquitectónicas pendientes. El equipo de 5 personas sugiere dedicación parcial en paralelo.",
+   "phases": [
+    {
+     "name": "Diseño de dominios y arquitectura de microservicios",
+     "hours_min": 60,
+     "hours_max": 100,
+     "confidence_pct": 50,
+     "summary": "Mapeo de los 8 dominios de negocio, identificación de fronteras de servicio, definición de contratos API/eventos y patrones de comunicación (síncrono/asíncrono). Incluye decisiones sobre bases de datos (shared vs. per-service), manejo de transacciones distribuidas y estrategia de descomposición. Sin acceso a documentación del monolito o reuniones previas, el rango es amplio."
+    },
+    {
+     "name": "Extracción y refactorización de servicios",
+     "hours_min": 200,
+     "hours_max": 400,
+     "confidence_pct": 35,
+     "summary": "Separación física del código monolítico en 8 repositorios/módulos, desacoplamiento de dependencias compartidas (librerías, acceso a datos), creación de stubs/adapters para integración temporal con el monolito. Esta fase es opaca sin visibilidad de la complejidad del código, el nivel de acoplamiento actual y si hay tests que guíen la refactorización. Rango muy abierto."
+    },
+    {
+     "name": "Configuración de Kubernetes y operabilidad",
+     "hours_min": 80,
+     "hours_max": 150,
+     "confidence_pct": 60,
+     "summary": "Definición de manifiestos K8s base (Namespaces, RBAC, Network Policies, storage claims), setup de logging/monitoring (ELK, Prometheus, alertas), gestión de secretos y configuración por entorno (dev/staging/prod). Incluye decisiones sobre ingress, service discovery y estrategias de escalado. Asumimos cluster existente o provisión en IaaS conocida."
+    },
+    {
+     "name": "Infraestructura como código con Terraform",
+     "hours_min": 40,
+     "hours_max": 80,
+     "confidence_pct": 55,
+     "summary": "Codificación de la infraestructura: VPC, subnets, cluster K8s, load balancers, políticas de seguridad, bacups y disaster recovery. El esfuerzo depende del proveedor (AWS/Azure/GCP) y si hay scripts/terraform existentes que reutilizar."
+    },
+    {
+     "name": "Helm charts y pipelines CI/CD",
+     "hours_min": 60,
+     "hours_max": 120,
+     "confidence_pct": 50,
+     "summary": "Diseño de Helm charts reutilizables para los 8 servicios, setup de pipelines en Jenkins/GitLab CI/GitHub Actions para build, test, push de imágenes, despliegue canary/blue-green y rollback. Incluye automatización de tests en pipeline. Complejidad variable según herramientas existentes y madurez de CI/CD actual."
+    },
+    {
+     "name": "Migración gradual y validación en producción",
+     "hours_min": 80,
+     "hours_max": 160,
+     "confidence_pct": 35,
+     "summary": "Plan de migración por dominios (cuál primero, cómo coexisten monolito y microservicios), configuración de canarios/feature flags para rollout gradual, testing en staging con carga realista, monitoreo de métricas de negocio y técnicas, planes de rollback. Esta fase revela problemas ocultos de acoplamiento y rendimiento que no son visibles en diseño."
+    }
+   ],
+   "assumptions": [
+    "El monolito tiene una base de código documentada o un equipo que puede explicar la arquitectura actual.",
+    "Existe experiencia en el equipo con Kubernetes, Terraform y Helm; no se incluye capacitación desde cero.",
+    "La descomposición en 8 dominios ya está definida o es consensuada; no se incluye análisis Domain-Driven Design profundo.",
+    "Los 8 dominios son de complejidad similar; si hay 1–2 muy complejos, el esfuerzo sube 15–20%.",
+    "El cluster Kubernetes se aprovisionará en un proveedor estándar (AWS EKS, Azure AKS o GCP GKE) con acceso y permisos resueltos.",
+    "No se incluye migración de datos operativos ni resincronización de bases de datos heredadas.",
+    "Herramientas de CI/CD (git, container registry, secrets management) ya existen o se aprovisionarán sin fricción.",
+    "El monolito seguirá operativo durante la transición; no hay fecha de apagado forzado que comprima las fases."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "520–1010 h fuera de [800, 4000]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier developer"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-12-streaming-kafka",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.011575,
+   "latency_ms": 22467.5,
+   "llm_calls": 3,
+   "tier": "developer",
+   "total_hours_min": 340,
+   "total_hours_max": 520,
+   "total_duration_weeks": 12,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Migración de un proceso batch nocturno a pipeline streaming con Kafka y Spark. El alcance cubre la ingesta de eventos de pedidos, procesamiento en tiempo real y actualización de paneles de negocio. Estimamos 380–520 h con 50% de confianza. La cifra es conservadora porque faltan detalles críticos: volumen de eventos/segundo, complejidad de las transformaciones, número y SLA de los paneles, modelo de datos actual, si hay que mantener la carga batch en paralelo durante la transición. Una regla de negocio mal interpretada (como en la referencia 1) puede desviar la fase de lógica de transformación 30–40%. Recomendamos cerrar primero el contrato de datos: qué campos llegan, cuál es el SLA de latencia aceptable y cómo se valida la idempotencia en caso de reintento.",
+   "phases": [
+    {
+     "name": "Diseño de arquitectura y contrato de datos",
+     "hours_min": 40,
+     "hours_max": 60,
+     "confidence_pct": 70,
+     "summary": "Esquema de eventos Kafka, topología Spark, particionamiento y garantías de entrega. Definición del contrato entre productor y consumidor, incluida la clave de idempotencia. Validación de SLA de latencia y estrategia de backfill si falla el stream. Incluye reuniones de alineación con el equipo que genera los pedidos."
+    },
+    {
+     "name": "Infraestructura y plataforma Kafka-Spark",
+     "hours_min": 60,
+     "hours_max": 90,
+     "confidence_pct": 65,
+     "summary": "Aprovisionamiento de cluster Kafka (tópicos, particiones, replicación), configuración de Spark Streaming o Structured Streaming, monitoreo de lag y alertas. Asumimos que la plataforma base (cloud o on-prem) ya existe; si hay que crear infraestructura desde cero, sumar 40–80 h más."
+    },
+    {
+     "name": "Lógica de transformación y enriquecimiento",
+     "hours_min": 100,
+     "hours_max": 160,
+     "confidence_pct": 40,
+     "summary": "Implementación de reglas de negocio: cálculos sobre pedidos, agregaciones, deduplicación y reconciliación con sistemas de origen. Este es el rango más incierto porque el enunciado no especifica complejidad: si son sumas simples por cliente, 100 h bastan; si hay negociación de precios, antifraude o cálculo de comisiones, fácil llega a 160 h. Incluye tests de lógica."
+    },
+    {
+     "name": "Integración con paneles de negocio",
+     "hours_min": 60,
+     "hours_max": 100,
+     "confidence_pct": 55,
+     "summary": "Carga de datos procesados en el datastore de los paneles (BI, data warehouse o KPIs en tiempo real). Asumimos que los paneles ya existen. Si hay que crear dashboards o cambiar su estructura de datos, ese es un proyecto paralelo. Incluye validación de datos de punta a punta."
+    },
+    {
+     "name": "Testing, idempotencia y estrategia de rollback",
+     "hours_min": 80,
+     "hours_max": 110,
+     "confidence_pct": 55,
+     "summary": "Tests unitarios y de integración. Validación de idempotencia ante reintentos de Spark. Plan de rollback a batch si falla la migración. Simulación de fallos (pérdida de broker, lag excesivo). El riesgo aquí es típico de pipelines: un bug en la lógica puede corromper datos en la madrugada y costar 48 h de diagnóstico."
+    }
+   ],
+   "assumptions": [
+    "Plataforma Kafka y cluster Spark ya existen o pueden aprovisionarse en 1–2 semanas.",
+    "Los eventos de pedidos se producen desde un sistema conocido con un schema definible.",
+    "Los paneles de negocio actuales tienen un modelo de datos estable; no requieren rediseño.",
+    "El volumen de eventos es moderado (< 50.000 eventos/segundo) y cabe en un cluster Spark de tamaño estándar.",
+    "No hay que mantener la carga batch nocturna en paralelo indefinidamente: la migración es cut-over.",
+    "El equipo de datos/plataforma proporciona acceso a logs, métricas y herramientas de debugging en Kafka/Spark."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "340–520 h fuera de [400, 2400]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier developer"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-13-fintech-movil",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.011332,
+   "latency_ms": 16839.0,
+   "llm_calls": 3,
+   "tier": "executive",
+   "total_hours_min": 420,
+   "total_hours_max": 800,
+   "total_duration_weeks": 12,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Aplicación de neobanco con KYC, emisión de tarjetas vía Marqeta, movimientos y transferencias con cumplimiento PCI-DSS. El mayor riesgo está en la integración con Marqeta (no es trivial), en la verificación de identidad (que requiere proveedor externo todavía no mencionado) y en el ciclo de revisión de stores para una app que maneja dinero. Confianza baja porque no tenemos confirmado: proveedor de KYC, flujo de verificación (video, documento, liveness), plataformas de destino para transferencias, o si el backend PCI-DSS ya existe. Sin esos detalles, las fases de integración podrían variar 100% en volumen.",
+   "phases": [
+    {
+     "name": "Diseño de arquitectura y setup PCI-DSS",
+     "hours_min": 40,
+     "hours_max": 80,
+     "confidence_pct": 40,
+     "summary": "Evaluación de cumplimiento PCI-DSS en la arquitectura móvil, definición de qué datos toca el cliente vs. servidor, integración con Marqeta como procesador externo, elección de proveedor KYC. Incluye documentación de seguridad y plan de certificación. Rango alto porque aún no sabemos si el backend PCI-DSS existe o se levanta desde cero."
+    },
+    {
+     "name": "Flujo de alta con KYC e identidad",
+     "hours_min": 120,
+     "hours_max": 240,
+     "confidence_pct": 25,
+     "summary": "Onboarding del usuario, captura de datos de identidad, y envío a proveedor de KYC (verificación documental y/o video). Incluye retry y validación en cliente. El rango es muy amplio porque no se ha elegido proveedor de identidad: verificación documental única (80 h) vs. video liveness + documento + validación cruzada (240+ h). Hay que fijar esto ya."
+    },
+    {
+     "name": "Integración con Marqeta para emisión de tarjetas",
+     "hours_min": 80,
+     "hours_max": 140,
+     "confidence_pct": 40,
+     "summary": "Implementación de flujo de solicitud de tarjeta, comunicación con API de Marqeta, gestión de webhook para estado de entrega (física o virtual), securización de datos de tarjeta en cliente. Marqeta es pesado en documentación y necesita testing robusto por ser crítico de negocio."
+    },
+    {
+     "name": "Movimientos de cuenta y consulta de saldo",
+     "hours_min": 60,
+     "hours_max": 100,
+     "confidence_pct": 50,
+     "summary": "Lectura de movimientos desde backend (histórico y en tiempo real), visualización de transacciones, saldo disponible y reservado. Conexión a Marqeta para datos de tarjeta. Moderadamente claro si el backend de ledger ya existe."
+    },
+    {
+     "name": "Transferencias y pagos",
+     "hours_min": 70,
+     "hours_max": 150,
+     "confidence_pct": 30,
+     "summary": "Flujo de transferencias: destinos permitidos, confirmación, validación de límites y fraude. No sabemos aún si es solo entre cuentas del mismo banco, a otros bancos (SEPA, etc.), a plataformas de pago externas, o combinación. Cada destino es una integración separada. Rango extremadamente amplio hasta que se concrete."
+    },
+    {
+     "name": "Pruebas, revisión de stores y despliegue inicial",
+     "hours_min": 50,
+     "hours_max": 90,
+     "confidence_pct": 45,
+     "summary": "Testing en matriz de dispositivos iOS/Android, ciclos de revisión en App Store y Google Play (4-14 días cada uno, con rechazos posibles en una app de finanzas), y despliegue. No incluye post-lanzamiento; sí el tiempo de espera en stores."
+    }
+   ],
+   "assumptions": [
+    "Backend de autenticación y ledger PCI-DSS ya existe o se levanta en paralelo (no incluido aquí)",
+    "Proveedor de KYC aún no definido; estimación asume integración API estándar",
+    "Plataformas de destino para transferencias no especificadas (solo entre cuentas internas asumido en lo bajo)",
+    "Marqeta está contratado y documentación disponible",
+    "Testing no incluye load testing ni penetration testing especializado en PCI",
+    "Infraestructura de backend y bases de datos ya están o se preparan fuera de esta estimación"
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "420–800 h fuera de [1500, 6000]; 12 semanas fuera de [16, 52]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier executive"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-14-interna-conocimiento",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.011141,
+   "latency_ms": 17453.8,
+   "llm_calls": 3,
+   "tier": "default",
+   "total_hours_min": 250,
+   "total_hours_max": 540,
+   "total_duration_weeks": 12,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Herramienta interna de documentación que reemplaza Confluence para 200 ingenieros con almacenamiento en Markdown, búsqueda con Elasticsearch, historial de versiones y permisos por equipo. El alcance cubre la ingesta de Markdown, indexación, búsqueda, gestión de permisos y auditoría de cambios. No se ha detallado la migración de contenido existente, la interfaz de usuario específica, ni cómo se integra con el directorio de equipos. La principal incertidumbre está en el volumen de documentos, la estrategia de permisos en cascada y la capacidad de Elasticsearch (aunque se asume un cluster estándar). El esfuerzo es moderado porque la arquitectura es clara (base de datos + índice + API), pero crece si hay legado a migrar o permisos heredados complejos.",
+   "phases": [
+    {
+     "name": "Diseño, base de datos y permisos",
+     "hours_min": 40,
+     "hours_max": 80,
+     "confidence_pct": 50,
+     "summary": "Arquitectura de almacenamiento de Markdown, esquema de permisos por equipo (lectura, escritura, administración), modelado de auditoría y planificación de Elasticsearch. Incluye definición de control de acceso basado en roles (RBAC) y cómo escala con 200 usuarios y equipos anidados."
+    },
+    {
+     "name": "API y motor de búsqueda",
+     "hours_min": 60,
+     "hours_max": 120,
+     "confidence_pct": 45,
+     "summary": "Desarrollo de endpoints REST para crear, leer, actualizar, eliminar documentos en Markdown; integración con Elasticsearch para indexación y búsqueda; sincronización de índice con cambios. Riesgo: reglas de tokenización y filtros de Elasticsearch son a menudo iterativos."
+    },
+    {
+     "name": "Historial de cambios y auditoría",
+     "hours_min": 30,
+     "hours_max": 70,
+     "confidence_pct": 40,
+     "summary": "Registro de versiones (autor, timestamp, diff de cambios), comparador visual, restauración a versión anterior. La complejidad depende de si diffs se calculan en cliente o servidor y si se necesita retención a largo plazo."
+    },
+    {
+     "name": "Autenticación, autorización y auditoría de acceso",
+     "hours_min": 25,
+     "hours_max": 60,
+     "confidence_pct": 35,
+     "summary": "Integración con directorio de usuarios (LDAP, OAuth, o sin detallar), asignación de equipos a permisos, logs de acceso denegado. Gran incertidumbre: ¿cómo se sincronizan equipos? ¿existe ya una fuente única de verdad?"
+    },
+    {
+     "name": "Interfaz web y experiencia de usuario",
+     "hours_min": 50,
+     "hours_max": 120,
+     "confidence_pct": 40,
+     "summary": "Editor de Markdown con preview en directo, búsqueda front-end con autocompletado, navegación de espacios, visualización de historial. No se ha especificado si es similar a Confluence o minimalista."
+    },
+    {
+     "name": "Pruebas, documentación y entrega",
+     "hours_min": 45,
+     "hours_max": 90,
+     "confidence_pct": 50,
+     "summary": "Pruebas funcionales, carga (comportamiento de Elasticsearch con índices grandes), seguridad de permisos, documentación de API, guía de usuario, entrega a entorno de staging."
+    }
+   ],
+   "assumptions": [
+    "Migraciones de contenido actual desde Confluence no están incluidas en esta estimación.",
+    "El directorio de usuarios y asignación de equipos es responsabilidad del cliente o ya existe.",
+    "Elasticsearch se asume disponible (clúster gestionado o instalado por DevOps).",
+    "La interfaz no requiere features WYSIWYG complejo, solo edición y preview de Markdown.",
+    "Máximo 2-3 integraciones externas (autenticación + posiblemente notificaciones).",
+    "Volumen inicial estimado en decenas de miles de documentos; si es superior, la indexación y búsqueda necesitan revisión.",
+    "Control de acceso es por equipo plano, no por jerarquía profunda de espacios."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "250–540 h fuera de [400, 2000]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-15-marketplace",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.011166,
+   "latency_ms": 16775.3,
+   "llm_calls": 3,
+   "tier": "default",
+   "total_hours_min": 210,
+   "total_hours_max": 345,
+   "total_duration_weeks": 8,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Marketplace de servicios de jardinería con flujo de reserva, pago mediante Stripe Connect y sistema de valoraciones. Arquitectura de dos lados: clientes que contratan y jardineros que ofertan servicios y gestionan ingresos. Riesgo principal: aislamiento de datos entre tenants y reconciliación de pagos con Stripe. Confianza moderada (65%) porque faltan detalles sobre volumen esperado, complejidad de la agenda compartida, y gestión de disputas de pago.",
+   "phases": [
+    {
+     "name": "Diseño de base de datos y modelo de negocio",
+     "hours_min": 20,
+     "hours_max": 35,
+     "confidence_pct": 75,
+     "summary": "Esquema de usuarios (clientes y jardineros), servicios disponibles, reservas, calendario de disponibilidad y relaciones con Stripe. Definición de aislamiento de datos por tenant, ciclo de pago y estados de reserva. Se excluye modelado de datos complejos de ubicación o matching algorítmico."
+    },
+    {
+     "name": "Autenticación, autorización y gestión de tenants",
+     "hours_min": 25,
+     "hours_max": 40,
+     "confidence_pct": 70,
+     "summary": "Sistema de registro y login para dos roles: cliente y jardinero. Aislamiento de datos por tenant, permisos diferenciados. Se asume autenticación estándar (email/contraseña o OAuth simple). No se incluye 2FA, SSO empresarial ni autenticación biométrica."
+    },
+    {
+     "name": "Gestión de servicios, reservas y calendario",
+     "hours_min": 35,
+     "hours_max": 55,
+     "confidence_pct": 65,
+     "summary": "Creación y listado de servicios, búsqueda básica, reserva con validación de disponibilidad, gestión de agenda del jardinero. No se cubre matching automático, recomendaciones personalizadas ni agenda compartida con overbooking automático. Se asume calendario simple de disponibilidad por día/horario."
+    },
+    {
+     "name": "Integración con Stripe Connect y facturación",
+     "hours_min": 40,
+     "hours_max": 65,
+     "confidence_pct": 60,
+     "summary": "Configuración de cuentas conectadas (jardineros), procesamiento de pagos, manejo de comisiones del marketplace, webhooks para confirmación de pago y reembolsos básicos. Riesgo: reconciliación de disputas y movimientos de dinero entre billeteras de jardineros. No incluye contabilidad avanzada, impuestos por región ni auditoría de transacciones."
+    },
+    {
+     "name": "Sistema de valoraciones y reputación",
+     "hours_min": 15,
+     "hours_max": 25,
+     "confidence_pct": 70,
+     "summary": "Registro de reseñas post-servicio, visualización de calificaciones, cálculo de promedio. Se excluye moderación de contenido, filtros de spam y análisis de sentimiento."
+    },
+    {
+     "name": "Frontend y experiencia de usuario",
+     "hours_min": 45,
+     "hours_max": 75,
+     "confidence_pct": 65,
+     "summary": "Interfaces para clientes (búsqueda, reserva, historial, valoración) y jardineros (agenda, cobros, perfil). Responsive básico. No se cubre accesibilidad avanzada, analytics personalizados ni optimización SEO."
+    },
+    {
+     "name": "Testing, deployment e infraestructura",
+     "hours_min": 30,
+     "hours_max": 50,
+     "confidence_pct": 60,
+     "summary": "Tests unitarios e integración, despliegue en producción, monitoreo básico y manejo de errores. No incluye load testing, disaster recovery ni redundancia geográfica."
+    }
+   ],
+   "assumptions": [
+    "Se asume un máximo de 1.000–5.000 reservas mensuales en fase inicial.",
+    "Autenticación: email/contraseña o OAuth básico, sin 2FA.",
+    "Sistema de calendario simple: disponibilidad por bandas horarias diarias, sin reglas complejas de recurring.",
+    "Stripe Connect es la única pasarela; se asume un solo método de pago.",
+    "Búsqueda de servicios sin geolocalización real ni matching por proximidad.",
+    "No se incluye gestión de cancelaciones complejas ni disputas de cliente-jardinero.",
+    "Valoraciones son simples (puntuación + texto), sin verificación de compra.",
+    "Infraestructura estándar: base de datos relacional, backend monolítico o API REST simple."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "210–345 h fuera de [600, 3000]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-16-plazo-imposible",
+   "mode": "actor",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.021773,
+   "latency_ms": 30011.2,
+   "llm_calls": 4,
+   "tier": "default",
+   "total_hours_min": 241,
+   "total_hours_max": 360,
+   "total_duration_weeks": 2,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "summary": "Fuera de alcance: E-commerce básico con 500 productos, carrito, pagos y panel de pedidos. Plazo fijo de 2 semanas (80 horas de capacidad). La estimación técnica sin sprints ni buffers asciende a 240–320 h con 25% de confianza. Esto EXCEDE el presupuesto disponible en un factor 3–4×. Se requiere reducir alcance (p.ej. integración de pagos simplificada, carrito sin persistencia multi-sesión, panel de admin minimal) o renegociar la fecha. La arquitectura multi-tenant típica de SaaS y la gestión de ciclos de facturación NO entran en este alcance inicial.",
+   "phases": [
+    {
+     "name": "Catálogo y gestión de productos",
+     "hours_min": 50,
+     "hours_max": 70,
+     "confidence_pct": 40,
+     "summary": "Creación del modelo de datos, ingesta de 500 referencias (asumimos CSV o JSON plano), maquetación de listado con búsqueda/filtrado básico y detalle de producto. No incluye sincronización posterior, versionado ni variantes. La carga inicial de 500 productos suele requerir más validación y limpieza de lo previsto."
+    },
+    {
+     "name": "Carrito y orden de compra",
+     "hours_min": 60,
+     "hours_max": 90,
+     "confidence_pct": 30,
+     "summary": "Sesión de carrito, persistencia, ajuste de cantidades, cálculo de subtotal e impuestos (asumimos un único tipo). Generación de orden y asignación de ID. No incluye carrito abandonado, recuperación de sesión entre dispositivos, ni aplicación de cupones/descuentos complejos. Persistencia en base de datos vs. memoria sigue sin definirse."
+    },
+    {
+     "name": "Integración de pagos",
+     "hours_min": 50,
+     "hours_max": 80,
+     "confidence_pct": 20,
+     "summary": "Integración con proveedor de pagos (Stripe, PayPal u otro). Implementación de flujo de autorización y notificación de webhook. Cobertura limitada a happy path. No incluye reembolsos, reintentos automáticos, reconciliación de pagos fallidos ni auditoría de transacciones. Elegir proveedor no está decidido; cada uno implica un costo de integración diferente."
+    },
+    {
+     "name": "Panel de pedidos (admin)",
+     "hours_min": 50,
+     "hours_max": 60,
+     "confidence_pct": 35,
+     "summary": "Listado de pedidos, filtrado por estado (pendiente, pagado, enviado), cambio de estado manual, descarga de albarán simple. No incluye reportes, análisis, exportación masiva ni integración con sistema de logística."
+    },
+    {
+     "name": "Despliegue en producción",
+     "hours_min": 30,
+     "hours_max": 40,
+     "confidence_pct": 50,
+     "summary": "Configuración de entorno (base de datos, variables de entorno, SSL), validación de seguridad básica (OWASP top 3), pruebas de carga minimal, backups. No incluye CDN, caching distribuido ni monitoreo avanzado."
+    },
+    {
+     "name": "Variabilidad y ajustes finales",
+     "hours_min": 1,
+     "hours_max": 20,
+     "confidence_pct": 15,
+     "summary": "Colchón para cambios de scope descubiertos en las últimas 48 horas antes de go-live. Realista solo si todo lo anterior se mantiene estable."
+    }
+   ],
+   "assumptions": [
+    "Proveedor de pagos elegido antes de iniciar desarrollo (Stripe, PayPal, etc.).",
+    "500 productos en formato plano sin variantes, atributos dinámicos ni jerarquía de categorías profunda.",
+    "Carrito persistido en base de datos estándar, no en Redis o solución de sesión distribuida.",
+    "Un único tipo de impuesto o impuesto fijo configurado.",
+    "Autenticación de usuarios simplificada (registro básico y login), sin OAuth ni SSO.",
+    "Hosting en una sola región, sin alta disponibilidad ni failover.",
+    "Equipo dedicado 40 h/semana sin interrupciones ni soporte paralelo.",
+    "Diseño visual reutilizando componentes estándar o UI kit existente; sin diseño gráfico de marca desde cero.",
+    "Base de datos sin optimización inicial de índices ni estrategia de particionado."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "241–360 h fuera de [300, 1500]; 2 semanas fuera de [3, 20]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-01-saas-crm",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.014178,
+   "latency_ms": 18894.6,
+   "llm_calls": 4,
+   "tier": "default",
+   "total_hours_min": 300,
+   "total_hours_max": 480,
+   "total_duration_weeks": 12,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "CRM B2B básico con gestión de contactos, embudo de ventas configurable y reportes de conversión. Frontend React, backend PostgreSQL. Equipo de 3 personas. El alcance está bien definido en funcionalidad, pero faltan detalles sobre volumen de datos (número de contactos, transacciones mensuales), integraciones externas (email, calendario, terceros), y modelo de tenencia (single vs multi-tenant). Asumimos uso single-tenant inicial, sin integraciones externas complejas y sin API pública. La confianza es 65% porque el alcance funcional es claro pero la arquitectura de escalabilidad y detalles de UX pueden requerir revisión.",
+   "phases": [
+    {
+     "name": "Diseño y arquitectura",
+     "hours_min": 30,
+     "hours_max": 50,
+     "confidence_pct": 75,
+     "summary": "Definición de modelo de datos (contactos, oportunidades, usuarios, permisos), diseño de embudo configurable, arquitectura backend-frontend, esquema PostgreSQL. Incluye spike de autenticación básica y seguridad de datos. No incluye integraciones externas ni diseño gráfico detallado."
+    },
+    {
+     "name": "Backend: CRUD y embudo de ventas",
+     "hours_min": 80,
+     "hours_max": 120,
+     "confidence_pct": 70,
+     "summary": "Implementación de API REST para contactos, oportunidades y etapas del embudo. Lógica de transiciones entre etapas, validaciones y permisos. Auditoría básica de cambios. Excluye webhooks, sincronización bidireccional y APIs de terceros."
+    },
+    {
+     "name": "Frontend: interfaz de gestión de contactos",
+     "hours_min": 60,
+     "hours_max": 100,
+     "confidence_pct": 65,
+     "summary": "Vistas CRUD de contactos y oportunidades, formularios reactivos, búsqueda y filtrado básico. Tablero del embudo visual (Kanban simple o lista). Gestión de vista por usuario. No incluye drag-and-drop avanzado, importación en lote ni campos dinámicos personalizados por cliente."
+    },
+    {
+     "name": "Reportes y análisis",
+     "hours_min": 40,
+     "hours_max": 70,
+     "confidence_pct": 60,
+     "summary": "Reportes de conversión por etapa, duración promedio, tasa de ganancia/pérdida. Gráficos básicos (barras, líneas). Filtros por fecha, propietario, etapa. Excluye predicción, cohortes complejas y exportación a múltiples formatos."
+    },
+    {
+     "name": "Autenticación, base de datos y devops",
+     "hours_min": 50,
+     "hours_max": 80,
+     "confidence_pct": 70,
+     "summary": "Autenticación de usuario (login/logout, sesiones), migración de base de datos, backups, despliegue en entorno de producción. Incluye documentación mínima de setup. No incluye SSO, 2FA, ni CI/CD avanzada."
+    },
+    {
+     "name": "Testing, ajustes y launch",
+     "hours_min": 40,
+     "hours_max": 60,
+     "confidence_pct": 60,
+     "summary": "Tests unitarios en backend, testing funcional del embudo, validación de reportes, resolución de bugs encontrados en QA. Ajustes de rendimiento en consultas. Capacitación básica del equipo de 3 personas."
+    }
+   ],
+   "assumptions": [
+    "Single-tenant: sin multi-tenancy ni aislamiento de datos por organización.",
+    "Volumen de datos bajo a medio: hasta 5.000 contactos y 1.000 oportunidades activas sin optimización especial de índices.",
+    "Sin integraciones externas iniciales: no incluye sincronización con email, calendario, Slack ni CRMs existentes.",
+    "Embudo configurable en administración pero sin personalización por usuario en tiempo de ejecución.",
+    "Autenticación local (usuario/contraseña); sin OAuth, SAML ni proveedores de identidad externos.",
+    "Reportes estáticos: sin real-time dashboards ni análisis predictivo.",
+    "Equipo de desarrollo disponible 100% para este proyecto sin interrupciones.",
+    "UI/UX básica: usable pero no diseño premium; iteraciones UX mínimas."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "dentro de rango"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 1.0
+  },
+  {
+   "case_id": "caso-02-movil-fidelizacion",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.013153,
+   "latency_ms": 17104.7,
+   "llm_calls": 4,
+   "tier": "default",
+   "total_hours_min": 400,
+   "total_hours_max": 600,
+   "total_duration_weeks": 10,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "App de fidelización en Flutter para 40 tiendas: tarjeta digital, puntos, cupones y notificaciones. Arquitectura de dos plataformas con backend compartido. El riesgo principal es la integración con sistemas de punto de venta existentes (no descrita), que puede añadir 15–20% de esfuerzo. Equipo de 4 reduce la complejidad de coordinación. Confianza 65% por falta de detalle en integraciones y flujos de sincronización offline.",
+   "phases": [
+    {
+     "name": "Diseño e infraestructura base",
+     "hours_min": 60,
+     "hours_max": 90,
+     "confidence_pct": 70,
+     "summary": "Arquitectura de la app (estado, navegación), diseño del sistema de puntos, definición de entidades principales (usuario, tienda, transacción), setup de Firebase o backend equivalente, CI/CD. Incluye prototipo de flujo principal."
+    },
+    {
+     "name": "Tarjeta digital y perfil de cliente",
+     "hours_min": 80,
+     "hours_max": 110,
+     "confidence_pct": 70,
+     "summary": "Pantalla de perfil, tarjeta digital con código QR/barras (lecturable en POS), historial de transacciones, datos personales. Integración con autenticación. No incluye integración con sistema de POS del cliente."
+    },
+    {
+     "name": "Motor de puntos y cupones",
+     "hours_min": 100,
+     "hours_max": 150,
+     "confidence_pct": 60,
+     "summary": "Lógica de acumulación de puntos, reglas de descuento, catálogo de cupones canjeables, carrito de canje, estado visual de puntos disponibles y pendientes. El riesgo está en la complejidad de las reglas de negocio, aún no detallada."
+    },
+    {
+     "name": "Notificaciones y ofertas",
+     "hours_min": 50,
+     "hours_max": 80,
+     "confidence_pct": 65,
+     "summary": "Push notifications, sistema de targeting (por tienda, por segmento), calendario de campañas, panel de administrador básico para lanzar notificaciones. No incluye segmentación avanzada ni A/B testing."
+    },
+    {
+     "name": "Sincronización y gestión offline",
+     "hours_min": 40,
+     "hours_max": 70,
+     "confidence_pct": 55,
+     "summary": "Caché local de datos de usuario y cupones, sincronización con backend, manejo de conflictos en modo offline. Complejidad depende de qué transacciones deben funcionar sin conexión y cómo se resuelven en el backend."
+    },
+    {
+     "name": "Testing, ajustes y release",
+     "hours_min": 70,
+     "hours_max": 100,
+     "confidence_pct": 70,
+     "summary": "Tests unitarios y de integración en Flutter, testing en matriz de dispositivos (iOS/Android, versiones recientes), preparación para stores (assets, permisos, descripciones), revisión y ajustes post-review de stores. No incluye mantenimiento post-lanzamiento."
+    }
+   ],
+   "assumptions": [
+    "Sistema de puntos con reglas simples (sin reglas por familia de producto ni negociación por volumen)",
+    "Backend disponible o a desarrollar en paralelo por otro equipo",
+    "Integración con sistema de POS del cliente será definida y desarrollada aparte (se estima solo la lectura de la tarjeta en la app)",
+    "Máximo 2 versiones recientes de iOS y Android como objetivo de soporte",
+    "Panel de administración de notificaciones muy básico (sin segmentación compleja ni IA)",
+    "Sincronización offline limitada a consulta de saldo y catálogo de cupones, no a transacciones complejas",
+    "No incluye fidelización de múltiples cadenas o gestión de clientes intertiendas avanzada"
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "400–600 h fuera de [500, 2500]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-03-interna-incorporacion",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.014886,
+   "latency_ms": 20103.2,
+   "llm_calls": 4,
+   "tier": "default",
+   "total_hours_min": 240,
+   "total_hours_max": 380,
+   "total_duration_weeks": 12,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "Portal de onboarding de empleados con autenticación Okta, gestión de tareas del primer mes, firma de documentos y notificaciones al responsable. Se estima en base a un único sistema de origen de datos (Okta) y un equipo pequeño (3 usuarios). La complejidad principal está en la integración con Okta SSO, la orquestación de flujo de tareas y el módulo de firma. No incluye integración con sistemas de RRHH externos ni customización de documentos dinámicos. Rango 240–380 h con 50% de confianza: hay varias asunciones pendientes sobre el volumen de empleados simultáneos, si los documentos se generan a partir de plantillas o datos maestros, y si hay validaciones complejas de estado.",
+   "phases": [
+    {
+     "name": "Integración Okta y autenticación",
+     "hours_min": 40,
+     "hours_max": 70,
+     "confidence_pct": 65,
+     "summary": "Setup de conexión OAuth2/SAML con Okta, gestión de sesión, mapeo de atributos de usuario (nombre, correo, departamento). Incluye pruebas de flujo de login y logout. Se asume que Okta está ya aprovisionada en la organización y que no hay requiere sincronización periódica de usuarios."
+    },
+    {
+     "name": "Diseño y desarrollo del portal frontend",
+     "hours_min": 60,
+     "hours_max": 100,
+     "confidence_pct": 55,
+     "summary": "Interfaz web para empleados: dashboard con lista de tareas, estado de progreso, acceso a documentos. Se asume diseño funcional simple sin requerimientos de marca complejos. No incluye app móvil ni soporte offline."
+    },
+    {
+     "name": "Flujo de tareas y estado del onboarding",
+     "hours_min": 50,
+     "hours_max": 80,
+     "confidence_pct": 50,
+     "summary": "Modelo de datos para tareas, transiciones de estado, lógica de orden y condiciones (ej. firma antes de acceso a recursos). Se asume que la lista de tareas es fija para todos los empleados en su primer mes; no incluye personalización dinámica ni ramificaciones por tipo de contrato."
+    },
+    {
+     "name": "Módulo de firma de documentos",
+     "hours_min": 40,
+     "hours_max": 60,
+     "confidence_pct": 45,
+     "summary": "Integración con servicio de e-firma (no especificado cuál) o implementación básica con timestamp y consentimiento registrado. Se asume volumen bajo (<50 firmas/mes). Riesgo: si se requiere certificado legal o compliance GDPR específico, el esfuerzo crece un 50%."
+    },
+    {
+     "name": "Notificaciones al responsable y reporting básico",
+     "hours_min": 30,
+     "hours_max": 40,
+     "confidence_pct": 60,
+     "summary": "Sistema de alertas para manager cuando un empleado no completa tareas en plazo, lista de pendientes por empleado. Se asume notificaciones por correo o panel simple; no incluye integraciones con sistemas de ticket o escalonamiento."
+    },
+    {
+     "name": "Deployment, testing y documentación",
+     "hours_min": 20,
+     "hours_max": 30,
+     "confidence_pct": 65,
+     "summary": "Tests de autenticación, flujos de tareas y firma. Documentación operativa y de usuario. Deployment en entorno de producción. No incluye capacitación presencial ni soporte post-launch sostenido."
+    }
+   ],
+   "assumptions": [
+    "Okta está ya configurada en la organización y disponible para integración OAuth2/SAML",
+    "La lista de tareas del primer mes es idéntica para todos los empleados y no varía por tipo de contrato, departamento o localización",
+    "Volumen estimado: <100 empleados/mes en onboarding simultáneo",
+    "Los documentos a firmar son estáticos o generados con datos simples (nombre, fecha) sin lógica de plantilla compleja",
+    "Servicio de e-firma: no se especifica si es SaaS (DocuSign, Adobe Sign) o autoimplementado; se asume disponibilidad o uso de solución estándar",
+    "Notificaciones iniciales son por correo; no se requiere integración con Slack, Teams u otro sistema de comunicación empresarial",
+    "El responsable es un único rol (manager del empleado) sin cadenas de aprobación ni escalamientos condicionados",
+    "Base de datos de empleados: sincronización manual o lectura directa de Okta, sin ETL desde HR system externo",
+    "Interfaz de reporte es un panel simple sin análisis predictivo ni visualizaciones complejas"
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "dentro de rango"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 1.0
+  },
+  {
+   "case_id": "caso-04-pipeline-etl",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.014234,
+   "latency_ms": 18662.2,
+   "llm_calls": 4,
+   "tier": "default",
+   "total_hours_min": 96,
+   "total_hours_max": 144,
+   "total_duration_weeks": 6,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "ETL diario que ingiere tres flujos CSV desde SFTP, transforma con dbt y carga a Snowflake. La estimación cubre conexión a los tres servidores SFTP, orquestación diaria, transformación en dbt, carga incremental a Snowflake y alertas de fallos. No están incluidos: esquema de datos, requisitos de backfill histórico, reintento automático de cargas fallidas ni manejo de duplicados entre proveedores. La confianza es media porque falta el contrato exacto de datos (volúmenes, frecuencia de cambio de esquema, SLA de latencia).",
+   "phases": [
+    {
+     "name": "Configuración SFTP y validación de ficheros",
+     "hours_min": 16,
+     "hours_max": 24,
+     "confidence_pct": 65,
+     "summary": "Autenticación y conexión a los tres servidores SFTP. Scripts de descarga y validación de estructura CSV (esquema, encoding, campos requeridos). Gestión de errores de conectividad. No incluye la definición del esquema de datos ni la documentación de los proveedores."
+    },
+    {
+     "name": "Diseño e implementación de transformación en dbt",
+     "hours_min": 32,
+     "hours_max": 48,
+     "confidence_pct": 50,
+     "summary": "Modelos de staging para los tres flujos, lógica de limpieza básica (nulos, tipos) y cálculos agregados si los hay. La confianza baja porque el resumen no especifica qué transformaciones de negocio se necesitan. Se asume que hay un modelo final de salida pero no se conoce su complejidad ni dependencias entre fuentes."
+    },
+    {
+     "name": "Carga en Snowflake e idempotencia",
+     "hours_min": 20,
+     "hours_max": 32,
+     "confidence_pct": 60,
+     "summary": "Tablas de destino en Snowflake, estrategia de carga (reemplazo diario o merge incremental), clave de deduplicación por proveedor. Gestión de tipos de datos y truncado antes de carga. No incluye backfill de histórico ni optimización de particiones."
+    },
+    {
+     "name": "Orquestación y alertas de fallos",
+     "hours_min": 16,
+     "hours_max": 24,
+     "confidence_pct": 60,
+     "summary": "DAG o flujo de scheduler (airflow, dbt cloud native o similar) que ejecute la secuencia diaria. Captura de logs de fallos, notificación por email o integración con monitoring si la existe. No se incluye escalabilidad multi-proyecto ni gestión de reintentos automáticos."
+    },
+    {
+     "name": "Testing, documentación y puesta en producción",
+     "hours_min": 12,
+     "hours_max": 16,
+     "confidence_pct": 55,
+     "summary": "Tests unitarios en dbt (unique, not_null en claves), documentación del flujo y de los contratos de datos esperados. Validación end-to-end en un entorno similar a producción. Setup de credenciales y secretos en la plataforma final de ejecución."
+    }
+   ],
+   "assumptions": [
+    "Se proporcionará acceso a los tres servidores SFTP y credenciales antes de comenzar.",
+    "Los ficheros CSV son de volumen pequeño-medio (menos de 500 MB diarios por proveedor).",
+    "Snowflake ya existe y está configurado; solo hay que crear tablas de destino.",
+    "El scheduler (Airflow, dbt Cloud, etc.) está disponible o será proporcionado por el cliente.",
+    "Las transformaciones son operacionales básicas: limpieza, deduplicación, tipos; no incluyen modelos estadísticos ni joins complejos entre las tres fuentes.",
+    "La latencia aceptable es diaria; no hay requisito de streaming o procesamiento en tiempo real.",
+    "El error de una fuente no debe bloquear la carga de las otras dos."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "96–144 h fuera de [150, 900]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-05-fuera-vago",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.008714,
+   "latency_ms": 10413.1,
+   "llm_calls": 4,
+   "tier": "default",
+   "total_hours_min": 16,
+   "total_hours_max": 32,
+   "total_duration_weeks": 1,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "Fuera de alcance: El cliente describe un proyecto de IA sin alcance definido: no hay especificación de funcionalidad, usuarios, datos de entrada, modelos a usar ni escala. A este nivel de ambigüedad es imposible estimar con rigor. Se requiere una sesión de descubrimiento antes de cualquier compromiso de horas.",
+   "phases": [
+    {
+     "name": "Descubrimiento y definición de alcance",
+     "hours_min": 16,
+     "hours_max": 32,
+     "confidence_pct": 25,
+     "summary": "Sesión con stakeholders para identificar: problema específico que la IA resuelve, usuarios finales (internos o externos), volumen de datos, latencia requerida, modelos candidatos (LLM, visión, NLP, etc.) y criterios de éxito. Sin esta claridad, cualquier cifra posterior es especulación."
+    }
+   ],
+   "assumptions": [
+    "No hay descripción de funcionalidad específica.",
+    "Se desconoce quiénes son los usuarios finales.",
+    "No se ha identificado qué tipo de IA se necesita (LLM, modelos entrenados, análisis, automatización).",
+    "No hay volumen de datos ni escala esperada.",
+    "Se asume que los stakeholders pueden dedicar tiempo a una sesión de descubrimiento en los próximos días.",
+    "Se presume que existe un presupuesto explorador para esta fase inicial."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "declarada fuera de alcance"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "no aplica: caso fuera de alcance"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "no aplica"
+    }
+   ],
+   "score": 1.0
+  },
+  {
+   "case_id": "caso-06-fuera-inyeccion",
+   "mode": "acb",
+   "status": "bloqueado",
+   "guardrail_reason": "prompt_injection",
+   "error": null,
+   "cost_usd": 0.0,
+   "latency_ms": 15.3,
+   "llm_calls": 0,
+   "tier": null,
+   "total_hours_min": null,
+   "total_hours_max": null,
+   "total_duration_weeks": null,
+   "acb_final_decision": null,
+   "acb_iterations": null,
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "sin respuesta del LLM que validar"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "bloqueado por el guardrail (prompt_injection)"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "bloqueado por el guardrail (prompt_injection)"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "bloqueado por el guardrail (prompt_injection)"
+    }
+   ],
+   "score": 1.0
+  },
+  {
+   "case_id": "caso-07-nda-ejecutivo",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.030243,
+   "latency_ms": 39934.0,
+   "llm_calls": 6,
+   "tier": "executive",
+   "total_hours_min": 410,
+   "total_hours_max": 950,
+   "total_duration_weeks": 20,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 2,
+   "summary": "Portal interno del banco para inversores con reportes trimestrales, documentos descargables y áreas privadas por inversor. Solución propietaria con aislamiento de datos crítico (cada inversor ve solo sus datos y documentos). Sin detalles aún sobre volumen de inversores, estructura de documentos, integraciones con sistemas del banco, frecuencia de actualizaciones ni requisitos regulatorios específicos (PSD2, GDPR, auditoría). La estimación es provisional: requiere clarificación sobre origen y formato de datos financieros, autenticación (SSO, estándar), responsabilidades de integración con legacy, y cualquier normativa de trazabilidad o cumplimiento. Variabilidad alta por falta de definición de arquitectura de permisos, complejidad del modelo de datos y alcance regulatorio.",
+   "phases": [
+    {
+     "name": "Autenticación, autorización y aislamiento de datos",
+     "hours_min": 60,
+     "hours_max": 140,
+     "confidence_pct": 38,
+     "summary": "Infraestructura de login, gestión de permisos por inversor y validación de aislamiento. Incluye pruebas de seguridad básicas. Rango alto si hay autenticación multifactor obligatoria o si regulación financiera exige auditoría de acceso y trazabilidad detallada."
+    },
+    {
+     "name": "Modelo de datos y API de reportes",
+     "hours_min": 80,
+     "hours_max": 180,
+     "confidence_pct": 28,
+     "summary": "Diseño del esquema de inversores, reportes trimestrales y documentos. API para lectura de reportes. El rango depende críticamente de dónde vienen los datos (sistema legacy del banco, entrada manual, integración con terceros), complejidad de transformación y si hay requisitos de auditoría o certificación en los datos."
+    },
+    {
+     "name": "Portal de inversores (frontend y backend)",
+     "hours_min": 100,
+     "hours_max": 220,
+     "confidence_pct": 35,
+     "summary": "Interfaz web responsive, descarga segura de documentos, visualización de reportes, área privada por usuario. Rango alto si los reportes requieren visualizaciones complejas, gráficos dinámicos o si hay requisitos de conformidad regulatoria en presentación de datos financieros."
+    },
+    {
+     "name": "Gestión de documentos y descarga segura",
+     "hours_min": 50,
+     "hours_max": 100,
+     "confidence_pct": 42,
+     "summary": "Almacenamiento, versionado y descarga de archivos con auditoría de acceso. Incluye mecanismos de control de descargas y eliminación segura. Rango alto si hay cifrado en reposo o en tránsito obligatorio por regulación."
+    },
+    {
+     "name": "Integración con sistemas del banco",
+     "hours_min": 70,
+     "hours_max": 180,
+     "confidence_pct": 22,
+     "summary": "Responsabilidad de integración aún por definir: ¿el equipo expone APIs que el banco conecta, o se hace cargo de la integración con legacy? Conexión a sistemas internos para datos de inversores y reportes. Rango muy abierto: depende de cantidad de sistemas, protocolos, calidad de documentación, gobernanza de cambios y si la integración es responsabilidad de este equipo o del banco."
+    },
+    {
+     "name": "Testing, conformidad y transición",
+     "hours_min": 50,
+     "hours_max": 130,
+     "confidence_pct": 28,
+     "summary": "Pruebas de seguridad y funcionalidad, validación regulatoria preliminar (si aplica PSD2/GDPR/auditoría), puesta en producción, y transición operacional. Rango alto si hay requisitos de cumplimiento financiero o auditoría de código por autoridades supervisoras."
+    }
+   ],
+   "assumptions": [
+    "No hay autenticación SSO ni multifactor especificada aún; se asume login con email/contraseña a menos que regulación lo prohiba.",
+    "El volumen de inversores no está definido; se estima para un sistema escalable a medio plazo (cientos a bajo miles).",
+    "Los datos de reportes provienen de al menos un sistema interno del banco; si hay múltiples fuentes, ETL complejos o transformaciones, la estimación sube.",
+    "No se incluyen cálculos financieros; se asume que reportes vienen calculados de sistemas upstream.",
+    "Responsabilidad de integración con sistemas del banco por definir: ¿Este equipo hace la integración o solo expone APIs para que el banco las conecte? Afecta horas de coordinación y testing.",
+    "Requisitos regulatorios (PSD2, GDPR, auditoría, conformidad financiera) por confirmar explícitamente. Proyecto bancario hace probable su existencia; su alcance puede aumentar horas de testing y documentación significativamente.",
+    "El almacenamiento de documentos es en servidor HTTP/blob storage simple, sin integración con sistemas de gestión documental empresarial."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "dentro de rango"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier executive"
+    }
+   ],
+   "score": 1.0
+  },
+  {
+   "case_id": "caso-08-rgpd-ejecutivo",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.01382,
+   "latency_ms": 18294.3,
+   "llm_calls": 4,
+   "tier": "executive",
+   "total_hours_min": 500,
+   "total_hours_max": 750,
+   "total_duration_weeks": 16,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "SaaS de analítica de RRHH con alcance europeo y cumplimiento RGPD desde el inicio. El proyecto incluye arquitectura con residencia de datos en EU, paneles de rotación y absentismo, y exportación de informes. Confianza moderada (55%) porque falta claridad en: número de paneles exacto, integraciones con sistemas de RRHH existentes, volumen de datos históricos, complejidad de las reglas de cálculo de rotación/absentismo, y si hay requisitos de SSO/autenticación corporativa. La arquitectura de multi-tenancy con aislamiento RGPD es la zona de mayor riesgo técnico y es la que mueve el rango.",
+   "phases": [
+    {
+     "name": "Infraestructura y cumplimiento RGPD",
+     "hours_min": 120,
+     "hours_max": 180,
+     "confidence_pct": 65,
+     "summary": "Entorno en EU (Región AWS EU o equivalente), configuración de aislamiento de tenants, encriptación en tránsito y reposo, políticas de retención y borrado de datos, auditoría de accesos, y documentación de cumplimiento RGPD. No incluye certificación formal (ISO 27001, SOC2) ni implementación de derechos ARCO más allá de API básica."
+    },
+    {
+     "name": "Autenticación, autorización y multi-tenancy",
+     "hours_min": 80,
+     "hours_max": 120,
+     "confidence_pct": 60,
+     "summary": "Sistema de login, gestión de tenants, roles y permisos por usuario y rol de empresa, y aislamiento de datos. Se asume autenticación básica (email/contraseña); SSO/SAML y MFA van en supuestos."
+    },
+    {
+     "name": "Paneles de rotación y absentismo",
+     "hours_min": 100,
+     "hours_max": 160,
+     "confidence_pct": 50,
+     "summary": "Modelado de conceptos (bajas, cambios de departamento, renuncias), agregación de métricas (tasa de rotación, días de ausencia, tendencias), y visualización en dashboards. Rango amplio porque no está claro si son 2 paneles simples o un sistema de alertas y análisis comparativo entre departamentos."
+    },
+    {
+     "name": "Exportación de informes",
+     "hours_min": 60,
+     "hours_max": 90,
+     "confidence_pct": 65,
+     "summary": "Generación de reportes en PDF y Excel, filtrado por período y unidad organizativa, y descarga por el usuario. No incluye programación automática de envíos ni integración con herramientas de BI externas."
+    },
+    {
+     "name": "Frontend y UX base",
+     "hours_min": 80,
+     "hours_max": 120,
+     "confidence_pct": 60,
+     "summary": "Interfaz responsive, navegación entre paneles, filtros comunes, y diseño de formularios de configuración. Se asume un único idioma (sin especificar cuál); localización multiidioma va en supuestos."
+    },
+    {
+     "name": "Testing, documentación y deployment",
+     "hours_min": 60,
+     "hours_max": 80,
+     "confidence_pct": 70,
+     "summary": "Tests unitarios e integración, documentación técnica y de usuario, setup de CI/CD, y lanzamiento a producción en EU."
+    }
+   ],
+   "assumptions": [
+    "No hay integraciones con sistemas de RRHH externos (Workday, SAP SuccessFactors, etc.) en esta fase.",
+    "Autenticación limitada a usuario/contraseña; SSO, SAML y MFA están excluidos.",
+    "Un único idioma de interfaz en el lanzamiento (confirmar cuál).",
+    "Base de datos histórica pequeña (<50k empleados acumulados); datos a gran escala requieren revisión.",
+    "Paneles limitados a rotación agregada y absentismo por período; análisis predictivo o ML excluidos.",
+    "No hay integración con calendarios de festivos por país ni cálculos locales de derecho laboral.",
+    "Cumplimiento RGPD cubre residencia y aislamiento; auditoría externa y certificación no incluidas."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": true,
+     "details": "dentro de rango"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier executive"
+    }
+   ],
+   "score": 1.0
+  },
+  {
+   "case_id": "caso-09-hipaa-ejecutivo",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.014398,
+   "latency_ms": 19329.5,
+   "llm_calls": 4,
+   "tier": "executive",
+   "total_hours_min": 180,
+   "total_hours_max": 280,
+   "total_duration_weeks": 8,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "Portal de admisión de pacientes con formularios de entrada, consentimiento informado y gestión de citas, cumpliendo HIPAA. El alcance cubre la interfaz de captura de datos, flujo de consentimiento, calendarización y almacenamiento seguro. No se incluyen: integración con sistemas hospitalarios existentes, SMS/email de confirmación, reportes analytics, autenticación multifactor avanzada ni módulos de seguimiento post-admisión. La confianza es moderada (55%) porque HIPAA introduce complejidad operacional (auditoría, encriptación, control de acceso) cuya implementación depende de decisiones arquitectónicas aún no documentadas. El riesgo principal es que \"cumplimiento HIPAA\" es una frase que esconde entre 40-60 horas de trabajo en seguridad, logging y segregación de datos.",
+   "phases": [
+    {
+     "name": "Diseño y arquitectura de seguridad HIPAA",
+     "hours_min": 40,
+     "hours_max": 60,
+     "confidence_pct": 50,
+     "summary": "Definición de controles de acceso, encriptación en tránsito y en reposo, plan de auditoría y logging, segregación de datos de pacientes, política de retención y borrado seguro. Requiere revisión con legal/compliance si no hay precedentes internos. Sin documentación de estos requisitos, el rango es amplio."
+    },
+    {
+     "name": "Formularios de entrada y captura de datos",
+     "hours_min": 35,
+     "hours_max": 50,
+     "confidence_pct": 65,
+     "summary": "Campos de datos demográficos, historia médica resumida, información de asegurador y contacto de emergencia. Validación client-side y server-side, manejo de errores. No incluye integración con sistemas externos de verificación."
+    },
+    {
+     "name": "Flujo de consentimiento informado",
+     "hours_min": 25,
+     "hours_max": 40,
+     "confidence_pct": 60,
+     "summary": "Documento de consentimiento con versiones, firma electrónica, registro de aceptación con timestamp, almacenamiento seguro del formulario firmado. Complejidad variable según si el consentimiento incluye variantes por tipo de servicio."
+    },
+    {
+     "name": "Gestión de citas y disponibilidad",
+     "hours_min": 30,
+     "hours_max": 45,
+     "confidence_pct": 60,
+     "summary": "Calendario de disponibilidad, búsqueda y reserva de citas, notificación básica al paciente (asumiendo email plano, no integraciones de terceros). No incluye SMS ni notificaciones push."
+    },
+    {
+     "name": "Almacenamiento y base de datos HIPAA-compliant",
+     "hours_min": 20,
+     "hours_max": 35,
+     "confidence_pct": 50,
+     "summary": "Configuración de base de datos con encryption at rest, políticas de backup, control de acceso por rol, eliminación segura de datos. Esfuerzo depende de la plataforma elegida (cloud gestionado vs. autohosted)."
+    },
+    {
+     "name": "Testing, documentación y deployment",
+     "hours_min": 30,
+     "hours_max": 50,
+     "confidence_pct": 55,
+     "summary": "Tests de seguridad básicos, auditoría de flujos sensibles, documentación de controles para cumplimiento, guía de operación y deployment en entorno productivo. HIPAA exige trazabilidad; la documentación absorbe más horas de lo típico."
+    }
+   ],
+   "assumptions": [
+    "Se asume que el cliente provee o define la política de seguridad y retención de datos; si no existe, suma 20-40 horas más de asesoría.",
+    "Se asume base de datos en plataforma cloud con soporte HIPAA nativo (ej: AWS RDS, Azure SQL) y no autohosted.",
+    "Se asume que la firma electrónica es mediante captura de evento (click/checkbox) con timestamp y no requiere certificado PKI.",
+    "Se asume un único rol de administrador de pacientes y no control granular de acceso por departamento.",
+    "Se asume que la notificación de citas es por email plano; no incluye SMS, push, ni integración con sistemas de comunicación de terceros.",
+    "Se asume que el portal es accesible solo después de admisión inicial (no pre-admisión con check-in remoto)."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "180–280 h fuera de [500, 2500]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier executive"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-10-equipo-pequeno",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.01198,
+   "latency_ms": 14705.6,
+   "llm_calls": 4,
+   "tier": "default",
+   "total_hours_min": 56,
+   "total_hours_max": 99,
+   "total_duration_weeks": 4,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "Sistema de reservas para peluquería con selección de servicio, hora y confirmación. MVP de alcance reducido (dos personas, un mes). La estimación asume servicios precargados sin gestión back-end de disponibilidad ni gestión de usuarios/permisos. No incluye herramientas de administración, reportes ni integraciones externas. El riesgo principal es la falta de claridad sobre gestión de conflictos de citas simultáneas y políticas de cancelación.",
+   "phases": [
+    {
+     "name": "Setup y infraestructura",
+     "hours_min": 8,
+     "hours_max": 16,
+     "confidence_pct": 70,
+     "summary": "Configuración del proyecto, base de datos básica, despliegue inicial. Incluye gestión de tenants mínima si es multi-tenant, o configuración simple si es mono-tenant. El supuesto es usar una solución PaaS estándar sin requisitos especiales de escala o seguridad."
+    },
+    {
+     "name": "Backend de citas",
+     "hours_min": 20,
+     "hours_max": 35,
+     "confidence_pct": 50,
+     "summary": "Creación de modelos de cita, API de reserva, lógica de búsqueda de horas disponibles. No incluye: sincronización de calendario externo, overbooking, avisos automáticos ni reglas complejas de duración variable por servicio. El riesgo es que 'elegir hora' puede esconder lógica de ocupación que aquí estimamos de forma plana."
+    },
+    {
+     "name": "Frontend (formulario + confirmación)",
+     "hours_min": 16,
+     "hours_max": 28,
+     "confidence_pct": 60,
+     "summary": "Interfaz de selección de servicio, horario y datos del cliente. Pantalla de confirmación con resumen. No incluye: página de gestión de reservas ya hechas, cancelación de cliente, recordatorios por correo o SMS."
+    },
+    {
+     "name": "Testing y ajustes",
+     "hours_min": 12,
+     "hours_max": 20,
+     "confidence_pct": 45,
+     "summary": "Pruebas funcionales del flujo de reserva, manejo de casos límite, correcciones menores. Bajo porque el MVP está acotado, pero la complejidad real emerge al probarlo con datos reales."
+    }
+   ],
+   "assumptions": [
+    "Servicios y precios precargados en la base de datos sin interfaz de administración.",
+    "Disponibilidad horaria definida de forma simple (ej: horario fijo 9-20h, sin pausas complejas).",
+    "Un único peluquero o salón; no hay asignación de citas a profesionales específicos.",
+    "La confirmación es una pantalla estática con resumen, sin envío de correo o SMS.",
+    "Autenticación mínima del cliente (nombre y teléfono) o sin autenticación en MVP.",
+    "Base de datos relacional estándar, sin requisitos de replicación ni backups especiales.",
+    "Despliegue en plataforma estándar (Vercel, Railway, etc.) sin DevOps complejo."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "56–99 h fuera de [60, 450]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": false,
+     "details": "tier default, se esperaba pm"
+    }
+   ],
+   "score": 0.5
+  },
+  {
+   "case_id": "caso-11-dev-microservicios",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.031914,
+   "latency_ms": 42524.6,
+   "llm_calls": 6,
+   "tier": "developer",
+   "total_hours_min": 480,
+   "total_hours_max": 980,
+   "total_duration_weeks": 18,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 2,
+   "summary": "Migración de monolito a microservicios en Kubernetes con Terraform y Helm, cubriendo 8 dominios de negocio. La estimación asume descomposición clara de límites, un único clúster Kubernetes y que infraestructura base existe. El equipo de plataforma de 5 personas operará post-migración pero no participa en la ejecución de la migración. La descomposición de código es la fase de mayor incertidumbre sin visibilidad del monolito actual. Se recomienda un spike inicial de 1–2 semanas para mapear dependencias ocultas antes de comprometerse con fechas.",
+   "phases": [
+    {
+     "name": "Análisis de dominios y descomposición arquitectónica",
+     "hours_min": 80,
+     "hours_max": 160,
+     "confidence_pct": 45,
+     "summary": "Mapeo de los 8 dominios de negocio, identificación de límites de servicios, análisis de dependencias y definición de contratos de API. Incluye entrevistas con dueños de negocio y revisión de arquitectura actual. Sin documentación conocida, el rango es amplio."
+    },
+    {
+     "name": "Preparación de infraestructura y pipelines base",
+     "hours_min": 60,
+     "hours_max": 120,
+     "confidence_pct": 40,
+     "summary": "Configuración de clúster Kubernetes, módulos Terraform reutilizables, registro de contenedores, pipelines CI/CD y plantillas base de Helm. No incluye gestión de secretos avanzada ni multi-region."
+    },
+    {
+     "name": "Descomposición y refactorización de código por servicio",
+     "hours_min": 160,
+     "hours_max": 360,
+     "confidence_pct": 28,
+     "summary": "Extracción de cada dominio del monolito: separación de código, manejo de transacciones distribuidas y estado compartido. Esta fase es opaca sin acceso al código. Asume equipos con experiencia en el dominio. El rango refleja variabilidad entre servicios simples y complejos con dependencias ocultas. Se recomienda spike arquitectónico previo."
+    },
+    {
+     "name": "Integración de servicios y testing en clúster",
+     "hours_min": 100,
+     "hours_max": 180,
+     "confidence_pct": 38,
+     "summary": "Tests de integración entre servicios, validación de DNS, políticas de red y circuit breakers. Asume mantenimiento de cobertura de tests actual del monolito; no incluye expansión de cobertura ni testing de carga."
+    },
+    {
+     "name": "Despliegue piloto y cutover",
+     "hours_min": 40,
+     "hours_max": 100,
+     "confidence_pct": 40,
+     "summary": "Despliegue paralelo de servicios no críticos, validación en producción y activación gradual del resto. Asume que el cliente tolera dual-run temporal."
+    },
+    {
+     "name": "Documentación y transición operacional",
+     "hours_min": 40,
+     "hours_max": 60,
+     "confidence_pct": 55,
+     "summary": "Playbooks de operación en Kubernetes, guías de troubleshooting y procedimientos de escalado. Excluye training formal: el equipo de plataforma operará con soporte ad-hoc y documentación."
+    }
+   ],
+   "assumptions": [
+    "Existe acceso al código y documentación clara de los 8 dominios, o es extraíble sin más investigación.",
+    "El monolito es modular en grado razonable; no es una bola de barro con acoplamiento global.",
+    "Infraestructura base (VPC, IAM, registro, certificados) ya existe o será responsabilidad del cliente.",
+    "Un único clúster Kubernetes; sin requisitos de multi-región o HA geográfica durante la migración.",
+    "Se mantiene la cobertura actual de tests unitarios e integración del monolito; no hay expansión de suite de tests.",
+    "Equipo de desarrollo actual puede dedicar tiempo; no es proyecto paralelo.",
+    "La migración la ejecuta un equipo dedicado, diferente del equipo de plataforma de 5 personas que operará post-migración.",
+    "Base de datos compartida actual; esquema por servicio es evaluado como decisión arquitectónica pero no ejecutado en esta fase."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "480–980 h fuera de [800, 4000]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier developer"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-12-streaming-kafka",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.014321,
+   "latency_ms": 19307.7,
+   "llm_calls": 4,
+   "tier": "developer",
+   "total_hours_min": 220,
+   "total_hours_max": 380,
+   "total_duration_weeks": 8,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "Migración de procesamiento nocturno por lotes a pipeline de streaming con Kafka y Spark para eventos de pedidos. El alcance no especifica: volumen de eventos/día, SLAs de latencia, esquema de eventos, topología actual de Kafka, número de paneles ni su complejidad. Sin estos detalles, la estimación tiene confianza baja y considera un escenario base (orden de magnitud: 10k-100k eventos/día, 1-3 paneles simples, infraestructura Kafka existente). Los riesgos principales son la idempotencia del procesamiento, los backfills históricos y la estabilidad operacional en producción.",
+   "phases": [
+    {
+     "name": "Análisis de requisitos y diseño de arquitectura",
+     "hours_min": 40,
+     "hours_max": 70,
+     "confidence_pct": 50,
+     "summary": "Sesiones de alineación para especificar: volumen real de eventos, SLAs de latencia, esquema de datos de pedidos, topología Kafka (brokers, particiones, replicación), composición y refresh de paneles, política de reintento y dead-letter. Documentar contrato de datos entre equipos (quien produce, quien consume, formato, garantías de entrega)."
+    },
+    {
+     "name": "Implementación del productor Kafka",
+     "hours_min": 30,
+     "hours_max": 50,
+     "confidence_pct": 45,
+     "summary": "Adaptar la fuente de pedidos para emitir eventos a Kafka en lugar de escribir en lote. Incluye serialización, selección de clave de partición (idempotencia), manejo de errores y reintentos. No incluye cambios en la fuente de datos subyacente si es externa."
+    },
+    {
+     "name": "Desarrollo del job Spark Streaming",
+     "hours_min": 50,
+     "hours_max": 90,
+     "confidence_pct": 40,
+     "summary": "Lógica de transformación y enriquecimiento de eventos, agregaciones si las hay, manejo de estado (windowing), chequeos de idempotencia. Pruebas unitarias y de integración local. Coste elevado si hay reglas complejas de negocio no documentadas."
+    },
+    {
+     "name": "Integración con paneles y validación de datos",
+     "hours_min": 35,
+     "hours_max": 60,
+     "confidence_pct": 40,
+     "summary": "Conexión del output de Spark a los sistemas de paneles (base de datos, caché o API). Validación de que los números coinciden con el lote anterior. Diseño de tests de regresión para asegurar que los paneles muestran los mismos KPIs tras la migración."
+    },
+    {
+     "name": "Manejo de backfill e idempotencia operacional",
+     "hours_min": 25,
+     "hours_max": 50,
+     "confidence_pct": 35,
+     "summary": "Estrategia para reprocesar histórico (si es necesario), garantías de exactly-once o at-least-once con deduplicación en destino, plan de recuperación ante fallos (checkpoints, offsets). Documentar y probar procedimientos de rollback."
+    },
+    {
+     "name": "Deployment, monitoreo y cutover",
+     "hours_min": 40,
+     "hours_max": 60,
+     "confidence_pct": 45,
+     "summary": "Configuración en ambiente de producción, métricas (lag de Kafka, throughput, latencia end-to-end), alertas. Plan de cutover del lote nocturno al streaming. Validación en paralelo antes de desactivar el proceso antiguo."
+    }
+   ],
+   "assumptions": [
+    "El volumen de eventos de pedidos es moderado (orden de 10k-100k/día) y manejable en una sola instancia de Spark.",
+    "Kafka ya existe en infraestructura o será aprovisionado sin coste de estimación.",
+    "Los paneles son relativamente simples (vistas de estado, agregaciones básicas, sin machine learning en streaming).",
+    "La fuente de pedidos permite emitir eventos sin cambios arquitectónicos mayores.",
+    "El equipo tiene experiencia previa con Spark; el tiempo de aprendizaje es mínimo.",
+    "No hay requisitos de reemplazo de todo el histórico en el primer día (backfill puede ser gradual).",
+    "La latencia máxima tolerable es de minutos, no de milisegundos."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "220–380 h fuera de [400, 2400]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier developer"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-13-fintech-movil",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.015467,
+   "latency_ms": 19479.2,
+   "llm_calls": 4,
+   "tier": "executive",
+   "total_hours_min": 540,
+   "total_hours_max": 940,
+   "total_duration_weeks": 24,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "App móvil de neobanco con onboarding KYC, integración con Marqeta para emisión de tarjetas, consulta de movimientos y transferencias, todo bajo cumplimiento PCI-DSS. El riesgo principal es la complejidad regulatoria y el número de integraciones externas (KYC, Marqeta, posiblemente backend financiero). Sin detalles sobre volumen de usuarios, arquitectura de backend existente, proveedor KYC específico ni requisitos exactos de PCI-DSS (certificación vs. controles en app), esta estimación asume una app bien diseñada conectada a backend existente. La desviación frente a este rango será importante si el backend no existe, si hay cambios regulatorios durante desarrollo o si el proveedor KYC requiere integraciones no documentadas.",
+   "phases": [
+    {
+     "name": "Diseño, arquitectura y setup de cumplimiento",
+     "hours_min": 40,
+     "hours_max": 80,
+     "confidence_pct": 50,
+     "summary": "Definición de flujo KYC con proveedor elegido, mapeo de integraciones (Marqeta, backend), análisis de requisitos PCI-DSS en la app (tokenización, gestión de credenciales, logging seguro), setup de entornos seguros y CI/CD con controles de seguridad. Incluye coordinación con compliance y posible auditoría inicial."
+    },
+    {
+     "name": "Onboarding y verificación KYC",
+     "hours_min": 120,
+     "hours_max": 200,
+     "confidence_pct": 40,
+     "summary": "Formularios de identidad y residencia, captura de documentos, orquestación de llamadas a proveedor KYC, reintentos y manejo de rechazos, almacenamiento seguro de datos sensibles (PCI-DSS), confirmación visual y consentimientos normativos. Riesgo alto: el flujo KYC real suele tener más pasos que los descritos en una frase."
+    },
+    {
+     "name": "Integración Marqeta y emisión de tarjetas",
+     "hours_min": 100,
+     "hours_max": 160,
+     "confidence_pct": 45,
+     "summary": "Llamadas a API de Marqeta para provisioning de tarjetas, manejo de estados (pending, active, declined), webhook para cambios de estado, cálculo de números de referencia, gestión de errores y reintentos. Incluye testing en sandbox y coordinación con Marqeta para credenciales y límites."
+    },
+    {
+     "name": "Consulta de movimientos y transferencias",
+     "hours_min": 80,
+     "hours_max": 140,
+     "confidence_pct": 50,
+     "summary": "Integración con backend para listar movimientos (filtros por fecha, tipo), detalles de transferencia, aprobaciones en caso de requerirse, confirmación de beneficiario, validación de fondos. Asume un backend ya construido; si no existe, suma 150+ horas."
+    },
+    {
+     "name": "Seguridad, testing y cumplimiento PCI-DSS",
+     "hours_min": 140,
+     "hours_max": 240,
+     "confidence_pct": 35,
+     "summary": "Auditoría de código (OWASP Mobile Top 10), penetration testing ligero, certificados SSL/TLS, gestión de secretos en app, logs de auditoría, testing en matriz de dispositivos y versiones de OS (iOS y Android asumidos), ciclos de revisión de stores. PCI-DSS en app es exigente; sin detalles de alcance exacto, este rango es conservador."
+    },
+    {
+     "name": "Iteraciones de store, ajustes y go-live",
+     "hours_min": 60,
+     "hours_max": 120,
+     "confidence_pct": 40,
+     "summary": "Ciclos de review de Apple App Store y Google Play (rechazos por permisos, contenido, comportamiento), ajustes menores, versión 1.1 con hotfixes, coordinación con equipos de marketing y compliance para lanzamiento."
+    }
+   ],
+   "assumptions": [
+    "Backend de neobanco (gestión de cuentas, saldos, transacciones) existe y está disponible en la fecha de inicio.",
+    "Proveedor de KYC es elegido y documentado antes del inicio del diseño.",
+    "Marqeta es el proveedor de tarjetas; credenciales y endpoints están disponibles en sandbox.",
+    "App es iOS y Android; no hay versiones web u otras plataformas.",
+    "Cumplimiento PCI-DSS se refiere a controles en la app (no tokenización en servidor, que es responsabilidad del backend).",
+    "Usuario entiende que ciclos de store pueden sumar 2–4 semanas en revisión externa.",
+    "Estimación no incluye cambios regulatorios (GDPR, KYC adicional impuesto por supervisor) durante desarrollo.",
+    "No hay integraciones adicionales (fraude, blockchain, biometría de terceros) más allá de las descritas."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "540–940 h fuera de [1500, 6000]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier executive"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-14-interna-conocimiento",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.01672,
+   "latency_ms": 22881.0,
+   "llm_calls": 4,
+   "tier": "default",
+   "total_hours_min": 270,
+   "total_hours_max": 440,
+   "total_duration_weeks": 16,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "Herramienta interna de wiki en Markdown para 200 ingenieros. El alcance core es almacenamiento de páginas, búsqueda con Elasticsearch, historial de versiones y control de acceso por equipo. La principal incógnita es la escala de la base de datos existente (número de páginas a migrar, tamaño medio), la complejidad de la integración con tu sistema de autenticación actual, y si las páginas tienen adjuntos o solo texto. Asumimos un único inquilino, no SaaS multiusuario. La estimación baja asume migración sencilla y autenticación vía LDAP/OIDC existente; la alta contempla limpieza de datos, duplicados y un sistema de permisos granular. Confianza 55% porque faltan detalles sobre el volumen y la estructura del legado.",
+   "phases": [
+    {
+     "name": "Backend y API REST",
+     "hours_min": 60,
+     "hours_max": 90,
+     "confidence_pct": 65,
+     "summary": "Servidor Node.js o Python con CRUD de páginas, versionado automático en cada cambio, y exposición de endpoints para lectura y escritura. Incluye schema de BD (PostgreSQL recomendado), modelo de datos para metadatos de página, y manejo de conflictos en edición concurrente. Suponemos autenticación delegada al frontend (JWT validado)."
+    },
+    {
+     "name": "Integración Elasticsearch",
+     "hours_min": 40,
+     "hours_max": 65,
+     "confidence_pct": 60,
+     "summary": "Configuración del cluster Elasticsearch, indexación full-text de páginas, sincronización en tiempo real tras cada cambio, y query builder para búsqueda con facetas por equipo. Suponemos Elasticsearch ya disponible en infraestructura; si es nueva instalación, el gasto creceríamos. Excluimos tuning avanzado (análisis de rendimiento, sharding estratégico)."
+    },
+    {
+     "name": "Sistema de permisos por equipo",
+     "hours_min": 50,
+     "hours_max": 80,
+     "confidence_pct": 50,
+     "summary": "Modelo de autorización (RBAC o ACL), mapeo de equipos a grupos, herencia de permisos en jerarquías de páginas, y enforcement en API. Suponemos que la estructura de equipos viene de un directorio corporativo (LDAP, AD, Okta) que puede ser consultado; si hay que construir gestión manual de equipos, el esfuerzo crece. Excluimos auditoría detallada de acceso."
+    },
+    {
+     "name": "Interfaz web y edición Markdown",
+     "hours_min": 70,
+     "hours_max": 110,
+     "confidence_pct": 55,
+     "summary": "Frontend React/Vue con editor de Markdown (considerar librerías como CodeMirror o ProseMirror), render en tiempo real, selector de equipos en permisos de página, y breadcrumb de navegación. Suponemos un solo navegador (Chrome/Firefox moderno). Historial visual (lista de versiones, diff) incluido. Excluimos WYSIWYG avanzado, comentarios en línea, o colaboración sincrónica (simultánea)."
+    },
+    {
+     "name": "Migración de datos desde Confluence",
+     "hours_min": 30,
+     "hours_max": 60,
+     "confidence_pct": 45,
+     "summary": "Extracción via Confluence API, mapeo de espacios a equipos, conversión de contenido (Confluence markup → Markdown), y carga bulk en BD destino. Suponemos acceso a APIs de Confluence y permisos para lectura de todos los espacios. No incluye: limpieza de duplicados masiva, análisis de huérfanas, ni reescritura de links internos rotos."
+    },
+    {
+     "name": "Despliegue e infraestructura",
+     "hours_min": 20,
+     "hours_max": 35,
+     "confidence_pct": 70,
+     "summary": "Dockerización, CI/CD básico (build + test), despliegue en tu entorno (cloud o on-prem), variables de entorno, y chequeo inicial. Suponemos acceso a infraestructura y que no necesitas alta disponibilidad multi-zona en v1. Excluye monitoring, backups, y documentación operativa."
+    }
+   ],
+   "assumptions": [
+    "Estructura de equipos disponible via LDAP, AD u otro directorio corporativo integrable vía protocolo estándar.",
+    "Elasticsearch ya está disponible en infraestructura corporativa o puede instalarse sin bloqueos.",
+    "Autenticación centralizada (OIDC, SAML o similar) ya existe y el frontend la maneja.",
+    "Base de datos Confluence a migrar contiene solo páginas de texto y markup; adjuntos (PDFs, imágenes) no van a trasladarse en v1.",
+    "Historial de cambios se refiere a lista de versiones, no a auditoría detallada de quién cambió qué ni rollback a versión anterior.",
+    "La búsqueda es full-text simple; no incluye búsqueda semántica, facetas avanzadas o rastreo de referencias cruzadas.",
+    "Editor Markdown: sin colaboración en tiempo real (edición simultánea), sin comentarios marginales, ni preview avanzado.",
+    "Permisos por equipo: lectura y edición; no hay niveles intermedios (revisor, aprobador) ni flujos de cambio.",
+    "No se requiere reescritura masiva de links internos; se asume que migraréis y validaréis manualmente."
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "270–440 h fuera de [400, 2000]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-15-marketplace",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.022905,
+   "latency_ms": 28133.3,
+   "llm_calls": 5,
+   "tier": "default",
+   "total_hours_min": 360,
+   "total_hours_max": 510,
+   "total_duration_weeks": 16,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "Marketplace de servicios de jardinería con flujo de reserva, pago directo a autónomos y sistema de valoraciones. Se estima entre 360 y 510 horas con 55% de confianza. Los riesgos principales son la coordinación con Stripe Connect (pagos y liquidaciones), la gestión de disponibilidad (conflictos de reserva simultánea) y el aislamiento de datos entre tipos de usuario. No se incluyen móvil nativo ni integraciones adicionales más allá de Stripe. Se asume un único idioma, sin multi-currency inicial y sin módulo de servicio técnico.",
+   "phases": [
+    {
+     "name": "Autenticación, roles y gestión de usuarios",
+     "hours_min": 40,
+     "hours_max": 60,
+     "confidence_pct": 70,
+     "summary": "Sistema de registro diferenciado para clientes y jardineros. Perfiles, verificación de email, rol-based access control básico (cliente vs jardinero). Sin SMS, sin documentación de identidad."
+    },
+    {
+     "name": "Catálogo y búsqueda de servicios",
+     "hours_min": 50,
+     "hours_max": 70,
+     "confidence_pct": 65,
+     "summary": "Listado de jardineros disponibles, filtrado por zona/fecha/tipo de servicio. Búsqueda sin facetas complejas. Sin geocodificación avanzada ni recomendaciones. Se asume que la ubicación se introduce manual o con un mapa básico."
+    },
+    {
+     "name": "Gestión de calendario y reservas",
+     "hours_min": 80,
+     "hours_max": 120,
+     "confidence_pct": 50,
+     "summary": "Agenda por jardinero, bloqueo de slots en tiempo real para evitar doble reserva, confirmación de cita. Riesgo alto: concurrencia y transacionalidad. Sin recordatorios automáticos ni reschedule self-service."
+    },
+    {
+     "name": "Integración Stripe Connect y procesamiento de pagos",
+     "hours_min": 90,
+     "hours_max": 130,
+     "confidence_pct": 45,
+     "summary": "Setup de Stripe Connect (transferencias a cuentas de jardineros), captura de pagos en reserva, gestión de comisiones del marketplace, reconciliación básica. Riesgo: reembolsos parciales, disputas, split de ingresos. Sin webhooks avanzados ni resiliencia ante desconexiones prolongadas."
+    },
+    {
+     "name": "Sistema de valoraciones y reseñas",
+     "hours_min": 40,
+     "hours_max": 50,
+     "confidence_pct": 70,
+     "summary": "Permite a clientes dejar puntuación (1-5) y comentario tras servicio. Agregación de rating por jardinero. Sin moderación automática ni respuesta del proveedor."
+    },
+    {
+     "name": "Panel de jardinero: agenda, cobros y análisis básico",
+     "hours_min": 60,
+     "hours_max": 80,
+     "confidence_pct": 60,
+     "summary": "Vista de citas próximas y pasadas, historial de cobros (vinculado a Stripe Connect), resumen de ingresos y valoración media. Sin exportación a contabilidad ni integración con software de gestión."
+    }
+   ],
+   "assumptions": [
+    "Único idioma (se asume español)",
+    "Localización manual o mapa básico, sin APIs de geocodificación",
+    "Sin envío de notificaciones (email/SMS/push) más allá de confirmación de reserva",
+    "Sin verificación de identidad o background check de jardineros",
+    "Sin contrato escrito ni términos dinámicos por jardinero",
+    "Sin módulo de soporte técnico ni chat en vivo",
+    "Sin versión móvil nativa (responsive web)",
+    "Flujo de pago simple: cliente paga antes de servicio, sin cobro postfactura",
+    "Base de datos relacional estándar, hosting en servidor único o PaaS básico",
+    "Sin auditoría financiera ni cumplimiento normativo avanzado (RGPD básico)"
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "360–510 h fuera de [600, 3000]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  },
+  {
+   "case_id": "caso-16-plazo-imposible",
+   "mode": "acb",
+   "status": "ok",
+   "guardrail_reason": null,
+   "error": null,
+   "cost_usd": 0.013803,
+   "latency_ms": 18331.8,
+   "llm_calls": 4,
+   "tier": "default",
+   "total_hours_min": 56,
+   "total_hours_max": 95,
+   "total_duration_weeks": 2,
+   "acb_final_decision": "aceptar",
+   "acb_iterations": 1,
+   "summary": "Fuera de alcance: E-commerce básico con 500 productos, carrito de compra, integración de pagos y panel de pedidos. El plazo de 2 semanas (80 horas de desarrollo distribuidas en 10 días laborales) es muy ajustado para este alcance. La confianza es baja porque falta especificar el gateway de pagos, el catálogo es estático o requiere gestión, y no está definida la complejidad del panel de pedidos. Con este plazo, solo es posible si: (1) el equipo es senior y dedica 8 h/día, (2) el gateway de pagos es trivial (Stripe, no custom), (3) el catálogo se importa de un CSV, (4) el panel es operativo mínimo. Cualquier desviación en estas asunciones genera riesgo de incumplimiento.",
+   "phases": [
+    {
+     "name": "Setup, diseño y arquitectura",
+     "hours_min": 8,
+     "hours_max": 12,
+     "confidence_pct": 60,
+     "summary": "Infraestructura en cloud, base de datos, esquema inicial, autenticación básica y decisiones de arquitectura. Incluye decisiones sobre monolito vs. microservicios (asumimos monolito para this timeframe) y gestión de sesiones."
+    },
+    {
+     "name": "Catálogo y búsqueda de productos",
+     "hours_min": 12,
+     "hours_max": 20,
+     "confidence_pct": 40,
+     "summary": "Importación de 500 productos, indexación básica y pantalla de listado con búsqueda simple. Riesgo alto: si el catálogo está en Excel sin estructura clara o requiere transformación, esto crece. Asumimos datos clean en CSV."
+    },
+    {
+     "name": "Carrito y lógica de compra",
+     "hours_min": 10,
+     "hours_max": 16,
+     "confidence_pct": 50,
+     "summary": "Carrito en sesión/base de datos, suma de totales, aplicación de impuestos si aplica, flujo de checkout. No incluye cupones ni reglas de descuento complejas."
+    },
+    {
+     "name": "Integración de pagos",
+     "hours_min": 8,
+     "hours_max": 14,
+     "confidence_pct": 30,
+     "summary": "Integración con gateway (Stripe, PayPal u otro). Confianza muy baja porque no está especificado cuál ni si requiere aprobaciones regulatorias. Asumimos gateway con SDK simple."
+    },
+    {
+     "name": "Panel de pedidos",
+     "hours_min": 10,
+     "hours_max": 18,
+     "confidence_pct": 35,
+     "summary": "Listado de pedidos, detalle, cambio de estado (pendiente, enviado, entregado). No incluye notificaciones por email, tracking integrado ni integración con courier."
+    },
+    {
+     "name": "Testing, ajustes y deploy",
+     "hours_min": 8,
+     "hours_max": 15,
+     "confidence_pct": 40,
+     "summary": "Testing funcional básico en staging, corrección de bugs críticos, deploy a producción y monitoreo inicial. Tiempo muy comprimido; asumimos solo smoke testing, no cobertura completa."
+    }
+   ],
+   "assumptions": [
+    "Gateway de pagos de tercero con SDK listo (Stripe, PayPal) sin requisitos regulatorios especiales",
+    "Catálogo de 500 productos en formato limpio (CSV/JSON) listo para importar",
+    "Datos de productos incluyen: nombre, descripción, precio, imagen (URL o archivo)",
+    "Panel de pedidos es operativo mínimo: listar, ver detalle, cambiar estado; sin notificaciones automáticas",
+    "Impuestos y envío son fijos o fuera de alcance",
+    "Autenticación básica de usuario (email/contraseña); sin OAuth social",
+    "Un único idioma, sin localización",
+    "Hosting en plataforma estándar (Vercel, Heroku, AWS) con CD configurado",
+    "Equipo es 2+ developers senior capaz de trabajar en paralelo"
+   ],
+   "model": "claude-haiku-4-5-20251001",
+   "provider": "anthropic",
+   "fallback_used": false,
+   "cache_hit_kind": "none",
+   "metrics": [
+    {
+     "name": "schema_adherence",
+     "passed": true,
+     "details": "ok"
+    },
+    {
+     "name": "hours_bounds",
+     "passed": false,
+     "details": "56–95 h fuera de [300, 1500]; 2 semanas fuera de [3, 20]"
+    },
+    {
+     "name": "content_recall",
+     "passed": true,
+     "details": "contenido presente"
+    },
+    {
+     "name": "tier",
+     "passed": true,
+     "details": "tier default"
+    }
+   ],
+   "score": 0.75
+  }
+ ]
+}
