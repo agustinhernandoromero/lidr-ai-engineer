@@ -43,8 +43,21 @@ class Boss:
     def run(self, actor: Actor, critic: Critic) -> tuple[EstimationResult, BossTrace]:
         iterations: list[ACBIteration] = []
         feedback: CriticFeedback | None = None
+        previous: EstimationResult | None = None
         for index in range(self.max_iterations):
-            current = actor(feedback)
+            try:
+                current = actor(feedback)
+            except Exception as exc:
+                # En la ronda 1 no hay nada que salvar: el error sube como siempre.
+                # Al rehacer, el borrador anterior es válido y ya está pagado.
+                if previous is None or feedback is None:
+                    raise
+                logger.warning("boss_actor_failed_keeping_previous",
+                               iteration=index + 1, error=str(exc)[:200])
+                return synthesize(previous, feedback), BossTrace(
+                    iterations=iterations, final_decision="sintetizar", iterations_run=index
+                )
+            previous = current
             review = critic(current)
             rounds_left = self.max_iterations - index - 1
             decision = self._decide(review.verdict, rounds_left)

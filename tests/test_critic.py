@@ -66,3 +66,19 @@ def test_revision_messages_carry_draft_and_issues():
     assert user["role"] == "user" and user["content"].startswith(REVISION_INTRO)
     assert "[mayor] fase_desproporcionada (phases[0].hours_max)" in user["content"]
     assert "Separa backend y frontend." in user["content"]
+
+
+def test_review_sees_attachments_and_recent_turns():
+    """Sin esto, un dato que sale de un PDF o del turno anterior parece inventado."""
+    llm = FakeLLM()
+    review(
+        llm,
+        result=DRAFT,
+        attachments_text="--- adjunto: spec.pdf ---\nPasarela de pago con Stripe.",
+        recent_turns=[{"user": "Turno previo: integración con Odoo.", "assistant": "x" * 3000}],
+        **CONTEXT,
+    )
+    user = llm.critic_calls[0][1]["content"]
+    assert "Pasarela de pago con Stripe." in user
+    assert "Turno previo: integración con Odoo." in user
+    assert "x" * 500 in user and "x" * 3000 not in user  # respuestas largas, recortadas

@@ -41,19 +41,23 @@ class InputGuardrailViolation(Exception):
 
 
 _FLAGS = re.IGNORECASE | re.DOTALL
+# Solo cuenta como inyección si lo que se pide olvidar o ignorar son
+# instrucciones, reglas o prompts, o si se impone un rol nuevo: "Olvida lo
+# anterior: el presupuesto es 80.000" es una corrección normal del cliente.
 _INJECTION_PATTERNS = [re.compile(p, _FLAGS) for p in (
     # Español
     r"\bignora(?:r)?\s+(?:todas\s+)?(?:las\s+)?(?:instrucciones|indicaciones|reglas)\s+(?:anteriores|previas)",
-    r"\bolvida\s+(?:todo|lo\s+anterior|las\s+instrucciones)",
-    r"\bahora\s+eres\b",
+    r"\bolvida\s+(?:todas\s+)?(?:las\s+|tus\s+)(?:instrucciones|indicaciones|reglas)\b",
+    r"\bahora\s+eres\s+(?:un|una)\b",
     r"\bnuevas\s+instrucciones\s*[:.\-]",
     r"\b(?:no\s+hagas\s+caso|haz\s+caso\s+omiso)\s+(?:de|a)\s+(?:las\s+)?(?:instrucciones|reglas)",
     # Inglés
     r"\bignore\s+(?:previous|prior|all|the)\s+(?:instructions?|prompts?|rules?)",
-    r"\bforget\s+(?:everything|all|previous)",
-    r"\byou\s+are\s+now\b",
+    r"\bforget\s+(?:everything\s+(?:you|above|before)\b"
+    r"|(?:all\s+)?(?:your|the|previous|prior)\s+(?:instructions?|rules?|prompts?))",
+    r"\byou\s+are\s+now\s+(?:a|an|my|the)\b",
     r"\bnew\s+instructions?\s*[:.\-]",
-    r"\bdisregard\b.{0,40}\b(?:instructions?|prompts?|rules?|context|previous|prior)",
+    r"\bdisregard\b.{0,40}\b(?:instructions?|prompts?|rules?)\b",
     # Etiquetas que imitan la estructura del prompt
     r"</?\s*(?:system|instructions?|prompt)\s*>",
 )]
@@ -61,11 +65,16 @@ _INJECTION_PATTERNS = [re.compile(p, _FLAGS) for p in (
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _IBAN = re.compile(r"\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){3,7}\b")
 # Teléfono: con prefijo internacional, o español de 9 cifras que empieza por
-# 6/7/8/9 (con o sin separadores). Los lookarounds evitan cifras como
-# "1.600.000.000", que no son teléfonos.
+# 6/7/8/9 en sus formatos habituales (612345678, 612 345 678, 612 34 56 78,
+# 91 234 56 78), con el MISMO separador en todo el número y nunca el punto:
+# así "8.000-12.000 horas" o "800.000.000 registros" no parecen teléfonos.
 _PHONE = re.compile(
     r"\+\d{1,3}[\s.-]?\d(?:[\s.-]?\d){7,11}"
-    r"|(?<![\d.,])\b[6789](?:[\s.-]?\d){8}\b(?![.,]\d)"
+    r"|(?<![\d.,-])\b(?:"
+    r"[6789]\d{2}([ -]?)\d{3}\1\d{3}"
+    r"|[6789]\d{2}([ -]?)\d{2}\2\d{2}\2\d{2}"
+    r"|[89]\d([ -]?)\d{3}\3\d{2}\3\d{2}"
+    r")\b(?![.,-]?\d)"
 )
 _PII = [(_EMAIL, "un email"), (_IBAN, "un IBAN"), (_PHONE, "un teléfono")]
 

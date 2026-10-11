@@ -23,6 +23,9 @@ logger = structlog.get_logger()
 CRITIC_JSON_SCHEMA = anthropic.transform_schema(CriticFeedback.model_json_schema())
 CRITIC_MAX_TOKENS = 1500
 CRITIC_MAX_RETRIES = 2
+# Las respuestas anteriores del estimador son Markdown largo: al crítico le basta
+# con las cifras y decisiones del principio.
+RECENT_ANSWER_MAX_CHARS = 800
 REVISION_INTRO = "Un revisor independiente encontró estos fallos en tu estimación:"
 
 
@@ -39,7 +42,11 @@ def review(
     summary: str | None,
     tier: str,
     result: EstimationResult,
+    attachments_text: str = "",
+    recent_turns: list[dict] | None = None,
 ) -> CriticFeedback:
+    # El crítico ve lo mismo que el actor (adjuntos y ventana reciente): si no,
+    # un dato sacado de un PDF o del turno anterior le parecería inventado.
     system, user = render_critic_prompt(
         transcript=transcript,
         metadata=metadata,
@@ -47,6 +54,11 @@ def review(
         summary=summary,
         tier=tier,
         result_json=result.model_dump_json(),
+        attachments_text=attachments_text,
+        recent_turns=[
+            {"user": t["user"], "assistant": t["assistant"][:RECENT_ANSWER_MAX_CHARS]}
+            for t in recent_turns or []
+        ],
     )
     messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
     for attempt in range(1, CRITIC_MAX_RETRIES + 2):

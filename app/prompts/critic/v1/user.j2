@@ -1,7 +1,17 @@
-<mensaje_del_turno>
+{% if recent_turns %}<turnos_recientes>
+{% for t in recent_turns %}Cliente: {{ t.user }}
+Estimador (recortado): {{ t.assistant }}
+
+{% endfor %}</turnos_recientes>
+
+{% endif %}<mensaje_del_turno>
 {{ transcript }}
 </mensaje_del_turno>
-
+{% if attachments_text %}
+<adjuntos_del_turno>
+{{ attachments_text }}
+</adjuntos_del_turno>
+{% endif %}
 <memoria_del_proyecto>
 {{ metadata | tojson }}
 </memoria_del_proyecto>

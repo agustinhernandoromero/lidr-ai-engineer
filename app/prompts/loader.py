@@ -195,6 +195,8 @@ def render_critic_prompt(
     summary: str | None,
     tier: str,
     result_json: str,
+    attachments_text: str = "",
+    recent_turns: list[dict] | None = None,
     version: str = "v1",
 ) -> tuple[str, str]:
     """Par (system, user) del crítico del Actor-Critic-Boss."""
@@ -205,5 +207,7 @@ def render_critic_prompt(
         "summary": summary,
         "tier": tier,
         "result_json": result_json,
+        "attachments_text": attachments_text,
+        "recent_turns": recent_turns or [],
     }
     return _render_pair("critic", version, context)

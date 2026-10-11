@@ -108,3 +108,20 @@ async def test_normal_turn_has_no_acb_trace():
         _, response = await _turn(client, path="estimate")
         assert response.json()["acb"] is None
         assert "acb_iterations" not in response.json()["observation"]
+
+
+@pytest.mark.asyncio
+async def test_critic_sees_the_attachment_of_the_turn():
+    from tests.helpers import make_pdf
+
+    llm = FakeLLM()
+    async with await _client(llm) as client:
+        sid = (await client.post("/api/v1/sessions")).json()["session_id"]
+        pdf = make_pdf("Requisito: pasarela de pago con Stripe.")
+        response = await client.post(
+            f"/api/v1/sessions/{sid}/estimate-acb",
+            data={"transcript": TEXT, **FORM},
+            files=[("attachments", ("spec.pdf", pdf, "application/pdf"))],
+        )
+        assert response.status_code == 200
+        assert "pasarela de pago con Stripe" in llm.critic_calls[0][1]["content"]

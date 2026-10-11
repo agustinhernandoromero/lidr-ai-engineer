@@ -96,3 +96,26 @@ def test_synthesis_respects_summary_limit_and_floor():
     assert len(out.summary) <= SUMMARY_MAX_CHARS
     assert out.confidence_pct == LOW_CONFIDENCE_THRESHOLD  # 40 // 2 = 20 → suelo 30
     EstimationResult.model_validate(out.model_dump())
+
+
+def test_actor_failure_on_redo_keeps_the_paid_first_draft():
+    """Un fallo al rehacer no debe tirar un borrador válido ya pagado (sería un 502)."""
+    s = Script([REHACER])
+
+    def actor(feedback):
+        if feedback is not None:
+            raise RuntimeError("JSON inválido tras todos los intentos")
+        return s.actor(feedback)
+
+    result, trace = Boss(max_iterations=2).run(actor, s.critic)
+    assert result.summary.startswith(CAVEATS_HEADER)
+    assert "Borrador 1 de la estimación." in result.summary
+    assert (trace.final_decision, trace.iterations_run) == ("sintetizar", 1)
+
+
+def test_actor_failure_on_first_round_propagates():
+    def actor(feedback):
+        raise RuntimeError("proveedor caído")
+
+    with pytest.raises(RuntimeError):
+        Boss(max_iterations=2).run(actor, lambda result: ACCEPT)

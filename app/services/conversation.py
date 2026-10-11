@@ -145,7 +145,8 @@ def run_turn(
     else:
         if acb:
             result, meta, acb_trace = _run_acb(
-                llm, messages, session, transcript=transcript, tier=tier.value, settings=settings
+                llm, messages, session, transcript=transcript,
+                attachments_text=attachments_text, tier=tier.value, settings=settings,
             )
         else:
             result, meta = estimate_structured(llm, messages, settings.STRUCTURED_MAX_RETRIES)
@@ -249,7 +250,16 @@ def run_turn(
     }
 
 
-def _run_acb(llm, messages: list[dict], session: Session, *, transcript: str, tier: str, settings):
+def _run_acb(
+    llm,
+    messages: list[dict],
+    session: Session,
+    *,
+    transcript: str,
+    attachments_text: str,
+    tier: str,
+    settings,
+):
     """Bucle actor → crítico → jefe sobre los mensajes del turno.
 
     El actor es el estimador de siempre; en cada ronda nueva recibe su borrador
@@ -275,6 +285,8 @@ def _run_acb(llm, messages: list[dict], session: Session, *, transcript: str, ti
             summary=session.history.summary,
             tier=tier,
             result=draft,
+            attachments_text=attachments_text,
+            recent_turns=session.history.as_dicts(),
         )
 
     result, trace = Boss(max_iterations=settings.ACB_MAX_ITERATIONS).run(actor, critic)
