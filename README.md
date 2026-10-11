@@ -3,7 +3,55 @@
 Servicio FastAPI que convierte una descripción de proyecto en una estimación técnica,
 con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 
-## 🎯 Qué cambia en esta rama (sesión 05)
+> **Esta rama es la entrega de la sesión 06**: estrés del CAG conversacional antes de
+> pasar a RAG. Lo nuevo está justo debajo; instalación, ejecución, tests y lo construido
+> en sesiones anteriores, a continuación.
+
+## 📈 Sesión 06 — estrés del CAG
+
+Antes de pasar a RAG, se mide dónde empieza a romperse este CAG. Resultado y lectura en
+[`evals/stress/REPORT.md`](evals/stress/REPORT.md); datos en `evals/stress/results.csv`.
+
+**Observación por turno.** Cada `POST /sessions/{id}/estimate` emite un único evento
+`turn_observed` (y lo devuelve en el campo `observation`; `GET /sessions/{id}` lo expone
+como `last_turn_observed`) con los 13 campos del enunciado: turno, sesión, tamaño del
+mensaje y de los adjuntos, mensajes en ventana, anclas, longitud del resumen, tokens de
+entrada y salida, coste, latencia, tipo de acierto de caché y tier; más `llm_calls`,
+`structured_attempts` y `tier_rule`. Tokens y coste suman **todas** las llamadas del turno
+(estimador con reintentos, extractor y resumidor) gracias a un `UsageMeter` que envuelve
+al LLM.
+
+**Qué se ejecuta** (`evals/stress/`):
+
+| Pieza | Qué hace |
+|---|---|
+| `scenarios.py` | 3 conversaciones de 10 turnos: un proyecto que **crece** (Nimbus), uno que **pivota** de React a Flutter (Orbit) y uno que **se contradice** en el presupuesto, 30.000 → 80.000 € (Atlas). Cada turno declara el hecho que debe recordarse |
+| `fixtures/build_pdfs.py` | PDFs deterministas de 5, 20, 50 y 100 mil caracteres con marcadores al 10, 50 y 90 % del texto (no se versionan) |
+| `metrics.py` | `LatencyBudgetMetric(20.000 ms)`, `CostBudgetMetric($0,02/turno)` y `MemoryDriftMetric` (coincidencia exacta en resumen, anclas y metadata) |
+| `run.py` | Recorre escenarios y adjuntos y escribe una fila por turno en el CSV |
+| `report.py` | Genera el REPORT (tabla resumen y tres curvas) e incrusta la lectura de `reading.md` |
+
+**Cómo ejecutarlo:**
+
+```bash
+# Ensayo completo con el LLM falso: coste $0, unos segundos
+uv run python -m evals.stress.run --in-process --fake-llm --output /tmp/fake.csv
+
+# Ejecución real (medido: ~$1,1 y ~17 min con Haiku; freno por defecto: $1,5)
+uv run python -m evals.stress.run --http http://localhost:8000 --max-cost 1.5
+uv run python -m evals.stress.report
+```
+
+El runner **vacía la caché del turno 1 antes de una ejecución real** (claves
+`session_turn1:*` en `REDIS_URL`, vía `SessionTurnCache.flush()`): con su TTL de 24 h,
+una ejecución anterior haría que los turnos 1 acertaran en caché y falsearía coste y
+latencia. Si Redis no responde, se para antes de hacer ninguna petición (código 3).
+`--keep-turn1-cache` lo desactiva, y si aun así un turno 1 de escenario sale de caché,
+la fila lo marca en `error` y el runner avisa.
+
+## 🕘 Sesiones anteriores
+
+### Sesión 05
 
 Hasta la sesión 04 el estimador era transaccional: una transcripción entra, una
 estimación sale. Esta rama lo convierte en **conversacional**:
@@ -18,7 +66,7 @@ estimación sale. Esta rama lo convierte en **conversacional**:
 Detalle en [💬 Sesión 05](#-sesión-05--conversación-con-memoria-y-adjuntos). Lo que
 cambió en sesiones anteriores sigue debajo.
 
-### Sesión 04
+#### Sesión 04
 
 La sesión 03 dejaba un chat libre y un prompt construido como f-string dentro del
 wrapper. Esta rama sustituye ambas cosas:
@@ -313,48 +361,6 @@ para detectar si un cambio futuro las relaja.
 La respuesta del endpoint añade `result`, `cost_min_eur`/`cost_max_eur`, `tier`/`tier_rule`,
 `anchors_count`, `summary_chars`, `structured_attempts` y `cache_hit_kind`; y
 `GET /sessions/{id}` expone resumen, anclas y último tier.
-
-## 📈 Sesión 06 — estrés del CAG
-
-Antes de pasar a RAG, se mide dónde empieza a romperse este CAG. Resultado y lectura en
-[`evals/stress/REPORT.md`](evals/stress/REPORT.md); datos en `evals/stress/results.csv`.
-
-**Observación por turno.** Cada `POST /sessions/{id}/estimate` emite un único evento
-`turn_observed` (y lo devuelve en el campo `observation`; `GET /sessions/{id}` lo expone
-como `last_turn_observed`) con los 13 campos del enunciado: turno, sesión, tamaño del
-mensaje y de los adjuntos, mensajes en ventana, anclas, longitud del resumen, tokens de
-entrada y salida, coste, latencia, tipo de acierto de caché y tier; más `llm_calls`,
-`structured_attempts` y `tier_rule`. Tokens y coste suman **todas** las llamadas del turno
-(estimador con reintentos, extractor y resumidor) gracias a un `UsageMeter` que envuelve
-al LLM.
-
-**Qué se ejecuta** (`evals/stress/`):
-
-| Pieza | Qué hace |
-|---|---|
-| `scenarios.py` | 3 conversaciones de 10 turnos: un proyecto que **crece** (Nimbus), uno que **pivota** de React a Flutter (Orbit) y uno que **se contradice** en el presupuesto, 30.000 → 80.000 € (Atlas). Cada turno declara el hecho que debe recordarse |
-| `fixtures/build_pdfs.py` | PDFs deterministas de 5, 20, 50 y 100 mil caracteres con marcadores al 10, 50 y 90 % del texto (no se versionan) |
-| `metrics.py` | `LatencyBudgetMetric(20.000 ms)`, `CostBudgetMetric($0,02/turno)` y `MemoryDriftMetric` (coincidencia exacta en resumen, anclas y metadata) |
-| `run.py` | Recorre escenarios y adjuntos y escribe una fila por turno en el CSV |
-| `report.py` | Genera el REPORT (tabla resumen y tres curvas) e incrusta la lectura de `reading.md` |
-
-**Cómo ejecutarlo:**
-
-```bash
-# Ensayo completo con el LLM falso: coste $0, unos segundos
-uv run python -m evals.stress.run --in-process --fake-llm --output /tmp/fake.csv
-
-# Ejecución real (medido: ~$1,1 y ~17 min con Haiku; para sola si pasa de --max-cost)
-uv run python -m evals.stress.run --http http://localhost:8000 --max-cost 1.5
-uv run python -m evals.stress.report
-```
-
-El runner **vacía la caché del turno 1 antes de una ejecución real** (claves
-`session_turn1:*` en `REDIS_URL`, vía `SessionTurnCache.flush()`): con su TTL de 24 h,
-una ejecución anterior haría que los turnos 1 acertaran en caché y falsearía coste y
-latencia. Si Redis no responde, se para antes de hacer ninguna petición (código 3).
-`--keep-turn1-cache` lo desactiva, y si aun así un turno 1 de escenario sale de caché,
-la fila lo marca en `error` y el runner avisa.
 
 ## 📝 Notas
 
