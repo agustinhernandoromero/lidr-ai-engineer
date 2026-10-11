@@ -50,6 +50,22 @@ def _outcome(response: httpx.Response, record: dict) -> Outcome:
     obs = data.get("observation") or {}
     acb = data.get("acb") or {}
     record.update(
+        # La respuesta completa y cómo se obtuvo: con esto se explica un fallo
+        # (¿escribió "onboarding"?, ¿respondió el respaldo?) sin pagar otra ejecución.
+        summary=result.summary,
+        phases=[p.model_dump() for p in result.phases],
+        assumptions=result.assumptions,
+        model=data.get("model"),
+        provider=data.get("provider"),
+        fallback_used=data.get("fallback_used"),
+        cache_hit_kind=data.get("cache_hit_kind"),
+    )
+    if data.get("cache_hit_kind") not in (None, "none"):
+        # Un acierto de caché sirve la estimación de otro caso parecido: no mide
+        # este caso y solo puede pasar en el actor (el ACB no usa caché).
+        record["error"] = f"respuesta servida desde la caché ({data['cache_hit_kind']}): caso inválido"
+        return Outcome("error")
+    record.update(
         status="ok",
         cost_usd=float(obs.get("cost_usd") or 0),
         llm_calls=int(obs.get("llm_calls") or 0),
@@ -73,15 +89,21 @@ async def run_case(client, case: GoldenCase, mode: str) -> dict:
     form = {"transcript": case.transcript, "project_type": case.project_type,
             "detail_level": case.detail_level, "output_format": case.output_format}
     started = time.perf_counter()
+    outcome = Outcome("error")
     try:
-        sid = (await client.post(f"{API}/sessions")).json()["session_id"]
-        response = await client.post(f"{API}/sessions/{sid}/{ENDPOINTS[mode]}", data=form)
-    except httpx.HTTPError as exc:
-        record["error"] = f"{type(exc).__name__}: {exc}"[:300]
+        created = await client.post(f"{API}/sessions")
+        if created.status_code != 201:
+            # Un 502 en HTML de un proxy no es JSON: se registra y se sigue con el siguiente caso.
+            record["error"] = f"crear sesión: HTTP {created.status_code}: {created.text[:200]}"
+        else:
+            sid = created.json()["session_id"]
+            response = await client.post(f"{API}/sessions/{sid}/{ENDPOINTS[mode]}", data=form)
+            record["latency_ms"] = round((time.perf_counter() - started) * 1000, 1)
+            outcome = _outcome(response, record)
+    except (httpx.HTTPError, ValueError, KeyError) as exc:
+        # ValueError cubre un JSON roto y un result que no valida (ValidationError).
+        record.update(status="error", error=f"{type(exc).__name__}: {exc}"[:300])
         outcome = Outcome("error")
-    else:
-        record["latency_ms"] = round((time.perf_counter() - started) * 1000, 1)
-        outcome = _outcome(response, record)
     metrics = run_golden_metrics(case, outcome)
     record["metrics"] = [{"name": m.name, "passed": m.passed, "details": m.details} for m in metrics]
     record["score"] = round(sum(m.passed for m in metrics) / len(metrics), 3)

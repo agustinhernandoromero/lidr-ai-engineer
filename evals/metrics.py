@@ -8,6 +8,8 @@ del golden dataset reciben además el caso esperado: ``evaluate(case, outcome)``
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
@@ -145,14 +147,29 @@ class ContentRecallMetric:
         if case.expected_out_of_scope:
             return _verdict(self.name, True, "no aplica: caso fuera de alcance")
         r = outcome.result
-        haystack = " ".join(
+        haystack = _fold(" ".join(
             [r.summary, *r.assumptions, *(f"{p.name} {p.summary}" for p in r.phases)]
-        ).lower()
-        problems = [f"falta '{t}'" for t in case.expected_in_summary if t.lower() not in haystack]
+        ))
+        problems: list[str] = []
+        for term in case.expected_in_summary:
+            options = [term] if isinstance(term, str) else term
+            if not any(_mentions(haystack, o) for o in options):
+                problems.append(f"falta '{' / '.join(options)}'")
         techs = case.expected_technologies_any_of
-        if techs and not any(t.lower() in haystack for t in techs):
+        if techs and not any(_mentions(haystack, t) for t in techs):
             problems.append(f"no menciona ninguna de {techs}")
         return _verdict(self.name, not problems, "; ".join(problems) or "contenido presente")
+
+
+def _fold(text: str) -> str:
+    """Minúsculas y sin acentos: "Incorporación" e "incorporacion" cuentan igual."""
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def _mentions(haystack: str, term: str) -> bool:
+    # Palabra completa: "React" no debe contar dentro de "reactivación".
+    return re.search(rf"(?<!\w){re.escape(_fold(term))}(?!\w)", haystack) is not None
 
 
 class TierMetric:

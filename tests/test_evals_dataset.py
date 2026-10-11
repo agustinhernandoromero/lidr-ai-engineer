@@ -63,3 +63,10 @@ def test_expected_tier_matches_the_resolver_on_turn_one():
             assert tier.value == "default"
         else:
             assert tier.value == case.expected_tier, case.id
+
+
+def test_medium_cases_accept_the_six_phases_the_prompt_allows():
+    """El prompt session5/v2 pide entre 3 y 6 fases en medium: una respuesta obediente no puede fallar."""
+    for case in CASES:
+        if case.detail_level == "medium" and case.expected_phase_count_range:
+            assert case.expected_phase_count_range[1] >= 6, case.id

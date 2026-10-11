@@ -27,7 +27,8 @@ class GoldenCase(BaseModel):
     output_format: Literal["phases_table", "line_items", "narrative"] = "phases_table"
 
     expected_out_of_scope: bool = False
-    expected_in_summary: list[str] = Field(default_factory=list)
+    # Cada término puede ser una lista de alternativas: [["incorporación", "onboarding"]].
+    expected_in_summary: list[str | list[str]] = Field(default_factory=list)
     expected_technologies_any_of: list[str] = Field(default_factory=list)
     expected_phase_count_range: Optional[Range] = None
     expected_hours_range: Optional[Range] = None

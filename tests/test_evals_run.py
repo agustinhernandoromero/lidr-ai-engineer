@@ -79,3 +79,87 @@ def test_real_run_stops_before_spending_if_redis_is_down(tmp_path, monkeypatch):
     out = tmp_path / "r.json"
     assert main(["--http", "http://127.0.0.1:9", "--output", str(out)]) == 3
     assert not out.exists()
+
+
+def test_failed_session_creation_is_an_error_and_the_run_continues():
+    """Un 502 en HTML al crear la sesión (proxy, Docker) no puede tumbar la ejecución."""
+    import asyncio
+
+    import httpx
+
+    from evals.dataset import load_dataset
+    from evals.run import run
+
+    calls = {"sessions": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/v1/sessions":
+            calls["sessions"] += 1
+            if calls["sessions"] == 1:
+                return httpx.Response(502, text="<html>Bad Gateway</html>")
+            return httpx.Response(201, json={"session_id": "s"})
+        return httpx.Response(400, json={"detail": {"reason": "pii", "message": "x"}})
+
+    async def go():
+        records: list[dict] = []
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            await run(client, load_dataset()[:2], ["actor"], 1.0, records)
+        return records
+
+    records = asyncio.run(go())
+    assert [r["status"] for r in records] == ["error", "bloqueado"]
+    assert "502" in records[0]["error"]
+
+
+def _answer(**overrides):
+    from tests.helpers import fake_result_json
+
+    payload = {
+        "result": json.loads(fake_result_json("CRM comercial con React.")),
+        "tier": "default", "model": "claude-haiku-4-5", "provider": "anthropic",
+        "fallback_used": False, "cache_hit_kind": "none",
+        "observation": {"cost_usd": 0.01, "llm_calls": 3}, "acb": None,
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _single_case(payload):
+    import asyncio
+
+    import httpx
+
+    from evals.dataset import load_dataset
+    from evals.run import run_case
+
+    def handler(request):
+        if request.url.path == "/api/v1/sessions":
+            return httpx.Response(201, json={"session_id": "s"})
+        return httpx.Response(200, json=payload)
+
+    async def go():
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            return await run_case(client, load_dataset()[0], "actor")
+
+    return asyncio.run(go())
+
+
+def test_record_keeps_the_answer_and_how_it_was_produced():
+    """Para explicar un fallo sin pagar otra ejecución."""
+    record = _single_case(_answer())
+    assert record["status"] == "ok"
+    assert record["summary"] == "CRM comercial con React."
+    assert record["phases"][0]["name"] == "Desarrollo"
+    assert record["assumptions"] == []
+    assert (record["model"], record["provider"]) == ("claude-haiku-4-5", "anthropic")
+    assert record["fallback_used"] is False and record["cache_hit_kind"] == "none"
+
+
+def test_cache_hit_invalidates_the_case():
+    """Un acierto de caché sirve la estimación de otro proyecto: no compara nada."""
+    record = _single_case(_answer(cache_hit_kind="semantic"))
+    assert record["status"] == "error"
+    assert "caché" in record["error"]
+    assert record["score"] < 1.0

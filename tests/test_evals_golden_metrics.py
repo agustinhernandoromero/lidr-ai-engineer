@@ -76,3 +76,27 @@ def test_guardrail_block_passes_only_when_out_of_scope_was_expected():
 
 def test_error_fails_everything():
     assert not any(verdicts(CASE, Outcome("error")).values())
+
+
+def recall_case(in_summary, techs=()):
+    return GoldenCase.model_validate({
+        "id": "caso-recall", "project_type": "internal_tool",
+        "transcript": "Portal interno de incorporación de empleados con Okta.",
+        "expected_in_summary": in_summary, "expected_technologies_any_of": list(techs),
+    })
+
+
+def test_recall_accepts_alternatives_for_a_term():
+    case = recall_case([["incorporación", "onboarding"], ["RGPD", "GDPR"]])
+    answer = result(summary="Portal de onboarding que cumple el GDPR.")
+    assert verdicts(case, Outcome("ok", result=answer, tier="default"))["content_recall"]
+
+
+def test_recall_ignores_accents():
+    answer = result(summary="Portal de incorporacion de empleados.")
+    assert verdicts(recall_case(["incorporación"]), Outcome("ok", result=answer))["content_recall"]
+
+
+def test_recall_matches_whole_words_only():
+    answer = result(summary="Plan de reactivación de clientes inactivos.")
+    assert not verdicts(recall_case([], ["React"]), Outcome("ok", result=answer))["content_recall"]
