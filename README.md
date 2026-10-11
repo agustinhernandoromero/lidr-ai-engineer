@@ -89,6 +89,7 @@ app/
 ├── config.py                # Settings (pydantic-settings, .env)
 ├── schemas.py               # Contrato tipado cliente ↔ servicio
 ├── observability.py         # Configuración de structlog
+├── dependencies.py          # Singletons: caché, LLM, sesiones y caché del turno 1
 ├── routers/
 │   ├── estimations.py       # POST /estimate, POST /estimate/stream, GET /prompt-versions
 │   └── sessions.py          # POST /sessions, GET /sessions/{id}, POST /sessions/{id}/estimate
@@ -102,6 +103,7 @@ app/
 │   ├── compression/         # anchors.py · summarizer.py · policy.py
 │   ├── tier_resolver.py     # para quién se redacta (reglas explicables)
 │   ├── session_cache.py     # caché exacta + semántica del turno 1
+│   ├── usage_meter.py       # tokens, coste y llamadas agregados por turno (sesión 06)
 │   └── conversation.py      # run_turn: orquesta un turno de la conversación
 ├── prompts/
 │   ├── loader.py            # render_estimation_prompt / render_session_prompt / render_extraction_prompt
@@ -114,7 +116,15 @@ app/
 │   └── extraction/v1/       # prompt del extractor de metadata
 └── context/
     └── examples.py          # Ejemplos CAG del chat libre (sesión 02)
-evals/                       # MetricResult + SchemaAdherenceMetric (evals deterministas)
+evals/
+├── metrics.py               # MetricResult + SchemaAdherenceMetric (sesión 05)
+└── stress/                  # Sesión 06: estrés del CAG
+    ├── scenarios.py         # 3 escenarios de 10 turnos con hechos a recordar
+    ├── metrics.py           # LatencyBudget, CostBudget, MemoryDrift
+    ├── run.py               # runner → results.csv (vacía la caché y frena por coste)
+    ├── report.py            # results.csv + reading.md → REPORT.md
+    ├── fixtures/build_pdfs.py # PDFs sintéticos con marcadores (no se versionan)
+    └── REPORT.md · results.csv · reading.md   # entregables
 streamlit_app.py             # Cliente: formulario · conversación (sesión 05) · chat
 tests/                       # Tests de template, sesiones, adjuntos, memoria y servicio
 ```
