@@ -204,7 +204,7 @@ def _parse(argv) -> argparse.Namespace:
     parser.add_argument("--turns", type=int, default=10)
     parser.add_argument("--attachment-sizes", default="0,5,20,50,100")
     parser.add_argument("--repeats", type=int, default=4)
-    parser.add_argument("--max-cost", type=float, default=1.0)
+    parser.add_argument("--max-cost", type=float, default=1.5, help="freno de coste acumulado (USD) para parar la ejecución")
     parser.add_argument("--output", default="evals/stress/results.csv")
     parser.add_argument("--pdf-dir", default=str(DEFAULT_DIR))
     parser.add_argument("--keep-turn1-cache", action="store_true",

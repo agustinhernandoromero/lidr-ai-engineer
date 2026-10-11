@@ -177,3 +177,10 @@ def test_warns_when_a_scenario_turn_one_is_served_from_cache(tmp_path, monkeypat
                        "--attachment-sizes", "0", "--repeats", "1")
     assert "caché" in rows[0]["error"] and rows[0]["status"] == "ok"
     assert rows[1]["error"] == ""
+
+
+def test_default_brake_covers_the_measured_cost_of_a_full_run():
+    """La ejecución real completa costó $1,11: el freno por defecto debe dejarla terminar."""
+    from evals.stress.run import _parse
+
+    assert _parse(["--http", "http://x"]).max_cost == 1.5
