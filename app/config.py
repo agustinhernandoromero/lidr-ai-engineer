@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -58,6 +58,13 @@ class Settings(BaseSettings):
 
     # Sesión 05: Actor-Critic-Boss. Rondas máximas actor + crítico.
     ACB_MAX_ITERATIONS: int = 2
+
+    # Sesión 07: embeddings de presupuestos históricos (solo embeddings;
+    # el LLM sigue siendo Anthropic). Gemini por defecto (nivel gratuito,
+    # modelo GEMINI_EMBEDDING_MODEL); "openai" usa text-embedding-3-small.
+    EMBEDDING_PROVIDER: Literal["gemini", "openai"] = "gemini"
+    OPENAI_API_KEY: Optional[str] = None
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
 
     model_config = SettingsConfigDict(
         env_file=".env",

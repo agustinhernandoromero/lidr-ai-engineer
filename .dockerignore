@@ -12,6 +12,7 @@
 docs/
 tests/
 evals/
-data/
+data/*
+!data/budgets_sample.json
 uvicorn_*
 *.log
