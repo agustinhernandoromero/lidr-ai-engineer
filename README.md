@@ -3,11 +3,86 @@
 Servicio FastAPI que convierte una descripción de proyecto en una estimación técnica,
 con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 
-> **Esta rama es la entrega de la sesión 06**: estrés del CAG conversacional antes de
-> pasar a RAG. Lo nuevo está justo debajo; instalación, ejecución, tests y lo construido
-> en sesiones anteriores, a continuación.
+> **Esta rama es la entrega del ejercicio previo a la sesión 07**: pipeline mínimo de
+> embeddings y chunking, primer paso hacia la búsqueda semántica. Lo nuevo está justo
+> debajo; instalación, ejecución, tests y lo construido en sesiones anteriores, a
+> continuación.
 
-## 📈 Sesión 06 — estrés del CAG
+## 🧭 Sesión 07 — embeddings y chunking estructural
+
+Los presupuestos históricos en JSON se parten en chunks, se vectorizan y se devuelven por
+HTTP. Los vectores viven en memoria: no se persisten todavía (eso llega con pgvector en la
+sesión 08).
+
+```
+POST /embeddings/ingest  →  JSONStructuralChunker  →  embedder (lotes de 100)  →  chunks + vectores + stats
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `app/embedding_pipeline/schemas.py` | `Budget`, `BudgetComponent`, `Chunk`, `EmbeddedChunk`, `IngestRequest`, `IngestResponse`. `sector` y `complexity` son `Literal` cerrados; `component_id` único por presupuesto y `budget_id` único por petición (forman el `chunk_id`) |
+| `app/embedding_pipeline/chunker.py` | `JSONStructuralChunker`: **un componente = un chunk**, con la cabecera del presupuesto padre (proyecto, sector, año, tecnología) delante del texto. Metadata filtrable fuera del texto; `chunk_id = {budget_id}::{component_id}`; `token_count` con `tiktoken`. Avisa en el log (`embedding_chunk_large`) por encima de 200 tokens, sin partir el chunk |
+| `app/embedding_pipeline/embedder.py` | `OpenAIEmbedder` y `GeminiEmbedder` con la misma interfaz (`embed_one`, `embed_many`): lotes de 100, reintentos 1 s · 2 s · 4 s ante límite de peticiones, log `embedding_batch` por lote (chunks, tokens, latencia) y coste estimado |
+| `app/embedding_pipeline/router.py` | `POST /embeddings/ingest`: 200, 422 (validación) o 500 con mensaje genérico y el detalle en el log con su `X-Request-ID` |
+| `scripts/compare.py` | Similitud coseno entre dos textos, calculada a mano con `math` |
+| `data/budgets_sample.json` | 15 presupuestos (finance, ecommerce, healthcare, industrial) con 58 componentes |
+| `app/embedding_pipeline/SANITY_CHECK.md` | Las tres parejas de validación, su lectura y una calibración sobre el corpus |
+
+> ⚠️ **Modelo de embeddings.** El enunciado fija `text-embedding-3-small` de OpenAI. Esta
+> entrega usa por defecto **`gemini-embedding-001`** (nivel gratuito, con la
+> `GEMINI_API_KEY` que el proyecto ya tenía), elegido con `EMBEDDING_PROVIDER=gemini`.
+> `OpenAIEmbedder` está implementado y se activa con `EMBEDDING_PROVIDER=openai` y
+> `OPENAI_API_KEY`, pero **no se ha probado contra la API real de OpenAI** (solo con un
+> cliente simulado). Gemini devuelve 3072 dimensiones (OpenAI, 1536); el `token_count` usa
+> el tokenizador de OpenAI, así que con Gemini es aproximado. La justificación con los cinco
+> criterios de selección está en el SANITY_CHECK.
+
+**Invocar el endpoint.** Desde `http://localhost:8000/docs` → *Embeddings* → *Try it out*:
+el cuerpo de ejemplo (un presupuesto, dos componentes) viene precargado. Con todo el sample:
+
+```bash
+# Envuelve el array del sample en {"budgets": [...]} y lo envía
+uv run python -c "import json; print(json.dumps({'budgets': json.load(open('data/budgets_sample.json', encoding='utf-8'))}))" > /tmp/ingest.json
+curl -X POST http://localhost:8000/embeddings/ingest \
+  -H "Content-Type: application/json" --data-binary @/tmp/ingest.json -o /tmp/vectors.json
+```
+
+Con el sample completo: 58 chunks, 5.134 tokens, ~2 s y unos 2,3 MB de respuesta (Swagger
+se atasca pintándola; para eso está el ejemplo pequeño). `stats` trae `total_budgets`,
+`total_chunks`, `total_tokens`, `estimated_cost_usd` (a precio de pago: $0,02/M tokens en
+OpenAI, $0,15/M en Gemini; constantes en `embedder.py`) y `embedding_model`.
+
+**Comparar dos textos** (siempre desde la raíz del repo, para que se lea el `.env`):
+
+```bash
+# Fuera del contenedor
+uv run python scripts/compare.py \
+  --text-a "OAuth 2.0 authentication backend for fintech" \
+  --text-b "JWT-based authorization service for banking app"
+
+# Dentro del contenedor (el servicio de compose se llama api)
+docker compose exec api python scripts/compare.py \
+  --text-a "OAuth 2.0 authentication backend for fintech" \
+  --text-b "JWT-based authorization service for banking app"
+```
+
+```
+Text A: OAuth 2.0 authentication backend for fintech
+Text B: JWT-based authorization service for banking app
+Model: gemini-embedding-001 (3072 dims)
+Norms: A=1.0000 B=1.0000
+Cosine similarity: 0.7632
+```
+
+**Resultado del sanity check** ([detalle](app/embedding_pipeline/SANITY_CHECK.md)):
+cercanos 0,7673 · no relacionados 0,5588 · genéricos 0,6569. El orden es el esperado, pero
+la escala de Gemini es más alta que los umbrales orientativos del enunciado (pensados para
+OpenAI). Sobre el corpus, la cabecera del presupuesto pesa casi tanto como el componente:
+los vecinos más cercanos de un componente suelen ser sus hermanos del mismo presupuesto.
+
+## 🕘 Sesiones anteriores
+
+### Sesión 06 — estrés del CAG
 
 Antes de pasar a RAG, se mide dónde empieza a romperse este CAG. Resultado y lectura en
 [`evals/stress/REPORT.md`](evals/stress/REPORT.md); datos en `evals/stress/results.csv`.
@@ -55,8 +130,6 @@ una ejecución anterior haría que los turnos 1 acertaran en caché y falsearía
 latencia. Si Redis no responde, se para antes de hacer ninguna petición (código 3).
 `--keep-turn1-cache` lo desactiva, y si aun así un turno 1 de escenario sale de caché,
 la fila lo marca en `error` y el runner avisa.
-
-## 🕘 Sesiones anteriores
 
 ### Sesión 05
 
@@ -128,8 +201,18 @@ app/
 │   ├── conversation_summary/v1/ # prompt del resumen acumulativo
 │   ├── extraction/v1/       # prompt del extractor de metadata
 │   └── critic/v1/           # prompt del crítico del Actor-Critic-Boss
-└── context/
-    └── examples.py          # Ejemplos CAG del chat libre (sesión 02)
+├── context/
+│   └── examples.py          # Ejemplos CAG del chat libre (sesión 02)
+└── embedding_pipeline/      # Sesión 07: presupuestos JSON → chunks → vectores
+    ├── schemas.py           # Budget, Chunk, EmbeddedChunk, IngestRequest/Response
+    ├── chunker.py           # Chunker (interfaz) + JSONStructuralChunker
+    ├── embedder.py          # OpenAIEmbedder · GeminiEmbedder · get_embedder()
+    ├── router.py            # POST /embeddings/ingest
+    └── SANITY_CHECK.md      # tres parejas de validación + calibración
+scripts/
+└── compare.py               # similitud coseno entre dos textos (sesión 07)
+data/
+└── budgets_sample.json      # 15 presupuestos históricos (sesión 07)
 evals/
 ├── metrics.py               # MetricResult, SchemaAdherence y métricas del golden
 ├── dataset.py               # GoldenCase + load_dataset
@@ -164,6 +247,8 @@ GEMINI_API_KEY=...
 GEMINI_MODEL=gemini-flash-latest
 API_BASE_URL=http://localhost:8000/api/v1
 PROMPT_VERSION=v1
+EMBEDDING_PROVIDER=gemini      # sesión 07: gemini (por defecto) u openai
+OPENAI_API_KEY=sk-...          # solo si EMBEDDING_PROVIDER=openai
 ```
 
 Sin comillas ni espacios alrededor del `=`: `python-dotenv` no parsea la línea y la
