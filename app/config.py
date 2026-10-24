@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
 
+    # Sesión 08: chunks y embeddings persistidos en Postgres + pgvector.
+    # Dentro de compose el host es "postgres" (lo fija docker-compose.yml).
+    DATABASE_URL: str = "postgresql+asyncpg://estimator:estimator@localhost:5432/estimator"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

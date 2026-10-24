@@ -1,4 +1,5 @@
-# Servicio IA + Redis (caché del /estimate y caché del turno 1 de las sesiones).
+# Servicio IA + Redis (caché del /estimate y caché del turno 1 de las sesiones)
+# + Postgres con pgvector (presupuestos históricos troceados y sus embeddings).
 # Uso: cp .env.example .env  (con tus claves)  y  docker compose up --build
 # Swagger en http://localhost:8000/docs. Streamlit corre fuera, contra este puerto.
 
@@ -14,11 +15,33 @@ services:
     environment:
       # Dentro de la red de compose Redis se llama "redis", no localhost.
       REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://estimator:estimator@postgres:5432/estimator
       # Logs en JSON aunque el .env local diga development.
       APP_ENV: production
     depends_on:
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    # Postgres 16 con la extensión vector precompilada (se activa con CREATE EXTENSION).
+    image: pgvector/pgvector:pg16
+    environment:
+      # Credenciales de desarrollo local, no secretos.
+      POSTGRES_DB: estimator
+      POSTGRES_USER: estimator
+      POSTGRES_PASSWORD: estimator
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U estimator -d estimator"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   redis:
@@ -29,3 +52,6 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+
+volumes:
+  postgres_data:

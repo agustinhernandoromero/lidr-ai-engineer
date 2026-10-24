@@ -22,6 +22,11 @@ dependencies = [
     "python-multipart>=0.0.32",
     "openai>=1.0.0",
     "tiktoken>=0.7.0",
+    # Sesión 08. [asyncio] trae greenlet, que SQLAlchemy 2.1 ya no instala solo.
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.29",
+    "pgvector>=0.3",
+    "alembic>=1.13",
 ]
 
 [project.optional-dependencies]
