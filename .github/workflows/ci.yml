@@ -2,7 +2,7 @@ name: CI Pipeline - Verificación de Estructura y Tests CAG
 
 on:
   push:
-    branches: [ main, master, "session_*" ]
+    branches: [ main, master, "session_*", "session-*" ]
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
