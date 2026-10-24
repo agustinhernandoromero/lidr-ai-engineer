@@ -1,0 +1,84 @@
+{
+  "budget_id": "BUD-2024-014",
+  "client_metadata": {
+    "name": "FintechCorp",
+    "sector": "finance",
+    "country": "ES"
+  },
+  "project_summary": "Mobile banking API with OAuth 2.0 authentication and PSD2 compliance",
+  "main_technology": "ruby_on_rails",
+  "year": 2024,
+  "total_estimated_hours": 480,
+  "components": [
+    {
+      "component_id": "AUTH-001",
+      "name": "OAuth 2.0 authentication backend",
+      "description": "Implementation of OAuth 2.0 flows (authorization code, refresh token) with JWT-based session management, multi-tenant token isolation, and rate limiting per client.",
+      "tech_stack": [
+        "ruby_on_rails",
+        "postgresql",
+        "redis"
+      ],
+      "estimated_hours": 120,
+      "complexity": "high",
+      "dependencies": []
+    },
+    {
+      "component_id": "ACC-001",
+      "name": "Accounts and transactions API",
+      "description": "REST endpoints to list accounts, balances and paginated transaction history, with filtering by date range and category and idempotent transfer requests.",
+      "tech_stack": [
+        "ruby_on_rails",
+        "postgresql"
+      ],
+      "estimated_hours": 140,
+      "complexity": "medium",
+      "dependencies": [
+        "AUTH-001"
+      ]
+    },
+    {
+      "component_id": "PSD2-001",
+      "name": "PSD2 consent and open banking connectors",
+      "description": "Consent lifecycle management for third-party providers, strong customer authentication challenges, and connectors to the Berlin Group NextGenPSD2 interface.",
+      "tech_stack": [
+        "ruby_on_rails",
+        "postgresql",
+        "sidekiq"
+      ],
+      "estimated_hours": 130,
+      "complexity": "high",
+      "dependencies": [
+        "AUTH-001"
+      ]
+    },
+    {
+      "component_id": "NOTIF-001",
+      "name": "Push notifications service",
+      "description": "Transaction alerts and security notifications delivered through Firebase Cloud Messaging and Apple Push Notification service, with user-level preferences.",
+      "tech_stack": [
+        "ruby_on_rails",
+        "firebase",
+        "sidekiq"
+      ],
+      "estimated_hours": 40,
+      "complexity": "low",
+      "dependencies": [
+        "ACC-001"
+      ]
+    },
+    {
+      "component_id": "OPS-001",
+      "name": "Audit logging and monitoring",
+      "description": "Immutable audit log of sensitive operations, structured application logs and dashboards with alerting on authentication failures and latency.",
+      "tech_stack": [
+        "ruby_on_rails",
+        "elasticsearch",
+        "grafana"
+      ],
+      "estimated_hours": 50,
+      "complexity": "medium",
+      "dependencies": []
+    }
+  ]
+}

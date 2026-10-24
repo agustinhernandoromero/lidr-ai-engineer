@@ -1,0 +1,68 @@
+{
+  "budget_id": "BUD-2025-012",
+  "client_metadata": {
+    "name": "ClinicaPlus",
+    "sector": "healthcare",
+    "country": "CO"
+  },
+  "project_summary": "Clinic management system with insurance billing and e-prescriptions",
+  "main_technology": "ruby_on_rails",
+  "year": 2025,
+  "total_estimated_hours": 320,
+  "components": [
+    {
+      "component_id": "PAT-001",
+      "name": "Patient records",
+      "description": "Patient demographics, medical history, allergies and visit notes with versioning and attachment upload.",
+      "tech_stack": [
+        "ruby_on_rails",
+        "postgresql",
+        "s3"
+      ],
+      "estimated_hours": 100,
+      "complexity": "medium",
+      "dependencies": []
+    },
+    {
+      "component_id": "BILL-001",
+      "name": "Insurance billing",
+      "description": "Claims generation for several health insurers, eligibility checks, rejection handling and monthly reconciliation reports.",
+      "tech_stack": [
+        "ruby_on_rails",
+        "postgresql",
+        "sidekiq"
+      ],
+      "estimated_hours": 120,
+      "complexity": "high",
+      "dependencies": [
+        "PAT-001"
+      ]
+    },
+    {
+      "component_id": "RX-001",
+      "name": "Electronic prescriptions",
+      "description": "Digitally signed prescriptions with drug catalogue lookup, interaction warnings and QR code for pharmacy validation.",
+      "tech_stack": [
+        "ruby_on_rails",
+        "postgresql"
+      ],
+      "estimated_hours": 70,
+      "complexity": "medium",
+      "dependencies": [
+        "PAT-001"
+      ]
+    },
+    {
+      "component_id": "REM-001",
+      "name": "SMS appointment reminders",
+      "description": "Automatic SMS reminders 24 hours before each appointment with confirmation and cancellation links.",
+      "tech_stack": [
+        "ruby_on_rails",
+        "twilio"
+      ],
+      "estimated_hours": 30,
+      "complexity": "low",
+      "dependencies": []
+    }
+  ]
+}

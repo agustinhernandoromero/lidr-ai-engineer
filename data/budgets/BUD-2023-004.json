@@ -1,0 +1,68 @@
+{
+  "budget_id": "BUD-2023-004",
+  "client_metadata": {
+    "name": "LogiPort",
+    "sector": "industrial",
+    "country": "NL"
+  },
+  "project_summary": "Warehouse management system integrated with SAP",
+  "main_technology": "java_spring",
+  "year": 2023,
+  "total_estimated_hours": 390,
+  "components": [
+    {
+      "component_id": "WMS-001",
+      "name": "Inventory and storage locations",
+      "description": "Bin locations, stock movements, cycle counts and putaway and picking strategies by product family.",
+      "tech_stack": [
+        "java_spring",
+        "postgresql"
+      ],
+      "estimated_hours": 140,
+      "complexity": "medium",
+      "dependencies": []
+    },
+    {
+      "component_id": "SCAN-001",
+      "name": "Handheld barcode scanning app",
+      "description": "Android app for rugged handhelds to scan barcodes during receiving, picking and shipping, working offline with later sync.",
+      "tech_stack": [
+        "kotlin",
+        "android",
+        "sqlite"
+      ],
+      "estimated_hours": 90,
+      "complexity": "medium",
+      "dependencies": [
+        "WMS-001"
+      ]
+    },
+    {
+      "component_id": "ERP-001",
+      "name": "SAP integration",
+      "description": "Exchange of purchase orders, deliveries and goods movements with SAP S/4HANA through IDocs and OData services, with error handling and replay.",
+      "tech_stack": [
+        "java_spring",
+        "sap_s4hana",
+        "rabbitmq"
+      ],
+      "estimated_hours": 120,
+      "complexity": "high",
+      "dependencies": [
+        "WMS-001"
+      ]
+    },
+    {
+      "component_id": "AUTH-001",
+      "name": "Single sign-on with Azure AD",
+      "description": "Employee login through Azure Active Directory with SAML, group-based roles and automatic deprovisioning.",
+      "tech_stack": [
+        "java_spring",
+        "azure_ad"
+      ],
+      "estimated_hours": 40,
+      "complexity": "low",
+      "dependencies": []
+    }
+  ]
+}

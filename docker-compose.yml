@@ -16,6 +16,8 @@ services:
       # Dentro de la red de compose Redis se llama "redis", no localhost.
       REDIS_URL: redis://redis:6379/0
       DATABASE_URL: postgresql+asyncpg://estimator:estimator@postgres:5432/estimator
+      # Para los scripts que llaman a la API (docker compose run --rm api python ...).
+      AI_SERVICE_URL: http://api:8000
       # Logs en JSON aunque el .env local diga development.
       APP_ENV: production
     depends_on:

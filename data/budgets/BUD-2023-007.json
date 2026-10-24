@@ -1,0 +1,74 @@
+{
+  "budget_id": "BUD-2023-007",
+  "client_metadata": {
+    "name": "NeoLend",
+    "sector": "finance",
+    "country": "MX"
+  },
+  "project_summary": "Online consumer lending platform with automated credit scoring",
+  "main_technology": "python_django",
+  "year": 2023,
+  "total_estimated_hours": 450,
+  "components": [
+    {
+      "component_id": "KYC-001",
+      "name": "Identity verification integration",
+      "description": "Integration with an external KYC provider for document scanning, selfie liveness checks and sanctions list screening, with manual review queue for edge cases.",
+      "tech_stack": [
+        "python_django",
+        "postgresql",
+        "celery"
+      ],
+      "estimated_hours": 90,
+      "complexity": "medium",
+      "dependencies": []
+    },
+    {
+      "component_id": "SCORE-001",
+      "name": "Credit scoring engine",
+      "description": "Rules-plus-model credit scoring engine that decides loan eligibility, amount and interest rate for each applicant. The engine combines a deterministic policy layer (minimum age, residency, maximum debt-to-income ratio, blacklist checks against the internal fraud registry and the national credit bureau) with a gradient boosting model trained on four years of historical repayment data. Features include income stability, length of employment, number of active credit lines, past delinquencies, device and behavioural signals captured during the application, and bank transaction aggregates obtained through open banking with explicit consent. Every decision must be explainable: the engine stores the input features, the model version, the policy rules that fired and the top contributing factors, so that the risk team can answer customer complaints and regulator audits. The model is retrained monthly through an offline pipeline, evaluated against a holdout set and a champion-challenger setup in production, and promoted only after sign-off by the risk committee. Latency budget is under 800 ms per decision, and the service must degrade gracefully to policy-only decisions if the model endpoint is unavailable.",
+      "tech_stack": [
+        "python_django",
+        "scikit_learn",
+        "postgresql",
+        "redis"
+      ],
+      "estimated_hours": 160,
+      "complexity": "high",
+      "dependencies": [
+        "KYC-001"
+      ]
+    },
+    {
+      "component_id": "LOAN-001",
+      "name": "Loan origination workflow",
+      "description": "Multi-step application form, offer presentation, electronic contract signature and disbursement request, modelled as a state machine with retries.",
+      "tech_stack": [
+        "python_django",
+        "postgresql",
+        "celery"
+      ],
+      "estimated_hours": 120,
+      "complexity": "medium",
+      "dependencies": [
+        "KYC-001",
+        "SCORE-001"
+      ]
+    },
+    {
+      "component_id": "PAY-001",
+      "name": "Repayment schedules and payment gateway",
+      "description": "Amortisation schedule generation, automatic direct debit collection through a local payment gateway, late fee calculation and reminders.",
+      "tech_stack": [
+        "python_django",
+        "postgresql",
+        "stripe"
+      ],
+      "estimated_hours": 80,
+      "complexity": "medium",
+      "dependencies": [
+        "LOAN-001"
+      ]
+    }
+  ]
+}

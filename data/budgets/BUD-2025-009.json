@@ -1,0 +1,71 @@
+{
+  "budget_id": "BUD-2025-009",
+  "client_metadata": {
+    "name": "TechMarket",
+    "sector": "ecommerce",
+    "country": "PT"
+  },
+  "project_summary": "Multi-vendor marketplace for consumer electronics",
+  "main_technology": "java_spring",
+  "year": 2025,
+  "total_estimated_hours": 360,
+  "components": [
+    {
+      "component_id": "VEND-001",
+      "name": "Vendor onboarding",
+      "description": "Self-service vendor registration, business document upload, approval workflow and catalogue import from CSV files.",
+      "tech_stack": [
+        "java_spring",
+        "postgresql",
+        "s3"
+      ],
+      "estimated_hours": 80,
+      "complexity": "medium",
+      "dependencies": []
+    },
+    {
+      "component_id": "ORD-001",
+      "name": "Order management with split orders",
+      "description": "Order splitting by vendor, per-vendor fulfilment states, partial cancellations and returns, and customer-facing order tracking.",
+      "tech_stack": [
+        "java_spring",
+        "postgresql",
+        "kafka"
+      ],
+      "estimated_hours": 150,
+      "complexity": "high",
+      "dependencies": [
+        "VEND-001"
+      ]
+    },
+    {
+      "component_id": "PAYOUT-001",
+      "name": "Vendor payouts",
+      "description": "Commission calculation, holding periods, and scheduled payouts to vendors through Stripe Connect with downloadable statements.",
+      "tech_stack": [
+        "java_spring",
+        "stripe",
+        "postgresql"
+      ],
+      "estimated_hours": 90,
+      "complexity": "high",
+      "dependencies": [
+        "ORD-001"
+      ]
+    },
+    {
+      "component_id": "REV-001",
+      "name": "Reviews and ratings moderation",
+      "description": "Verified-purchase product reviews, star ratings, vendor replies and a moderation queue with profanity filtering.",
+      "tech_stack": [
+        "java_spring",
+        "postgresql"
+      ],
+      "estimated_hours": 40,
+      "complexity": "low",
+      "dependencies": [
+        "ORD-001"
+      ]
+    }
+  ]
+}

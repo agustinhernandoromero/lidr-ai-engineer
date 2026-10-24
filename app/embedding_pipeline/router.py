@@ -1,21 +1,31 @@
 """Router FastAPI del pipeline de embeddings: POST /embeddings/ingest.
 
-Los vectores se generan en memoria y se devuelven por HTTP; la persistencia
-en una base de datos vectorial llega en la sesión 08.
+Cada petición trae un presupuesto; se trocea, se embebe en un único lote y se
+persiste como un document con sus chunks en una sola transacción.
 """
 
+import asyncio
+import time
 from functools import lru_cache
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.models import EMBEDDING_DIMENSION, Chunk, Document
+from app.db.session import get_session
 from app.embedding_pipeline.chunker import JSONStructuralChunker
 from app.embedding_pipeline.embedder import BaseEmbedder, get_embedder
-from app.embedding_pipeline.schemas import IngestRequest, IngestResponse, IngestStats
+from app.embedding_pipeline.schemas import Budget, IngestConflict, IngestRequest, IngestResponse
 
 logger = structlog.get_logger(__name__)
 
 router = APIRouter(tags=["Embeddings"])
+
+CHUNK_TYPE_COMPONENT = "budget_component"
 
 
 @lru_cache
@@ -30,43 +40,109 @@ def get_cached_embedder() -> BaseEmbedder:
     return get_embedder()
 
 
+def _conflict(document_id: int) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content=IngestConflict(document_id=document_id).model_dump(),
+    )
+
+
+async def _existing_document_id(session: AsyncSession, source_path: str) -> int | None:
+    return await session.scalar(select(Document.id).where(Document.source_path == source_path))
+
+
+def _document_metadata(budget: Budget) -> dict:
+    """Metadata del presupuesto completo; los chunks no la duplican."""
+    return {
+        "budget_id": budget.budget_id,
+        "client_name": budget.client_metadata.name,
+        "sector": budget.client_metadata.sector,
+        "country": budget.client_metadata.country,
+        "main_technology": budget.main_technology,
+        "year": budget.year,
+        "total_estimated_hours": budget.total_estimated_hours,
+        "components": len(budget.components),
+    }
+
+
 @router.post(
     "/ingest",
     response_model=IngestResponse,
     status_code=status.HTTP_200_OK,
-    summary="Trocear y vectorizar presupuestos históricos",
+    responses={status.HTTP_409_CONFLICT: {"model": IngestConflict}},
+    summary="Trocear, vectorizar y persistir un presupuesto histórico",
     description=(
-        "Parte cada presupuesto en un chunk por componente (con la cabecera del presupuesto "
-        "padre), genera sus embeddings en lotes y devuelve los chunks vectorizados con "
-        "estadísticas de tokens y coste estimado. No persiste nada."
+        "Parte el presupuesto en un chunk por componente, genera los embeddings en un único "
+        "lote y guarda el documento y sus chunks en una sola transacción. Devuelve 409 si el "
+        "source_path ya estaba ingestado."
     ),
 )
-def ingest_budgets(
+async def ingest_budget(
     payload: IngestRequest,
+    session: AsyncSession = Depends(get_session),
     chunker: JSONStructuralChunker = Depends(get_chunker),
-) -> IngestResponse:
-    # Endpoint síncrono a propósito: los SDK de embeddings bloquean, y FastAPI
-    # ejecuta los endpoints def en un hilo aparte sin parar el event loop.
+) -> IngestResponse | JSONResponse:
+    started = time.perf_counter()
+
+    # 1. Duplicado: se responde antes de gastar llamadas al embedder.
+    existing_id = await _existing_document_id(session, payload.source_path)
+    if existing_id is not None:
+        return _conflict(existing_id)
+
+    # 2. Chunking y embeddings, fuera de la transacción: la llamada a la API
+    # no retiene una conexión de Postgres. Los SDK bloquean, así que van en un hilo.
+    budget = payload.content
     try:
         embedder = get_cached_embedder()
-        chunks = chunker.chunk(payload.budgets)
-        embedded = embedder.embed_many(chunks)
+        chunks = chunker.chunk([budget])
+        embedded = await asyncio.to_thread(embedder.embed_many, chunks, "document")
     except Exception:  # noqa: BLE001
-        # Detalle completo solo en el log; el cliente recibe un mensaje genérico
-        # y lo correlaciona con la cabecera X-Request-ID.
-        logger.exception("embeddings_ingest_failed", budgets=len(payload.budgets))
+        # Detalle completo solo en el log; el cliente lo correlaciona con X-Request-ID.
+        logger.exception("embeddings_ingest_failed", source_path=payload.source_path)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error generando los embeddings. Consulta los logs con el X-Request-ID de la respuesta.",
         )
 
-    total_tokens = sum(chunk.token_count for chunk in embedded)
-    stats = IngestStats(
-        total_budgets=len(payload.budgets),
-        total_chunks=len(embedded),
-        total_tokens=total_tokens,
-        estimated_cost_usd=embedder.estimate_cost_usd(total_tokens),
-        embedding_model=embedder.model,
+    # 3. Una sola transacción: el documento y todos sus chunks, o nada.
+    tech_stacks = {component.component_id: component.tech_stack for component in budget.components}
+    document = Document(
+        source_path=payload.source_path,
+        document_type=payload.document_type,
+        metadata_=_document_metadata(budget),
     )
-    logger.info("embeddings_ingest", **stats.model_dump())
-    return IngestResponse(chunks=embedded, stats=stats)
+    document.chunks = [
+        Chunk(
+            chunk_type=CHUNK_TYPE_COMPONENT,
+            content=chunk.text,
+            embedding=chunk.embedding,
+            metadata_={**chunk.metadata, "tech_stack": tech_stacks[chunk.metadata["component_id"]]},
+        )
+        for chunk in embedded
+    ]
+    session.add(document)
+    try:
+        await session.commit()
+    except IntegrityError:
+        # Otra petición con el mismo source_path ganó la carrera entre el SELECT
+        # y el INSERT; el índice UNIQUE lo detecta y aquí se responde igual que en el paso 1.
+        await session.rollback()
+        existing_id = await _existing_document_id(session, payload.source_path)
+        if existing_id is None:
+            raise
+        return _conflict(existing_id)
+
+    response = IngestResponse(
+        document_id=document.id,
+        chunks_created=len(document.chunks),
+        embedding_dimension=EMBEDDING_DIMENSION,
+        ingestion_time_ms=round((time.perf_counter() - started) * 1000),
+    )
+    logger.info(
+        "embeddings_ingest",
+        source_path=payload.source_path,
+        total_tokens=sum(chunk.token_count for chunk in embedded),
+        embedding_model=embedder.model,
+        **response.model_dump(),
+    )
+    return response

@@ -1,0 +1,56 @@
+{
+  "budget_id": "BUD-2022-008",
+  "client_metadata": {
+    "name": "FitPulse",
+    "sector": "healthcare",
+    "country": "GB"
+  },
+  "project_summary": "Wellness mobile app synchronised with wearables",
+  "main_technology": "flutter",
+  "year": 2022,
+  "total_estimated_hours": 350,
+  "components": [
+    {
+      "component_id": "MOB-001",
+      "name": "Flutter mobile app",
+      "description": "Cross-platform app with activity rings, sleep and heart rate charts, goals, streaks and offline mode.",
+      "tech_stack": [
+        "flutter",
+        "dart",
+        "sqlite"
+      ],
+      "estimated_hours": 160,
+      "complexity": "medium",
+      "dependencies": [
+        "API-001"
+      ]
+    },
+    {
+      "component_id": "SYNC-001",
+      "name": "Wearables synchronisation",
+      "description": "Background synchronisation with Apple HealthKit and Google Fit, conflict resolution between sources and battery-friendly scheduling.",
+      "tech_stack": [
+        "flutter",
+        "healthkit",
+        "google_fit"
+      ],
+      "estimated_hours": 100,
+      "complexity": "high",
+      "dependencies": [
+        "MOB-001"
+      ]
+    },
+    {
+      "component_id": "API-001",
+      "name": "Backend API",
+      "description": "REST API for user profiles, goals and aggregated health metrics, with token authentication and GDPR data export.",
+      "tech_stack": [
+        "nodejs",
+        "mongodb"
+      ],
+      "estimated_hours": 90,
+      "complexity": "medium",
+      "dependencies": []
+    }
+  ]
+}

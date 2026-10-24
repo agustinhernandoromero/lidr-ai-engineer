@@ -1,0 +1,69 @@
+{
+  "budget_id": "BUD-2022-021",
+  "client_metadata": {
+    "name": "PayFlow",
+    "sector": "finance",
+    "country": "ES"
+  },
+  "project_summary": "Card payments gateway for small online merchants",
+  "main_technology": "nodejs",
+  "year": 2022,
+  "total_estimated_hours": 370,
+  "components": [
+    {
+      "component_id": "TOKEN-001",
+      "name": "Card tokenization vault",
+      "description": "PCI DSS compliant vault that replaces card numbers with tokens, using envelope encryption with a hardware security module and strict network segmentation.",
+      "tech_stack": [
+        "nodejs",
+        "postgresql",
+        "aws_kms"
+      ],
+      "estimated_hours": 130,
+      "complexity": "high",
+      "dependencies": []
+    },
+    {
+      "component_id": "FRAUD-001",
+      "name": "Fraud detection rules engine",
+      "description": "Configurable velocity and geolocation rules evaluated on every payment, with risk scores, manual review queue and merchant-level thresholds.",
+      "tech_stack": [
+        "nodejs",
+        "redis",
+        "postgresql"
+      ],
+      "estimated_hours": 100,
+      "complexity": "high",
+      "dependencies": [
+        "TOKEN-001"
+      ]
+    },
+    {
+      "component_id": "WEBHOOK-001",
+      "name": "Merchant webhooks",
+      "description": "Signed webhook delivery of payment events to merchants, with exponential backoff retries and a delivery log visible in the backoffice.",
+      "tech_stack": [
+        "nodejs",
+        "rabbitmq"
+      ],
+      "estimated_hours": 50,
+      "complexity": "low",
+      "dependencies": []
+    },
+    {
+      "component_id": "ADMIN-001",
+      "name": "Merchant backoffice",
+      "description": "Web backoffice for merchants to see payments, issue refunds, download settlement reports and manage API keys and team members.",
+      "tech_stack": [
+        "react",
+        "nodejs",
+        "postgresql"
+      ],
+      "estimated_hours": 90,
+      "complexity": "medium",
+      "dependencies": [
+        "WEBHOOK-001"
+      ]
+    }
+  ]
+}

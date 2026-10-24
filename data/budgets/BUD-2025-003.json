@@ -1,0 +1,72 @@
+{
+  "budget_id": "BUD-2025-003",
+  "client_metadata": {
+    "name": "InvestaPlus",
+    "sector": "finance",
+    "country": "DE"
+  },
+  "project_summary": "Robo-advisor web platform with automated portfolio rebalancing",
+  "main_technology": "java_spring",
+  "year": 2025,
+  "total_estimated_hours": 450,
+  "components": [
+    {
+      "component_id": "PORT-001",
+      "name": "Portfolio rebalancing service",
+      "description": "Calculates drift against target allocations, proposes rebalancing orders with tax-loss harvesting rules and sends them to the broker API in batches.",
+      "tech_stack": [
+        "java_spring",
+        "postgresql",
+        "kafka"
+      ],
+      "estimated_hours": 150,
+      "complexity": "high",
+      "dependencies": [
+        "MKT-001"
+      ]
+    },
+    {
+      "component_id": "MKT-001",
+      "name": "Market data ingestion",
+      "description": "Ingestion of end-of-day and intraday prices from two market data vendors, normalisation, gap detection and storage in a time-series table.",
+      "tech_stack": [
+        "java_spring",
+        "kafka",
+        "timescaledb"
+      ],
+      "estimated_hours": 100,
+      "complexity": "medium",
+      "dependencies": []
+    },
+    {
+      "component_id": "DASH-001",
+      "name": "Investor dashboard",
+      "description": "Web dashboard showing portfolio value, performance charts, allocation breakdown and pending orders, with responsive layout and accessibility support.",
+      "tech_stack": [
+        "react",
+        "typescript",
+        "java_spring"
+      ],
+      "estimated_hours": 110,
+      "complexity": "medium",
+      "dependencies": [
+        "PORT-001"
+      ]
+    },
+    {
+      "component_id": "REP-001",
+      "name": "MiFID II regulatory reporting",
+      "description": "Generation of suitability reports, cost and charges disclosures and transaction reports in the formats required by the financial regulator.",
+      "tech_stack": [
+        "java_spring",
+        "postgresql",
+        "jasperreports"
+      ],
+      "estimated_hours": 90,
+      "complexity": "high",
+      "dependencies": [
+        "PORT-001"
+      ]
+    }
+  ]
+}

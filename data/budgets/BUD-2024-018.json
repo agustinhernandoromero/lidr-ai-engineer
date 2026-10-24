@@ -1,0 +1,57 @@
+{
+  "budget_id": "BUD-2024-018",
+  "client_metadata": {
+    "name": "MetalWorks",
+    "sector": "industrial",
+    "country": "DE"
+  },
+  "project_summary": "Predictive maintenance for CNC machines using sensor data",
+  "main_technology": "python_fastapi",
+  "year": 2024,
+  "total_estimated_hours": 350,
+  "components": [
+    {
+      "component_id": "SENS-001",
+      "name": "Sensor data pipeline",
+      "description": "Collection of vibration, temperature and spindle load readings over MQTT, buffering at the edge and storage in a time-series database.",
+      "tech_stack": [
+        "python_fastapi",
+        "mqtt",
+        "timescaledb"
+      ],
+      "estimated_hours": 130,
+      "complexity": "high",
+      "dependencies": []
+    },
+    {
+      "component_id": "ML-001",
+      "name": "Anomaly detection model",
+      "description": "Unsupervised anomaly detection on sensor time series, failure probability per machine and retraining with labelled maintenance events.",
+      "tech_stack": [
+        "python_fastapi",
+        "pytorch",
+        "timescaledb"
+      ],
+      "estimated_hours": 150,
+      "complexity": "high",
+      "dependencies": [
+        "SENS-001"
+      ]
+    },
+    {
+      "component_id": "DASH-001",
+      "name": "Maintenance dashboard",
+      "description": "Plant-level dashboard with machine health scores, anomaly timeline and maintenance work order creation.",
+      "tech_stack": [
+        "react",
+        "typescript",
+        "python_fastapi"
+      ],
+      "estimated_hours": 70,
+      "complexity": "medium",
+      "dependencies": [
+        "ML-001"
+      ]
+    }
+  ]
+}

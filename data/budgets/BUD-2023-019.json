@@ -1,0 +1,69 @@
+{
+  "budget_id": "BUD-2023-019",
+  "client_metadata": {
+    "name": "MediTrack",
+    "sector": "healthcare",
+    "country": "US"
+  },
+  "project_summary": "Real-time hospital asset tracking with indoor location",
+  "main_technology": "dotnet",
+  "year": 2023,
+  "total_estimated_hours": 320,
+  "components": [
+    {
+      "component_id": "IOT-001",
+      "name": "BLE beacon ingestion",
+      "description": "Ingestion of Bluetooth Low Energy beacon signals from gateways, trilateration of asset positions and deduplication of noisy readings.",
+      "tech_stack": [
+        "dotnet",
+        "azure_iot_hub",
+        "sql_server"
+      ],
+      "estimated_hours": 110,
+      "complexity": "high",
+      "dependencies": []
+    },
+    {
+      "component_id": "MAP-001",
+      "name": "Indoor map dashboard",
+      "description": "Floor plan viewer showing live positions of wheelchairs, infusion pumps and other equipment, with search and history playback.",
+      "tech_stack": [
+        "angular",
+        "typescript",
+        "dotnet"
+      ],
+      "estimated_hours": 90,
+      "complexity": "medium",
+      "dependencies": [
+        "IOT-001"
+      ]
+    },
+    {
+      "component_id": "ALERT-001",
+      "name": "Geofencing alerts",
+      "description": "Alerts when equipment leaves an authorised zone or stays idle too long, delivered by email and to the nursing station screen.",
+      "tech_stack": [
+        "dotnet",
+        "signalr"
+      ],
+      "estimated_hours": 40,
+      "complexity": "low",
+      "dependencies": [
+        "IOT-001"
+      ]
+    },
+    {
+      "component_id": "HIPAA-001",
+      "name": "HIPAA audit trail and encryption",
+      "description": "Encryption at rest and in transit, access audit trail, and data retention policies required for HIPAA compliance.",
+      "tech_stack": [
+        "dotnet",
+        "sql_server",
+        "azure_key_vault"
+      ],
+      "estimated_hours": 80,
+      "complexity": "high",
+      "dependencies": []
+    }
+  ]
+}

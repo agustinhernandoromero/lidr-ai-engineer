@@ -1,0 +1,72 @@
+{
+  "budget_id": "BUD-2024-002",
+  "client_metadata": {
+    "name": "ModaNova",
+    "sector": "ecommerce",
+    "country": "ES"
+  },
+  "project_summary": "Headless fashion e-commerce store with fast product search",
+  "main_technology": "nodejs",
+  "year": 2024,
+  "total_estimated_hours": 440,
+  "components": [
+    {
+      "component_id": "CAT-001",
+      "name": "Product catalog and search",
+      "description": "Product catalog with variants (size, colour), faceted search, typo tolerance and synonym handling, indexed from the product database in near real time.",
+      "tech_stack": [
+        "nodejs",
+        "elasticsearch",
+        "postgresql"
+      ],
+      "estimated_hours": 110,
+      "complexity": "medium",
+      "dependencies": []
+    },
+    {
+      "component_id": "CART-001",
+      "name": "Cart and checkout",
+      "description": "Persistent cart, guest and registered checkout, address validation, shipping options and card payments with 3-D Secure through Stripe.",
+      "tech_stack": [
+        "nodejs",
+        "stripe",
+        "redis"
+      ],
+      "estimated_hours": 120,
+      "complexity": "high",
+      "dependencies": [
+        "CAT-001"
+      ]
+    },
+    {
+      "component_id": "FRONT-001",
+      "name": "Next.js storefront",
+      "description": "Server-rendered storefront with product listing and detail pages, image optimisation, SEO metadata and Core Web Vitals targets.",
+      "tech_stack": [
+        "nextjs",
+        "react",
+        "typescript"
+      ],
+      "estimated_hours": 140,
+      "complexity": "medium",
+      "dependencies": [
+        "CAT-001",
+        "CART-001"
+      ]
+    },
+    {
+      "component_id": "INT-001",
+      "name": "ERP inventory synchronisation",
+      "description": "Bidirectional synchronisation of stock levels and orders with the client ERP through scheduled jobs and a reconciliation report.",
+      "tech_stack": [
+        "nodejs",
+        "postgresql"
+      ],
+      "estimated_hours": 70,
+      "complexity": "medium",
+      "dependencies": [
+        "CAT-001"
+      ]
+    }
+  ]
+}

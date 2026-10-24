@@ -92,8 +92,9 @@ def test_stress_scenarios_and_sample_data_pass():
     for scenario in SCENARIOS.values():
         for turn in scenario.turns:
             check_input(turn.transcript)
-    for path in DATA_DIR.iterdir():
-        check_input(path.read_text(encoding="utf-8"))
+    for path in DATA_DIR.rglob("*"):
+        if path.is_file():
+            check_input(path.read_text(encoding="utf-8"))
 
 
 def test_moderation_flag_blocks():

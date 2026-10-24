@@ -1,0 +1,71 @@
+{
+  "budget_id": "BUD-2023-011",
+  "client_metadata": {
+    "name": "GourmetBox",
+    "sector": "ecommerce",
+    "country": "FR"
+  },
+  "project_summary": "Subscription meal kit e-commerce with mobile app",
+  "main_technology": "python_django",
+  "year": 2023,
+  "total_estimated_hours": 370,
+  "components": [
+    {
+      "component_id": "SUB-001",
+      "name": "Subscription billing",
+      "description": "Weekly and monthly subscription plans with pause, skip and cancel flows, proration and recurring card payments with dunning on failures.",
+      "tech_stack": [
+        "python_django",
+        "stripe",
+        "postgresql"
+      ],
+      "estimated_hours": 100,
+      "complexity": "high",
+      "dependencies": [
+        "ACC-001"
+      ]
+    },
+    {
+      "component_id": "LOG-001",
+      "name": "Delivery scheduling and routing",
+      "description": "Delivery slot booking, capacity limits per zone and daily route export for the logistics partner.",
+      "tech_stack": [
+        "python_django",
+        "postgresql",
+        "celery"
+      ],
+      "estimated_hours": 90,
+      "complexity": "medium",
+      "dependencies": [
+        "SUB-001"
+      ]
+    },
+    {
+      "component_id": "ACC-001",
+      "name": "Customer accounts with social login",
+      "description": "Customer registration and login with email and password or Google and Apple sign-in, password reset and profile management.",
+      "tech_stack": [
+        "python_django",
+        "postgresql"
+      ],
+      "estimated_hours": 50,
+      "complexity": "low",
+      "dependencies": []
+    },
+    {
+      "component_id": "MOB-001",
+      "name": "React Native mobile app",
+      "description": "iOS and Android app to browse weekly menus, manage the subscription, track deliveries and receive push notifications.",
+      "tech_stack": [
+        "react_native",
+        "typescript"
+      ],
+      "estimated_hours": 130,
+      "complexity": "medium",
+      "dependencies": [
+        "SUB-001",
+        "ACC-001"
+      ]
+    }
+  ]
+}

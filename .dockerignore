@@ -14,5 +14,6 @@ tests/
 evals/
 data/*
 !data/budgets_sample.json
+!data/budgets/
 uvicorn_*
 *.log

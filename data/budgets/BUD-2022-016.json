@@ -1,0 +1,65 @@
+{
+  "budget_id": "BUD-2022-016",
+  "client_metadata": {
+    "name": "HomeDeco",
+    "sector": "ecommerce",
+    "country": "IT"
+  },
+  "project_summary": "Replatforming of a home decoration store from Magento to Laravel",
+  "main_technology": "php_laravel",
+  "year": 2022,
+  "total_estimated_hours": 290,
+  "components": [
+    {
+      "component_id": "MIG-001",
+      "name": "Data migration from MySQL to PostgreSQL",
+      "description": "Migration of products, customers and order history from the Magento MySQL database to PostgreSQL, with incremental sync and a cut-over plan for zero downtime.",
+      "tech_stack": [
+        "php_laravel",
+        "mysql",
+        "postgresql"
+      ],
+      "estimated_hours": 120,
+      "complexity": "high",
+      "dependencies": []
+    },
+    {
+      "component_id": "SEO-001",
+      "name": "SEO URL redirects",
+      "description": "Mapping of legacy Magento URLs to the new routes with permanent redirects, sitemap regeneration and broken link monitoring.",
+      "tech_stack": [
+        "php_laravel",
+        "nginx"
+      ],
+      "estimated_hours": 40,
+      "complexity": "low",
+      "dependencies": [
+        "MIG-001"
+      ]
+    },
+    {
+      "component_id": "PROMO-001",
+      "name": "Promotions engine",
+      "description": "Coupon codes, percentage and fixed discounts, buy-x-get-y rules and free shipping thresholds applied at cart level.",
+      "tech_stack": [
+        "php_laravel",
+        "mysql"
+      ],
+      "estimated_hours": 70,
+      "complexity": "medium",
+      "dependencies": []
+    },
+    {
+      "component_id": "CMS-001",
+      "name": "Content CMS",
+      "description": "Editable landing pages, banners and inspiration articles for the marketing team using a block-based editor.",
+      "tech_stack": [
+        "php_laravel",
+        "vuejs"
+      ],
+      "estimated_hours": 60,
+      "complexity": "low",
+      "dependencies": []
+    }
+  ]
+}

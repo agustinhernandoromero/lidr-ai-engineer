@@ -1,11 +1,12 @@
 """Modelos Pydantic del pipeline de embeddings.
 
 Entrada: presupuestos históricos ya normalizados (sesión 06).
-Salida: chunks con su texto, metadata filtrable y vector.
+Ingesta: un presupuesto por petición, persistido en documents + chunks.
+Búsqueda: query en lenguaje natural → k chunks más cercanos por coseno.
 """
 
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -85,82 +86,110 @@ class EmbeddedChunk(Chunk):
     embedding: list[float]
 
 
+# Ejemplo pequeño para "Try it out" en /docs.
+_EXAMPLE_BUDGET = {
+    "budget_id": "BUD-2024-014",
+    "client_metadata": {"name": "FintechCorp", "sector": "finance", "country": "ES"},
+    "project_summary": "Mobile banking API with OAuth 2.0 authentication and PSD2 compliance",
+    "main_technology": "ruby_on_rails",
+    "year": 2024,
+    "total_estimated_hours": 260,
+    "components": [
+        {
+            "component_id": "AUTH-001",
+            "name": "OAuth 2.0 authentication backend",
+            "description": (
+                "Implementation of OAuth 2.0 flows (authorization code, refresh token) "
+                "with JWT-based session management, multi-tenant token isolation, and "
+                "rate limiting per client."
+            ),
+            "tech_stack": ["ruby_on_rails", "postgresql", "redis"],
+            "estimated_hours": 120,
+            "complexity": "high",
+            "dependencies": [],
+        },
+        {
+            "component_id": "ACC-001",
+            "name": "Accounts and transactions API",
+            "description": (
+                "REST endpoints to list accounts, balances and paginated transaction "
+                "history, with filtering by date range and category."
+            ),
+            "tech_stack": ["ruby_on_rails", "postgresql"],
+            "estimated_hours": 140,
+            "complexity": "medium",
+            "dependencies": ["AUTH-001"],
+        },
+    ],
+}
+
+
 class IngestRequest(BaseModel):
-    """Payload de POST /embeddings/ingest."""
+    """Payload de POST /embeddings/ingest: un presupuesto por petición."""
 
-    budgets: list[Budget] = Field(..., min_length=1)
+    source_path: str = Field(
+        ..., min_length=1, description="Ruta del fichero de origen; identifica el documento (único)."
+    )
+    document_type: str = Field(..., min_length=1, max_length=50)
+    content: Budget = Field(..., description="JSON completo del presupuesto, tal cual lo recibe el chunker.")
 
-    # Ejemplo pequeño para "Try it out" en /docs (el sample completo pesa ~3,5 MB de respuesta).
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
-                    "budgets": [
-                        {
-                            "budget_id": "BUD-2024-014",
-                            "client_metadata": {"name": "FintechCorp", "sector": "finance", "country": "ES"},
-                            "project_summary": "Mobile banking API with OAuth 2.0 authentication and PSD2 compliance",
-                            "main_technology": "ruby_on_rails",
-                            "year": 2024,
-                            "total_estimated_hours": 260,
-                            "components": [
-                                {
-                                    "component_id": "AUTH-001",
-                                    "name": "OAuth 2.0 authentication backend",
-                                    "description": (
-                                        "Implementation of OAuth 2.0 flows (authorization code, refresh token) "
-                                        "with JWT-based session management, multi-tenant token isolation, and "
-                                        "rate limiting per client."
-                                    ),
-                                    "tech_stack": ["ruby_on_rails", "postgresql", "redis"],
-                                    "estimated_hours": 120,
-                                    "complexity": "high",
-                                    "dependencies": [],
-                                },
-                                {
-                                    "component_id": "ACC-001",
-                                    "name": "Accounts and transactions API",
-                                    "description": (
-                                        "REST endpoints to list accounts, balances and paginated transaction "
-                                        "history, with filtering by date range and category."
-                                    ),
-                                    "tech_stack": ["ruby_on_rails", "postgresql"],
-                                    "estimated_hours": 140,
-                                    "complexity": "medium",
-                                    "dependencies": ["AUTH-001"],
-                                },
-                            ],
-                        }
-                    ]
+                    "source_path": "data/budgets/BUD-2024-014.json",
+                    "document_type": "historical_budget",
+                    "content": _EXAMPLE_BUDGET,
                 }
             ]
         }
     }
 
-    @field_validator("budgets")
-    @classmethod
-    def _unique_budget_ids(cls, value: list[Budget]) -> list[Budget]:
-        ids = [budget.budget_id for budget in value]
-        duplicates = sorted({bid for bid in ids if ids.count(bid) > 1})
-        if duplicates:
-            raise ValueError(f"budget_id repetido en la petición: {duplicates}")
-        return value
-
-
-class IngestStats(BaseModel):
-    """Estadísticas agregadas de una ingesta."""
-
-    total_budgets: int
-    total_chunks: int
-    total_tokens: int
-    estimated_cost_usd: float
-    embedding_model: str = Field(
-        ..., description="Modelo que generó los vectores; vectores de modelos distintos no son comparables."
-    )
-
 
 class IngestResponse(BaseModel):
-    """Respuesta de POST /embeddings/ingest."""
+    """Respuesta 200 de POST /embeddings/ingest."""
 
-    chunks: list[EmbeddedChunk]
-    stats: IngestStats
+    document_id: int
+    chunks_created: int
+    embedding_dimension: int
+    ingestion_time_ms: int
+
+
+class IngestConflict(BaseModel):
+    """Respuesta 409: el source_path ya estaba ingestado."""
+
+    detail: str = "Document already ingested"
+    document_id: int
+
+
+class SearchRequest(BaseModel):
+    """Payload de POST /search."""
+
+    query: str = Field(..., min_length=1, max_length=2000)
+    k: int = Field(5, ge=1, le=50)
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{"query": "REST API with OAuth authentication for fintech sector", "k": 5}]
+        }
+    }
+
+
+class SearchResult(BaseModel):
+    """Un chunk recuperado; distance es la distancia coseno (0 = misma dirección)."""
+
+    chunk_id: int
+    document_id: int
+    chunk_type: str
+    content: str
+    distance: float
+    metadata: dict[str, Any]
+
+
+class SearchResponse(BaseModel):
+    """Respuesta de POST /search."""
+
+    query: str
+    k: int
+    search_time_ms: int
+    results: list[SearchResult]

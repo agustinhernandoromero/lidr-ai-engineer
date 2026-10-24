@@ -1,0 +1,55 @@
+{
+  "budget_id": "BUD-2025-015",
+  "client_metadata": {
+    "name": "EnergiaSur",
+    "sector": "industrial",
+    "country": "ES"
+  },
+  "project_summary": "Solar plant monitoring platform connected to SCADA systems",
+  "main_technology": "dotnet",
+  "year": 2025,
+  "total_estimated_hours": 300,
+  "components": [
+    {
+      "component_id": "SCADA-001",
+      "name": "OPC UA connector",
+      "description": "Connector that subscribes to inverter and meter tags through OPC UA, handles reconnections and maps tags to a common asset model.",
+      "tech_stack": [
+        "dotnet",
+        "opc_ua",
+        "rabbitmq"
+      ],
+      "estimated_hours": 120,
+      "complexity": "high",
+      "dependencies": []
+    },
+    {
+      "component_id": "HIST-001",
+      "name": "Historian and production reports",
+      "description": "Storage of 1-minute production data, daily and monthly yield reports and comparison against expected irradiance.",
+      "tech_stack": [
+        "dotnet",
+        "timescaledb",
+        "powerbi"
+      ],
+      "estimated_hours": 80,
+      "complexity": "medium",
+      "dependencies": [
+        "SCADA-001"
+      ]
+    },
+    {
+      "component_id": "DB-001",
+      "name": "Database migration from Oracle to PostgreSQL",
+      "description": "Migration of the legacy Oracle historian schema and ten years of data to PostgreSQL with dual writes during the transition and zero downtime cut-over.",
+      "tech_stack": [
+        "dotnet",
+        "oracle",
+        "postgresql"
+      ],
+      "estimated_hours": 100,
+      "complexity": "high",
+      "dependencies": []
+    }
+  ]
+}

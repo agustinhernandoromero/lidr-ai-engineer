@@ -2,6 +2,7 @@
 
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI, Request
@@ -9,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from app.config import get_settings
+from app.db.session import dispose_engine
 from app.embedding_pipeline.router import router as embeddings_router
 from app.observability import configure_logging
 from app.routers.estimations import router as estimations_router
@@ -18,6 +20,14 @@ settings = get_settings()
 configure_logging(settings.APP_ENV)
 
 logger = structlog.get_logger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    # Cierra las conexiones a Postgres al apagar el servicio.
+    await dispose_engine()
+
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -29,6 +39,7 @@ app = FastAPI(
     version="0.2.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # CORS middleware for development

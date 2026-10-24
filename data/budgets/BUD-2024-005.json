@@ -1,0 +1,72 @@
+{
+  "budget_id": "BUD-2024-005",
+  "client_metadata": {
+    "name": "SaludDigital",
+    "sector": "healthcare",
+    "country": "ES"
+  },
+  "project_summary": "Telemedicine platform with video consultations and electronic health records integration",
+  "main_technology": "python_fastapi",
+  "year": 2024,
+  "total_estimated_hours": 440,
+  "components": [
+    {
+      "component_id": "VIDEO-001",
+      "name": "Video consultations",
+      "description": "Browser and mobile video calls between doctor and patient using WebRTC, waiting room, screen sharing and recording with patient consent.",
+      "tech_stack": [
+        "python_fastapi",
+        "webrtc",
+        "redis"
+      ],
+      "estimated_hours": 150,
+      "complexity": "high",
+      "dependencies": [
+        "AUTH-001",
+        "APPT-001"
+      ]
+    },
+    {
+      "component_id": "AUTH-001",
+      "name": "Patient authentication with OpenID Connect",
+      "description": "Patient and practitioner login through OpenID Connect with two-factor authentication, short-lived access tokens and role-based access to clinical data.",
+      "tech_stack": [
+        "python_fastapi",
+        "keycloak",
+        "postgresql"
+      ],
+      "estimated_hours": 90,
+      "complexity": "high",
+      "dependencies": []
+    },
+    {
+      "component_id": "APPT-001",
+      "name": "Appointment scheduling",
+      "description": "Practitioner availability calendars, online booking, cancellation rules and email reminders.",
+      "tech_stack": [
+        "python_fastapi",
+        "postgresql"
+      ],
+      "estimated_hours": 70,
+      "complexity": "medium",
+      "dependencies": [
+        "AUTH-001"
+      ]
+    },
+    {
+      "component_id": "EHR-001",
+      "name": "HL7 FHIR integration",
+      "description": "Read and write of patient summaries, encounters and prescriptions to the hospital electronic health record through an HL7 FHIR R4 API.",
+      "tech_stack": [
+        "python_fastapi",
+        "fhir",
+        "postgresql"
+      ],
+      "estimated_hours": 130,
+      "complexity": "high",
+      "dependencies": [
+        "AUTH-001"
+      ]
+    }
+  ]
+}
