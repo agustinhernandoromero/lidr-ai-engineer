@@ -3,28 +3,112 @@
 Servicio FastAPI que convierte una descripción de proyecto en una estimación técnica,
 con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 
-> **Esta rama es la entrega del ejercicio previo a la sesión 07**: pipeline mínimo de
-> embeddings y chunking, primer paso hacia la búsqueda semántica. Lo nuevo está justo
-> debajo; instalación, ejecución, tests y lo construido en sesiones anteriores, a
-> continuación.
+> **Esta rama es la entrega del ejercicio previo a la sesión 08**: el pipeline de embeddings
+> de la sesión 07 pasa a persistir en PostgreSQL + pgvector y se añade un endpoint de
+> búsqueda semántica. Lo nuevo está justo debajo; instalación, ejecución, tests y lo
+> construido en sesiones anteriores, a continuación.
 
-## 🧭 Sesión 07 — embeddings y chunking estructural
+## 🗄️ Sesión 08 — pgvector y búsqueda semántica
 
-Los presupuestos históricos en JSON se parten en chunks, se vectorizan y se devuelven por
-HTTP. Los vectores viven en memoria: no se persisten todavía (eso llega con pgvector en la
-sesión 08).
+Cada presupuesto ingestado se guarda como un `document` con sus `chunks` y embeddings, y
+`POST /search` devuelve los k chunks más cercanos a una query por distancia coseno.
 
 ```
-POST /embeddings/ingest  →  JSONStructuralChunker  →  embedder (lotes de 100)  →  chunks + vectores + stats
+POST /embeddings/ingest  →  chunker  →  embedder (un lote)  →  documents + chunks (una transacción)
+POST /search             →  embedder (query)  →  ORDER BY embedding <=> :query LIMIT k
+```
+
+```bash
+docker compose up -d --build                                  # api + redis + postgres
+docker compose run --rm api alembic upgrade head              # extensión vector + tablas + índices
+docker compose run --rm api python scripts/ingest_budgets.py  # 15 presupuestos → 58 chunks
+docker compose run --rm api python query_examples.py          # 5 queries (salida: output_examples.txt)
 ```
 
 | Pieza | Qué hace |
 |---|---|
-| `app/embedding_pipeline/schemas.py` | `Budget`, `BudgetComponent`, `Chunk`, `EmbeddedChunk`, `IngestRequest`, `IngestResponse`. `sector` y `complexity` son `Literal` cerrados; `component_id` único por presupuesto y `budget_id` único por petición (forman el `chunk_id`) |
+| `docker-compose.yml` | Servicio `postgres` (`pgvector/pgvector:pg16`, volumen y healthcheck); la API espera a que esté sano |
+| `alembic/versions/0001_initial_schema.py` | `CREATE EXTENSION vector`, `documents`, `chunks` (`vector(1536)`), índices B-tree y GIN. Sin índice vectorial |
+| `app/db/models.py` · `app/db/session.py` | Modelos ORM (`alembic check` los compara con la base de datos) y una sesión async por petición |
+| `app/embedding_pipeline/router.py` | `POST /embeddings/ingest`: un presupuesto por petición → 200 con `document_id`, `chunks_created`, `embedding_dimension`, `ingestion_time_ms`; 409 si el `source_path` ya existe |
+| `app/embedding_pipeline/search.py` | `POST /search`: `{query, k}` → resultados con `distance`; el log separa `embed_ms` (Gemini) de `db_ms` (Postgres) |
+| `scripts/ingest_budgets.py` · `data/budgets/` | Un JSON por presupuesto y el script que los envía; relanzarlo no duplica (409) |
+| `query_examples.py` · `output_examples.txt` | Cinco queries (directa, reformulada, otro dominio, ambigua, específica) y su salida real |
+
+### Decisiones de esquema
+
+- **(a) Dos tablas, no una.** Un presupuesto produce N chunks. En una sola tabla su metadata
+  (sector, cliente, año) se repetiría N veces y habría que mantenerla coherente a mano. Con
+  `documents` 1—N `chunks` y `ON DELETE CASCADE`, borrar un presupuesto borra sus chunks
+  sin código de aplicación.
+- **(b) Metadata en JSONB.** Lo estable y que se consulta siempre va en columnas tipadas
+  (`document_type`, `chunk_type`, fechas). Lo que el chunker puede enriquecer (tecnologías,
+  complejidad, horas) va en `metadata JSONB`. Así, añadir un campo no exige una migración, y
+  el índice GIN permite filtrar por cualquier clave.
+- **(c) `cosine_distance` (`<=>`).** Con vectores de norma 1, coseno e inner product ordenan
+  igual. Coseno no depende de esa normalización: sigue siendo correcto si mañana se cambia a
+  un modelo que no normaliza. Además es la convención en RAG. El índice HNSW que llegará se
+  creará con `vector_cosine_ops`, que encaja con este operador. Si la query y el índice no
+  coinciden, Postgres ignora el índice sin avisar. L2 se descarta porque mide también la
+  magnitud, que en embeddings de texto no aporta significado.
+- **(d) Sin índice vectorial, a propósito.** Con 58 chunks, Postgres hace un sequential scan
+  (`EXPLAIN ANALYZE`: 0,3 ms dentro de la base de datos). Es la línea base contra la que se
+  medirá el impacto de HNSW.
+- **(e) `source_path` con índice UNIQUE.** Es el único cambio respecto al esquema del
+  enunciado, que pide un índice normal. El 409 se comprueba primero con un `SELECT`, pero
+  dos ingestas simultáneas del mismo fichero pasarían ambas ese `SELECT` y lo duplicarían.
+  Con UNIQUE, la base de datos rechaza la segunda (`IntegrityError` → 409). **Para volver al
+  índice normal:** quitar `unique=True` en `ix_documents_source_path` (migración 0001) y en
+  `Document.source_path` (`app/db/models.py`). Si la base de datos ya está creada, hace falta
+  una migración nueva que borre el índice y lo cree sin `unique`. El endpoint sigue igual:
+  el `SELECT` previo cubre el caso normal.
+
+### Adaptaciones al repositorio
+
+- **Embeddings con Gemini a 1536 dimensiones.** Se usa `gemini-embedding-001` con
+  `output_dimensionality=1536`, no `text-embedding-3-small`. Gemini solo entrega norma 1 a su
+  dimensión nativa (3072), así que cada vector se renormaliza: en la base de datos todos
+  tienen norma 1,000000. A 3072 dimensiones tampoco se podría crear el índice HNSW sobre
+  `vector`, que admite como máximo 2000. Además se pasa `task_type`: `RETRIEVAL_DOCUMENT` al
+  ingerir y `RETRIEVAL_QUERY` al buscar. Anthropic no ofrece modelo de embeddings.
+- **El servicio de compose se llama `api`**, no `ai_service`.
+- **`Chunk.metadata_` en Python**, porque `metadata` está reservado en los modelos de
+  SQLAlchemy. La columna se sigue llamando `metadata`.
+- **`sqlalchemy[asyncio]`**: SQLAlchemy 2.1 ya no instala `greenlet`, y sin él el motor async
+  falla en el contenedor.
+- **Embeddings fuera de la transacción.** Orden: comprobación del 409, chunking, embeddings y,
+  al final, una transacción corta con el documento y todos sus chunks. Si Gemini falla, no se
+  escribe nada, y la llamada a la API no retiene una conexión a Postgres. Comprobado con una
+  clave inválida: 500 y ningún documento huérfano.
+
+**Lectura de `output_examples.txt`.**
+
+- La reformulación ("token-based access control for banking") recupera el mismo top-1 que
+  la query directa (OAuth de banca, 0,297 → 0,306): el modelo captura significado, no solo
+  palabras.
+- El corpus no tiene restaurantes ni Kubernetes. Esas dos queries no bajan de 0,35 y 0,38, y
+  la específica cae en "migration" de bases de datos.
+- La distancia mínima solo pasa de ~0,30 a ~0,35–0,38, porque la escala de Gemini está
+  comprimida. Un umbral absoluto de relevancia habría que calibrarlo sobre el corpus.
+- Casi toda la latencia es la llamada a Gemini (~270 ms; ~800 ms en la primera llamada),
+  frente a ~5 ms en Postgres.
+
+## 🕘 Sesiones anteriores
+
+### Sesión 07 — embeddings y chunking estructural
+
+Los presupuestos históricos en JSON se parten en chunks y se vectorizan. En la sesión 07 los
+vectores se devolvían por HTTP; desde la sesión 08 se persisten (contrato nuevo arriba).
+
+```
+JSONStructuralChunker  →  embedder (lotes de 100)  →  chunks + vectores
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `app/embedding_pipeline/schemas.py` | `Budget`, `BudgetComponent`, `Chunk`, `EmbeddedChunk`. `sector` y `complexity` son `Literal` cerrados; `component_id` único por presupuesto (forma el `chunk_id`) |
 | `app/embedding_pipeline/chunker.py` | `JSONStructuralChunker`: **un componente = un chunk**, con la cabecera del presupuesto padre (proyecto, sector, año, tecnología) delante del texto. Metadata filtrable fuera del texto; `chunk_id = {budget_id}::{component_id}`; `token_count` con `tiktoken`. Avisa en el log (`embedding_chunk_large`) por encima de 200 tokens, sin partir el chunk |
 | `app/embedding_pipeline/embedder.py` | `OpenAIEmbedder` y `GeminiEmbedder` con la misma interfaz (`embed_one`, `embed_many`): lotes de 100, reintentos 1 s · 2 s · 4 s ante límite de peticiones, log `embedding_batch` por lote (chunks, tokens, latencia) y coste estimado |
-| `app/embedding_pipeline/router.py` | `POST /embeddings/ingest`: 200, 422 (validación) o 500 con mensaje genérico y el detalle en el log con su `X-Request-ID` |
-| `scripts/compare.py` | Similitud coseno entre dos textos, calculada a mano con `math` |
 | `data/budgets_sample.json` | 15 presupuestos (finance, ecommerce, healthcare, industrial) con 58 componentes |
 | `app/embedding_pipeline/SANITY_CHECK.md` | Las tres parejas de validación, su lectura y una calibración sobre el corpus |
 
@@ -33,54 +117,18 @@ POST /embeddings/ingest  →  JSONStructuralChunker  →  embedder (lotes de 100
 > `GEMINI_API_KEY` que el proyecto ya tenía), elegido con `EMBEDDING_PROVIDER=gemini`.
 > `OpenAIEmbedder` está implementado y se activa con `EMBEDDING_PROVIDER=openai` y
 > `OPENAI_API_KEY`, pero **no se ha probado contra la API real de OpenAI** (solo con un
-> cliente simulado). Gemini devuelve 3072 dimensiones (OpenAI, 1536); el `token_count` usa
+> cliente simulado). En la sesión 07 Gemini daba 3072 dimensiones (desde la 08, 1536); el `token_count` usa
 > el tokenizador de OpenAI, así que con Gemini es aproximado. La justificación con los cinco
 > criterios de selección está en el SANITY_CHECK.
 
-**Invocar el endpoint.** Desde `http://localhost:8000/docs` → *Embeddings* → *Try it out*:
-el cuerpo de ejemplo (un presupuesto, dos componentes) viene precargado. Con todo el sample:
-
-```bash
-# Envuelve el array del sample en {"budgets": [...]} y lo envía
-uv run python -c "import json; print(json.dumps({'budgets': json.load(open('data/budgets_sample.json', encoding='utf-8'))}))" > /tmp/ingest.json
-curl -X POST http://localhost:8000/embeddings/ingest \
-  -H "Content-Type: application/json" --data-binary @/tmp/ingest.json -o /tmp/vectors.json
-```
-
-Con el sample completo: 58 chunks, 5.134 tokens, ~2 s y unos 2,3 MB de respuesta (Swagger
-se atasca pintándola; para eso está el ejemplo pequeño). `stats` trae `total_budgets`,
-`total_chunks`, `total_tokens`, `estimated_cost_usd` (a precio de pago: $0,02/M tokens en
-OpenAI, $0,15/M en Gemini; constantes en `embedder.py`) y `embedding_model`.
-
-**Comparar dos textos** (siempre desde la raíz del repo, para que se lea el `.env`):
-
-```bash
-# Fuera del contenedor
-uv run python scripts/compare.py \
-  --text-a "OAuth 2.0 authentication backend for fintech" \
-  --text-b "JWT-based authorization service for banking app"
-
-# Dentro del contenedor (el servicio de compose se llama api)
-docker compose exec api python scripts/compare.py \
-  --text-a "OAuth 2.0 authentication backend for fintech" \
-  --text-b "JWT-based authorization service for banking app"
-```
-
-```
-Text A: OAuth 2.0 authentication backend for fintech
-Text B: JWT-based authorization service for banking app
-Model: gemini-embedding-001 (3072 dims)
-Norms: A=1.0000 B=1.0000
-Cosine similarity: 0.7632
-```
+`scripts/compare.py` (similitud coseno entre dos textos) lo sustituye en la sesión 08
+`query_examples.py`.
 
 **Resultado del sanity check** ([detalle](app/embedding_pipeline/SANITY_CHECK.md)):
 cercanos 0,7673 · no relacionados 0,5588 · genéricos 0,6569. El orden es el esperado, pero
 la escala de Gemini es más alta que los umbrales orientativos del enunciado (pensados para
 OpenAI). Sobre el corpus, la cabecera del presupuesto pesa casi tanto como el componente:
 los vecinos más cercanos de un componente suelen ser sus hermanos del mismo presupuesto.
-
-## 🕘 Sesiones anteriores
 
 ### Sesión 06 — estrés del CAG
 
@@ -203,16 +251,24 @@ app/
 │   └── critic/v1/           # prompt del crítico del Actor-Critic-Boss
 ├── context/
 │   └── examples.py          # Ejemplos CAG del chat libre (sesión 02)
+├── db/                      # Sesión 08: Postgres + pgvector
+│   ├── models.py            # Document y Chunk (ORM), vector(1536)
+│   └── session.py           # engine async + sesión por petición
 └── embedding_pipeline/      # Sesión 07: presupuestos JSON → chunks → vectores
-    ├── schemas.py           # Budget, Chunk, EmbeddedChunk, IngestRequest/Response
+    ├── schemas.py           # Budget, Chunk, contratos de ingest y search
     ├── chunker.py           # Chunker (interfaz) + JSONStructuralChunker
     ├── embedder.py          # OpenAIEmbedder · GeminiEmbedder · get_embedder()
-    ├── router.py            # POST /embeddings/ingest
+    ├── router.py            # POST /embeddings/ingest (persiste; sesión 08)
+    ├── search.py            # POST /search (sesión 08)
     └── SANITY_CHECK.md      # tres parejas de validación + calibración
+alembic/                     # Sesión 08: migraciones (0001: extensión + documents + chunks)
 scripts/
-└── compare.py               # similitud coseno entre dos textos (sesión 07)
+└── ingest_budgets.py        # carga data/budgets/ vía POST /embeddings/ingest (sesión 08)
+query_examples.py            # cinco queries contra POST /search (sesión 08)
+output_examples.txt          # su salida contra el corpus
 data/
-└── budgets_sample.json      # 15 presupuestos históricos (sesión 07)
+├── budgets/                 # un JSON por presupuesto (sesión 08)
+└── budgets_sample.json      # los mismos 15 presupuestos en un fichero (sesión 07)
 evals/
 ├── metrics.py               # MetricResult, SchemaAdherence y métricas del golden
 ├── dataset.py               # GoldenCase + load_dataset
@@ -229,7 +285,7 @@ evals/
     └── REPORT.md · results.csv · reading.md   # entregables
 streamlit_app.py             # Cliente: formulario · conversación (sesión 05) · chat
 tests/                       # Tests de template, sesiones, adjuntos, memoria y servicio
-Dockerfile · docker-compose.yml # Servicio IA + Redis en contenedores
+Dockerfile · docker-compose.yml # Servicio IA + Redis + Postgres en contenedores
 ```
 
 ## ⚙️ Instalación
@@ -251,6 +307,9 @@ EMBEDDING_PROVIDER=gemini      # sesión 07: gemini (por defecto) u openai
 OPENAI_API_KEY=sk-...          # solo si EMBEDDING_PROVIDER=openai
 ```
 
+`DATABASE_URL` no hace falta en el `.env`: por defecto apunta a `localhost:5432` y el compose
+la fija al contenedor `postgres`.
+
 Sin comillas ni espacios alrededor del `=`: `python-dotenv` no parsea la línea y la
 variable queda a `None`.
 
@@ -271,13 +330,14 @@ Servicio en `http://localhost:8000/docs`, cliente en `http://localhost:8501`.
 ### Con Docker
 
 ```bash
-docker compose up --build        # servicio IA + Redis
+docker compose up --build        # servicio IA + Redis + Postgres
 uv run streamlit run streamlit_app.py   # el cliente corre fuera, contra :8000
 ```
 
 `Dockerfile` en dos etapas con uv (dependencias exactas de `uv.lock`, sin root y con
-healthcheck en `/health`). El compose lee tu `.env`, apunta `REDIS_URL` al contenedor de
-Redis y pone `APP_ENV=production` (logs en JSON). El `.env` no entra en la imagen.
+healthcheck en `/health`). El compose lee tu `.env`, apunta `REDIS_URL` y `DATABASE_URL` a
+sus contenedores y pone `APP_ENV=production` (logs en JSON). El `.env` no entra en la imagen.
+Los datos de Postgres viven en el volumen `postgres_data` (`docker compose down -v` los borra).
 
 ## ✅ Tests
 

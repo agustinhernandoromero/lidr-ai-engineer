@@ -1,0 +1,95 @@
+=== Componente directo conocido ===
+Query: "REST API development with JWT authentication for financial sector"
+search_time_ms: 851
+  1. chunk_id=36   distance=0.2972  budget_component
+     [Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance] [Client sector: finance | Year: 2024 | M
+     -> Component: OAuth 2.0 authentication backend
+  2. chunk_id=3    distance=0.3028  budget_component
+     [Project: Wellness mobile app synchronised with wearables] [Client sector: healthcare | Year: 2022 | Main tech: flutter]
+     -> Component: Backend API
+  3. chunk_id=8    distance=0.3146  budget_component
+     [Project: Card payments gateway for small online merchants] [Client sector: finance | Year: 2022 | Main tech: nodejs] Co
+     -> Component: Card tokenization vault
+  4. chunk_id=38   distance=0.3179  budget_component
+     [Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance] [Client sector: finance | Year: 2024 | M
+     -> Component: PSD2 consent and open banking connectors
+  5. chunk_id=37   distance=0.3195  budget_component
+     [Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance] [Client sector: finance | Year: 2024 | M
+     -> Component: Accounts and transactions API
+
+=== Reformulación semántica ===
+Query: "secure backend service with token-based access control for banking applications"
+search_time_ms: 293
+  1. chunk_id=36   distance=0.3060  budget_component
+     [Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance] [Client sector: finance | Year: 2024 | M
+     -> Component: OAuth 2.0 authentication backend
+  2. chunk_id=38   distance=0.3304  budget_component
+     [Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance] [Client sector: finance | Year: 2024 | M
+     -> Component: PSD2 consent and open banking connectors
+  3. chunk_id=8    distance=0.3362  budget_component
+     [Project: Card payments gateway for small online merchants] [Client sector: finance | Year: 2022 | Main tech: nodejs] Co
+     -> Component: Card tokenization vault
+  4. chunk_id=37   distance=0.3398  budget_component
+     [Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance] [Client sector: finance | Year: 2024 | M
+     -> Component: Accounts and transactions API
+  5. chunk_id=3    distance=0.3412  budget_component
+     [Project: Wellness mobile app synchronised with wearables] [Client sector: healthcare | Year: 2022 | Main tech: flutter]
+     -> Component: Backend API
+
+=== Dominio distinto ===
+Query: "mobile application for restaurant reservations"
+search_time_ms: 286
+  1. chunk_id=23   distance=0.3477  budget_component
+     [Project: Subscription meal kit e-commerce with mobile app] [Client sector: ecommerce | Year: 2023 | Main tech: python_d
+     -> Component: React Native mobile app
+  2. chunk_id=13   distance=0.3942  budget_component
+     [Project: Warehouse management system integrated with SAP] [Client sector: industrial | Year: 2023 | Main tech: java_spr
+     -> Component: Handheld barcode scanning app
+  3. chunk_id=21   distance=0.4074  budget_component
+     [Project: Subscription meal kit e-commerce with mobile app] [Client sector: ecommerce | Year: 2023 | Main tech: python_d
+     -> Component: Delivery scheduling and routing
+  4. chunk_id=1    distance=0.4154  budget_component
+     [Project: Wellness mobile app synchronised with wearables] [Client sector: healthcare | Year: 2022 | Main tech: flutter]
+     -> Component: Flutter mobile app
+  5. chunk_id=22   distance=0.4179  budget_component
+     [Project: Subscription meal kit e-commerce with mobile app] [Client sector: ecommerce | Year: 2023 | Main tech: python_d
+     -> Component: Customer accounts with social login
+
+=== Consulta ambigua ===
+Query: "integration with external system"
+search_time_ms: 280
+  1. chunk_id=14   distance=0.3196  budget_component
+     [Project: Warehouse management system integrated with SAP] [Client sector: industrial | Year: 2023 | Main tech: java_spr
+     -> Component: SAP integration
+  2. chunk_id=16   distance=0.3492  budget_component
+     [Project: Online consumer lending platform with automated credit scoring] [Client sector: finance | Year: 2023 | Main te
+     -> Component: Identity verification integration
+  3. chunk_id=15   distance=0.3560  budget_component
+     [Project: Warehouse management system integrated with SAP] [Client sector: industrial | Year: 2023 | Main tech: java_spr
+     -> Component: Single sign-on with Azure AD
+  4. chunk_id=35   distance=0.3599  budget_component
+     [Project: Telemedicine platform with video consultations and electronic health records integration] [Client sector: heal
+     -> Component: HL7 FHIR integration
+  5. chunk_id=31   distance=0.3600  budget_component
+     [Project: Headless fashion e-commerce store with fast product search] [Client sector: ecommerce | Year: 2024 | Main tech
+     -> Component: ERP inventory synchronisation
+
+=== Consulta muy específica ===
+Query: "migration from monolith to microservices architecture using Kubernetes"
+search_time_ms: 277
+  1. chunk_id=58   distance=0.3840  budget_component
+     [Project: Solar plant monitoring platform connected to SCADA systems] [Client sector: industrial | Year: 2025 | Main tec
+     -> Component: Database migration from Oracle to PostgreSQL
+  2. chunk_id=4    distance=0.4153  budget_component
+     [Project: Replatforming of a home decoration store from Magento to Laravel] [Client sector: ecommerce | Year: 2022 | Mai
+     -> Component: Data migration from MySQL to PostgreSQL
+  3. chunk_id=40   distance=0.4186  budget_component
+     [Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance] [Client sector: finance | Year: 2024 | M
+     -> Component: Audit logging and monitoring
+  4. chunk_id=45   distance=0.4225  budget_component
+     [Project: Robo-advisor web platform with automated portfolio rebalancing] [Client sector: finance | Year: 2025 | Main te
+     -> Component: Market data ingestion
+  5. chunk_id=44   distance=0.4228  budget_component
+     [Project: Robo-advisor web platform with automated portfolio rebalancing] [Client sector: finance | Year: 2025 | Main te
+     -> Component: Portfolio rebalancing service
+

@@ -1,7 +1,7 @@
 # Servicio IA (FastAPI) en dos etapas con uv.
 # 1) builder: instala las dependencias exactas de uv.lock en /app/.venv.
-# 2) runtime: copia el .venv, app/, scripts/, las migraciones de Alembic y los
-#    presupuestos de ejemplo, sin uv ni cachés, y corre sin root.
+# 2) runtime: copia el .venv, app/, scripts/, las migraciones de Alembic, los
+#    presupuestos de ejemplo y query_examples.py, sin uv ni cachés, y corre sin root.
 
 FROM python:3.13-slim AS builder
 
@@ -31,6 +31,7 @@ COPY --chown=estimator:estimator alembic ./alembic
 COPY --chown=estimator:estimator alembic.ini ./
 COPY --chown=estimator:estimator scripts ./scripts
 COPY --chown=estimator:estimator data ./data
+COPY --chown=estimator:estimator query_examples.py ./
 
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \

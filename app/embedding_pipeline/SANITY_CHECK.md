@@ -1,7 +1,9 @@
 # Sanity check de embeddings
 
 Ejecutado el 2026-10-18 con `scripts/compare.py` dentro del contenedor
-(`docker compose exec api python scripts/compare.py --text-a "..." --text-b "..."`).
+(`docker compose exec api python scripts/compare.py --text-a "..." --text-b "..."`). Ese
+script era de la sesión 07; en la 08 lo sustituye `query_examples.py`, y los embeddings
+pasan a 1536 dimensiones.
 
 > **Modelo:** `gemini-embedding-001` (3072 dimensiones, vectores normalizados: norma 1,0000
 > en los seis textos), no `text-embedding-3-small`. Motivo y alcance en
