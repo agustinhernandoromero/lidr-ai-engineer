@@ -253,6 +253,7 @@ app/
 │   └── examples.py          # Ejemplos CAG del chat libre (sesión 02)
 ├── db/                      # Sesión 08: Postgres + pgvector
 │   ├── models.py            # Document y Chunk (ORM), vector(1536)
+│   ├── repository.py        # DocumentRepository: duplicados, guardado, k-NN por coseno
 │   └── session.py           # engine async + sesión por petición
 └── embedding_pipeline/      # Sesión 07: presupuestos JSON → chunks → vectores
     ├── schemas.py           # Budget, Chunk, contratos de ingest y search
@@ -354,6 +355,30 @@ RUN_LIVE_TESTS=1 uv run pytest -m live -v -s -p no:logging
 
 (En Windows con Control de aplicaciones, `uv run python -m pytest` en lugar de
 `uv run pytest`.)
+
+### Tests de la sesión 08
+
+Sin red ni Postgres (corren siempre, también en CI): embedder falso que hereda de
+`BaseEmbedder` y repositorio en memoria vía `dependency_overrides`.
+
+| Fichero | Qué comprueba |
+|---|---|
+| `test_embeddings_ingest.py` | 200 con un chunk por componente; un solo lote como `document`; metadata de documento y chunk; 409 sin llamar al embedder; 409 al perder la carrera contra el `UNIQUE`; 500 genérico (sin detalle interno) si falla o falta el embedder o la dimensión no es 1536; 422 con payload inválido |
+| `test_search_endpoint.py` | Contrato de respuesta y orden; la query se embebe como `query`; `k` por defecto 5; corpus vacío → 200 sin resultados; 422 con `k` fuera de 1–50 o query vacía/larga; 500 sin consultar la base de datos |
+| `test_pgvector_repository.py` | `save()` convierte la violación del `UNIQUE` en `DuplicateSourcePath` con el id ganador (y relanza otros `IntegrityError`); la búsqueda ordena por `<=>` con `LIMIT k`; modelos y migración alineados |
+
+Contra Postgres + pgvector reales (embedder falso, $0). Crea y migra una base de
+datos aparte, `estimator_test`; no toca el corpus de desarrollo:
+
+```bash
+docker compose up -d postgres
+RUN_DB_TESTS=1 uv run pytest -m db -v
+```
+
+Prueba la migración (`upgrade` → `downgrade` → `upgrade`, sin borrar la extensión),
+el esquema real (`vector(1536)`, `UNIQUE`, GIN, sin índice vectorial), ingesta + 409,
+la carrera resuelta por el `UNIQUE` sin chunks huérfanos, el ranking por distancia
+coseno real y el borrado en cascada.
 
 ### Tests de la sesión 05
 

@@ -49,4 +49,5 @@ testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
     "live: llama a la API real de Anthropic; solo corre con RUN_LIVE_TESTS=1",
+    "db: usa el Postgres + pgvector de docker compose; solo corre con RUN_DB_TESTS=1",
 ]
