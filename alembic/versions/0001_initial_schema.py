@@ -64,4 +64,5 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("chunks")
     op.drop_table("documents")
-    op.execute("DROP EXTENSION IF EXISTS vector")
+    # La extensión vector se queda: es de toda la base de datos y otros objetos
+    # podrían depender de ella. El upgrade la crea con IF NOT EXISTS.

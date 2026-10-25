@@ -11,12 +11,9 @@ from functools import lru_cache
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import EMBEDDING_DIMENSION, Chunk, Document
-from app.db.session import get_session
+from app.db.repository import DocumentRepository, DuplicateSourcePath, get_repository
 from app.embedding_pipeline.chunker import JSONStructuralChunker
 from app.embedding_pipeline.embedder import BaseEmbedder, get_embedder
 from app.embedding_pipeline.schemas import Budget, IngestConflict, IngestRequest, IngestResponse
@@ -47,10 +44,6 @@ def _conflict(document_id: int) -> JSONResponse:
     )
 
 
-async def _existing_document_id(session: AsyncSession, source_path: str) -> int | None:
-    return await session.scalar(select(Document.id).where(Document.source_path == source_path))
-
-
 def _document_metadata(budget: Budget) -> dict:
     """Metadata del presupuesto completo; los chunks no la duplican."""
     return {
@@ -79,13 +72,13 @@ def _document_metadata(budget: Budget) -> dict:
 )
 async def ingest_budget(
     payload: IngestRequest,
-    session: AsyncSession = Depends(get_session),
+    repository: DocumentRepository = Depends(get_repository),
     chunker: JSONStructuralChunker = Depends(get_chunker),
 ) -> IngestResponse | JSONResponse:
     started = time.perf_counter()
 
     # 1. Duplicado: se responde antes de gastar llamadas al embedder.
-    existing_id = await _existing_document_id(session, payload.source_path)
+    existing_id = await repository.find_document_id(payload.source_path)
     if existing_id is not None:
         return _conflict(existing_id)
 
@@ -120,17 +113,12 @@ async def ingest_budget(
         )
         for chunk in embedded
     ]
-    session.add(document)
     try:
-        await session.commit()
-    except IntegrityError:
-        # Otra petición con el mismo source_path ganó la carrera entre el SELECT
-        # y el INSERT; el índice UNIQUE lo detecta y aquí se responde igual que en el paso 1.
-        await session.rollback()
-        existing_id = await _existing_document_id(session, payload.source_path)
-        if existing_id is None:
-            raise
-        return _conflict(existing_id)
+        await repository.save(document)
+    except DuplicateSourcePath as exc:
+        # Otra petición con el mismo source_path ganó la carrera entre la
+        # comprobación del paso 1 y el INSERT; se responde igual que allí.
+        return _conflict(exc.document_id)
 
     response = IngestResponse(
         document_id=document.id,

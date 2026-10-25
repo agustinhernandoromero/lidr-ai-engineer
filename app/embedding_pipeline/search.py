@@ -10,11 +10,8 @@ import time
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Chunk
-from app.db.session import get_session
+from app.db.repository import DocumentRepository, get_repository
 from app.embedding_pipeline.router import get_cached_embedder
 from app.embedding_pipeline.schemas import SearchRequest, SearchResponse, SearchResult
 
@@ -34,7 +31,7 @@ router = APIRouter(tags=["Search"])
 )
 async def search(
     payload: SearchRequest,
-    session: AsyncSession = Depends(get_session),
+    repository: DocumentRepository = Depends(get_repository),
 ) -> SearchResponse:
     started = time.perf_counter()
     try:
@@ -48,22 +45,7 @@ async def search(
         )
     embedded_at = time.perf_counter()
 
-    # El mismo operador en la columna y en el ORDER BY: cuando exista un índice
-    # HNSW con vector_cosine_ops, solo lo usará si la query ordena por <=>.
-    distance = Chunk.embedding.cosine_distance(query_vector)
-    stmt = (
-        select(
-            Chunk.id,
-            Chunk.document_id,
-            Chunk.chunk_type,
-            Chunk.content,
-            Chunk.metadata_,
-            distance.label("distance"),
-        )
-        .order_by(distance)
-        .limit(payload.k)
-    )
-    rows = (await session.execute(stmt)).all()
+    rows = await repository.nearest_chunks(query_vector, payload.k)
     finished = time.perf_counter()
 
     results = [
