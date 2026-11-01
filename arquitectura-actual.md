@@ -1,4 +1,4 @@
-# Diagnóstico arquitectónico — Sesión 09 (pre-work)
+# Diagnóstico arquitectónico de la sesión 09 (pre-work)
 
 Estado del servicio IA al cierre de la Sesión 08 (rama `session-08-pgvector-busqueda`) y lo que
 pasa cuando le llega una transcripción cruda. Las trazas son reales: Docker local, Postgres 16 +
@@ -88,7 +88,7 @@ uv run python scripts/ingest_budgets.py                # seed (409 si ya está c
 uv run python scripts/trace_s09.py examples/transcripts/02_ambiguous.txt
 ```
 
-### Paso 1 — Embeber la transcripción completa
+### Paso 1. Embeber la transcripción completa
 
 No hay un endpoint que embeba texto libre: `/embeddings/ingest` solo acepta un `Budget` JSON. Así
 que el paso 1 llama al módulo directamente, con el mismo `task` que usa `/search`:
@@ -114,7 +114,7 @@ vector = get_cached_embedder().embed_one(transcript, "query")   # RETRIEVAL_QUER
 > correo. Las componentes sueltas no dicen nada por sí mismas, y eso ya es un aviso: no hay forma
 > de saber qué parte de la transcripción pesa más en el vector.
 
-### Paso 2 — Búsqueda semántica (top-5)
+### Paso 2. Búsqueda semántica (top-5)
 
 **2a. `/search` con la transcripción completa**, que es lo que haría cualquier cliente:
 
@@ -129,9 +129,9 @@ HTTP 422
   "msg": "String should have at most 2000 characters", "ctx": {"max_length": 2000}}]}
 ```
 
-> El endpoint ni siquiera acepta la transcripción: `SearchRequest.query` tiene `max_length=2000` y
-> esta reunión de cinco minutos ocupa 2854 caracteres. Una reunión real de una hora no cabría de
-> ninguna manera.
+> El endpoint no acepta la transcripción: `SearchRequest.query` tiene `max_length=2000` y esta
+> reunión de cinco minutos ocupa 2854 caracteres. Al mismo ritmo, una reunión de una hora ocuparía
+> unos 34.000, 17 veces el límite.
 
 **2b. Top-5 con el vector del paso 1** (el mismo SQL que `/search`, mediante
 `DocumentRepository.nearest_chunks`), para ver qué devolvería sin el límite:
@@ -206,7 +206,7 @@ Respuesta cruda (HTTP 200). El campo `query` se ha abreviado; el `content` va í
 > Quitar un tercio de la reunión casi no mueve el resultado: el vector lo domina el tema general
 > «tienda online».
 
-### Paso 3 — Lectura de los chunks devueltos
+### Paso 3. Lectura de los chunks devueltos
 
 | chunk | presupuesto histórico | sector | ¿relevante para Rubén? |
 |---|---|---|---|
@@ -216,7 +216,7 @@ Respuesta cruda (HTTP 200). El campo `query` se ha abreviado; el `content` va í
 | REV-001 | BUD-2025-009 TechMarket | ecommerce | **No.** Reseñas y moderación, que nadie ha pedido. Ocupa un hueco que debería ser de la fidelización o del panel. |
 | ADMIN-001 | BUD-2022-021 PayFlow, pasarela de pagos | finance | **Parcial (N3).** Es un backoffice para ver pagos y reembolsos, lo más parecido a «el panel del café» que sale. Pero es del panel de una pasarela de pagos, otro producto y otro sector. |
 
-> Balance honesto: 2 de 5 son buenos, 1 es parcial y 2 sobran. Las cinco necesidades quedan así:
+> Balance: 2 de 5 son buenos, 1 es parcial y 2 sobran. Las cinco necesidades quedan así:
 > N1 y N4 con evidencia, N3 con evidencia débil y N2 y N5 sin nada. Lo que está en el corpus y no
 > sale: `PROMO-001` *Promotions engine* (HomeDeco), lo más parecido a la fidelización;
 > `ORD-001` *Order management* e `INT-001` *ERP inventory synchronisation*, para el panel de
@@ -232,8 +232,9 @@ Respuesta cruda (HTTP 200). El campo `query` se ha abreviado; el `content` va í
 | 02_ambiguous | 2854 | 0.3142 | **0.0086** | **0.0773** | ver arriba |
 | 03_hard | 2397 | 0.2841 | 0.0263 | 0.1124 | 3 de BUD-2024-005 (EHR, vídeo, citas) + 2 de BUD-2025-012 |
 
-> Con la transcripción clara funciona bien: el presupuesto gemelo sale arriba con margen. Con la
-> ambigua, la distancia mínima es 0,10 peor y las cinco primeras caben en menos de una centésima.
+> Con la transcripción clara, el presupuesto gemelo ocupa 4 de los 5 puestos y el top-1 está a
+> 0,215. Con la ambigua, la distancia mínima es 0,10 peor y las cinco primeras caben en menos de una
+> centésima.
 > En la difícil, la clínica sigue sin decidir el alcance, pero el sistema devuelve con la misma
 > seguridad EHR, videoconsulta y citas, como si hubiera un proyecto cerrado.
 
@@ -241,7 +242,7 @@ Respuesta cruda (HTTP 200). El campo `query` se ha abreviado; el `content` va í
 
 ## 3. Diagnóstico: cinco fallos identificados
 
-### Fallo 1 — La transcripción no cabe en `/search`, y cortarla pierde requisitos sin avisar
+### Fallo 1. La transcripción no cabe en `/search`, y cortarla pierde requisitos sin avisar
 - **Problema observado:** con la transcripción entera, `/search` devuelve **422** (`max_length=2000`,
   la reunión tiene 2854 caracteres, paso 2a). Al cortarla a 2000 caracteres, el corte cae en el
   minuto 03:40 y desaparecen el correo de confirmación (N5), el mercado y la petición de precio
@@ -252,7 +253,7 @@ Respuesta cruda (HTTP 200). El campo `query` se ha abreviado; el `content` va í
   queries cortas y completas. El límite de 2000 caracteres puede quedarse como está: lo que está
   mal es pasarle la transcripción entera, no el límite.
 
-### Fallo 2 — Las distancias no discriminan: los cinco primeros caben en menos de una centésima
+### Fallo 2. Las distancias no discriminan: los cinco primeros caben en menos de una centésima
 - **Problema observado:** el spread entre el top-1 y el top-5 es de **0,0086** (0,3142 → 0,3227) y
   el de todo el corpus es de 0,077. Del primer chunk al último no hay ni una décima. Con 01_clear,
   ese spread es 5 veces mayor (0,045) y la distancia mínima cae a 0,215.
@@ -264,7 +265,7 @@ Respuesta cruda (HTTP 200). El campo `query` se ha abreviado; el `content` va í
   representación estructurada de lo que pide (función, sector, alcance, restricciones) y embeber
   eso, en el mismo registro y el mismo idioma que los chunks del corpus.
 
-### Fallo 3 — Cinco necesidades en un solo vector: tres se quedan sin evidencia
+### Fallo 3. Cinco necesidades en un solo vector: tres se quedan sin evidencia
 - **Problema observado:** de las cinco necesidades, solo N1 (catálogo) y N4 (checkout) tienen un
   chunk claro en el top-5. N3 (panel) tiene uno débil y de otro sector, y N2 (fidelización) y N5
   (correo) no tienen nada. Mientras tanto, VEND-001 y REV-001, que nadie ha pedido, ocupan dos de
@@ -276,11 +277,12 @@ Respuesta cruda (HTTP 200). El campo `query` se ha abreviado; el `content` va í
   una por separado y juntar los resultados, de forma que cada necesidad tenga su propia evidencia
   (o la ausencia de ella).
 
-### Fallo 4 — Siempre devuelve k resultados: no sabe decir «no tengo nada parecido»
+### Fallo 4. Siempre devuelve k resultados: no sabe decir «no tengo nada parecido»
 - **Problema observado:** `/search` devuelve 5 chunks para 02 aunque su mejor distancia (0,314) está
-  casi en la mediana de 01 (0,32): el mejor resultado de 02 es un resultado mediocre de 01. En el corpus no hay ningún programa de puntos ni ningún
-  correo transaccional, y nada lo indica. En 03_hard, con un alcance que la clienta deja abierto,
-  devuelve EHR, vídeo y citas con la misma seguridad que una petición cerrada.
+  casi en la mediana de 01 (0,32): el mejor resultado de 02 está a la altura de un resultado medio
+  de 01. En el corpus no hay ningún programa de puntos ni ningún correo transaccional, y nada lo
+  indica. En 03_hard, con un alcance que la clienta deja abierto, devuelve EHR, vídeo y citas con
+  la misma seguridad que una petición cerrada.
 - **Causa probable:** `nearest_chunks` es un `ORDER BY ... LIMIT k` sin umbral y la respuesta no
   dice nada sobre la cobertura. La ambigüedad del alcance tampoco se detecta en ningún punto.
 - **Propuesta de solución:** un umbral de distancia calibrado con las tres transcripciones (no
@@ -288,7 +290,7 @@ Respuesta cruda (HTTP 200). El campo `query` se ha abreviado; el `content` va í
   sigue abierto, como en 03, el sistema debería devolver preguntas de aclaración en vez de una
   estimación.
 
-### Fallo 5 — Lo recuperado no llega al estimador, y además llega incompleto
+### Fallo 5. Lo recuperado no llega al estimador, y además llega incompleto
 - **Problema observado:** el top-5 de `/search` no lo consume ninguna pieza (sección 1). El
   estimador genera a partir de los ejemplos fijos de `app/context/examples.py`
   (`llm_service.py:67`). Y aunque se conectara, el top-5 de 02 cubre solo 3 presupuestos (dos se
@@ -380,6 +382,6 @@ aclaración** en vez de inventar una estimación (fallo 4). La **recuperación p
 una sub-query por necesidad contra el `/search` actual, con umbral y filtro de sector, y devuelve
 hits o «sin evidencia» (fallos 3 y 4). El **ensamblador** agrupa por presupuesto, quita repetidos,
 completa con `documents` y pasa al **generador** existente, ya sin `examples.py`, evidencia citable
-y un mapa de cobertura (fallo 5). La pieza que atacaría primero es el **analizador**: los fallos
-1 a 3 nacen de embeber la reunión cruda, y 01_clear demuestra que el mismo retriever funciona bien
-cuando recibe una query que ya parece una lista de requisitos.
+y un mapa de cobertura (fallo 5). Empezaría por el **analizador**. Los fallos 1 a 3 nacen de
+embeber la reunión cruda: con 01_clear, que ya parece una lista de requisitos, el mismo retriever
+da una distancia mínima de 0,215 (0,314 en 02) y un top-5 cinco veces más separado.
