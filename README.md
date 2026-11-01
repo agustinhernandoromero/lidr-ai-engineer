@@ -20,3 +20,4 @@ Cada entrega se revisa desde el enlace de su propia rama.
 | 06 | Estrés del CAG | [sesion-06-Stress-Test-CAG](https://github.com/agustinhernandoromero/lidr-ai-engineer/tree/sesion-06-Stress-Test-CAG) | Entregada |
 | 07 | Embeddings y chunking | [session-07-Embeddings-Representacion-vectorial](https://github.com/agustinhernandoromero/lidr-ai-engineer/tree/session-07-Embeddings-Representacion-vectorial) | Entregada |
 | 08 | pgvector y búsqueda semántica | [session-08-pgvector-busqueda](https://github.com/agustinhernandoromero/lidr-ai-engineer/tree/session-08-pgvector-busqueda) | Entregada |
+| 09 | Diagnóstico arquitectónico del flujo RAG | [session-09/pre-work](https://github.com/agustinhernandoromero/lidr-ai-engineer/tree/session-09/pre-work) | Entregada |
