@@ -374,13 +374,12 @@ flowchart TB
 ```
 
 El **orquestador** (`/estimate-from-transcript`) recibe la transcripción y encadena el resto. El
-**analizador de requisitos** convierte la reunión en una lista de necesidades en el idioma del
-corpus, el sector inferido, el alcance y los puntos abiertos. Ataca los fallos 1 y 2. La
-**puerta de alcance** desvía casos como 03 hacia **preguntas de aclaración** en lugar de inventar
-una estimación (fallo 4). La **recuperación por necesidad** lanza una sub-query por necesidad
-contra el `/search` actual, con umbral y filtro de sector, y devuelve hits o «sin evidencia» para
-cada una (fallos 3 y 4). El **ensamblador** agrupa por presupuesto, quita los repetidos, completa
-con `documents` y entrega al **generador**, que ya existe y deja de usar `examples.py`, evidencia
-citable junto con un mapa de cobertura (fallo 5). La pieza que atacaría primero es el
-**analizador de requisitos**: los fallos 1 a 3 nacen de embeber la reunión cruda, y 01_clear (que
-ya parece una lista de requisitos) demuestra que el mismo retriever funciona con una buena query.
+**analizador de requisitos** la convierte en necesidades en el idioma del corpus, sector, alcance
+y puntos abiertos (fallos 1 y 2). La **puerta de alcance** desvía casos como 03 a **preguntas de
+aclaración** en vez de inventar una estimación (fallo 4). La **recuperación por necesidad** lanza
+una sub-query por necesidad contra el `/search` actual, con umbral y filtro de sector, y devuelve
+hits o «sin evidencia» (fallos 3 y 4). El **ensamblador** agrupa por presupuesto, quita repetidos,
+completa con `documents` y pasa al **generador** existente, ya sin `examples.py`, evidencia citable
+y un mapa de cobertura (fallo 5). La pieza que atacaría primero es el **analizador**: los fallos
+1 a 3 nacen de embeber la reunión cruda, y 01_clear demuestra que el mismo retriever funciona bien
+cuando recibe una query que ya parece una lista de requisitos.
