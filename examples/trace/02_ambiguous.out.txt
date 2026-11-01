@@ -1,0 +1,234 @@
+# examples\transcripts\02_ambiguous.txt — 2854 chars, ~890 tokens (cl100k_base)
+
+## Step 1 — embed full transcript
+{
+  "provider": "gemini",
+  "model": "gemini-embedding-001",
+  "dimensions": 1536,
+  "l2_norm": 1.0,
+  "first_component": -0.026480070229876022,
+  "last_component": -0.0021965014736055233
+}
+
+## Step 2a — POST /search with the full transcript
+HTTP 422
+{
+  "detail": [
+    {
+      "type": "string_too_long",
+      "loc": [
+        "body",
+        "query"
+      ],
+      "msg": "String should have at most 2000 characters",
+      "ctx": {
+        "max_length": 2000
+      }
+    }
+  ]
+}
+
+## Step 2b — top-5 with the full-transcript vector (DocumentRepository.nearest_chunks)
+[
+  {
+    "chunk_id": 28,
+    "budget_id": "BUD-2024-002",
+    "component_id": "CAT-001",
+    "client_sector": "ecommerce",
+    "distance": 0.3142,
+    "content_first_lines": [
+      "[Project: Headless fashion e-commerce store with fast product search]",
+      "[Client sector: ecommerce | Year: 2024 | Main tech: nodejs]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 29,
+    "budget_id": "BUD-2024-002",
+    "component_id": "CART-001",
+    "client_sector": "ecommerce",
+    "distance": 0.3144,
+    "content_first_lines": [
+      "[Project: Headless fashion e-commerce store with fast product search]",
+      "[Client sector: ecommerce | Year: 2024 | Main tech: nodejs]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 48,
+    "budget_id": "BUD-2025-009",
+    "component_id": "VEND-001",
+    "client_sector": "ecommerce",
+    "distance": 0.3151,
+    "content_first_lines": [
+      "[Project: Multi-vendor marketplace for consumer electronics]",
+      "[Client sector: ecommerce | Year: 2025 | Main tech: java_spring]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 51,
+    "budget_id": "BUD-2025-009",
+    "component_id": "REV-001",
+    "client_sector": "ecommerce",
+    "distance": 0.3215,
+    "content_first_lines": [
+      "[Project: Multi-vendor marketplace for consumer electronics]",
+      "[Client sector: ecommerce | Year: 2025 | Main tech: java_spring]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 11,
+    "budget_id": "BUD-2022-021",
+    "component_id": "ADMIN-001",
+    "client_sector": "finance",
+    "distance": 0.3227,
+    "content_first_lines": [
+      "[Project: Card payments gateway for small online merchants]",
+      "[Client sector: finance | Year: 2022 | Main tech: nodejs]",
+      ""
+    ]
+  }
+]
+
+## Distance distribution over the whole corpus
+{
+  "chunks": 58,
+  "min": 0.3142,
+  "p50": 0.3443,
+  "max": 0.3915,
+  "spread_top1_to_top5": 0.0086,
+  "spread_min_to_max": 0.0773,
+  "best_distance_per_budget": {
+    "BUD-2024-002": 0.3142,
+    "BUD-2025-009": 0.3151,
+    "BUD-2022-021": 0.3227,
+    "BUD-2022-016": 0.3288,
+    "BUD-2025-012": 0.3311,
+    "BUD-2024-005": 0.3325,
+    "BUD-2024-014": 0.3327,
+    "BUD-2023-011": 0.3327,
+    "BUD-2025-015": 0.3399,
+    "BUD-2023-004": 0.3409,
+    "BUD-2025-003": 0.3419,
+    "BUD-2023-007": 0.3516,
+    "BUD-2024-018": 0.3527,
+    "BUD-2022-008": 0.3742,
+    "BUD-2023-019": 0.3778
+  }
+}
+
+## Step 2c — POST /search with the transcript cut to 2000 chars
+HTTP 200
+{
+  "query": "<2000 chars, ends with: ...'y eso no puede ser.\\n\\n[00:03:40] Consultor: Totalmente. ¿Tenéis volumen previsto,'>",
+  "k": 5,
+  "search_time_ms": 442,
+  "results": [
+    {
+      "chunk_id": 28,
+      "document_id": 8,
+      "chunk_type": "budget_component",
+      "content": "[Project: Headless fashion e-commerce store with fast product search]\n[Client sector: ecommerce | Year: 2024 | Main tech: nodejs]\n\nComponent: Product catalog and search\nDescription: Product catalog with variants (size, colour), faceted search, typo tolerance and synonym handling, indexed from the product database in near real time.\nTech stack: nodejs, elasticsearch, postgresql\nComplexity: medium\nEstimated hours: 110",
+      "distance": 0.3249320983886671,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-002",
+        "complexity": "medium",
+        "tech_stack": [
+          "nodejs",
+          "elasticsearch",
+          "postgresql"
+        ],
+        "component_id": "CAT-001",
+        "client_sector": "ecommerce",
+        "estimated_hours": 110,
+        "main_technology": "nodejs"
+      }
+    },
+    {
+      "chunk_id": 48,
+      "document_id": 13,
+      "chunk_type": "budget_component",
+      "content": "[Project: Multi-vendor marketplace for consumer electronics]\n[Client sector: ecommerce | Year: 2025 | Main tech: java_spring]\n\nComponent: Vendor onboarding\nDescription: Self-service vendor registration, business document upload, approval workflow and catalogue import from CSV files.\nTech stack: java_spring, postgresql, s3\nComplexity: medium\nEstimated hours: 80",
+      "distance": 0.32528690545040817,
+      "metadata": {
+        "year": 2025,
+        "budget_id": "BUD-2025-009",
+        "complexity": "medium",
+        "tech_stack": [
+          "java_spring",
+          "postgresql",
+          "s3"
+        ],
+        "component_id": "VEND-001",
+        "client_sector": "ecommerce",
+        "estimated_hours": 80,
+        "main_technology": "java_spring"
+      }
+    },
+    {
+      "chunk_id": 29,
+      "document_id": 8,
+      "chunk_type": "budget_component",
+      "content": "[Project: Headless fashion e-commerce store with fast product search]\n[Client sector: ecommerce | Year: 2024 | Main tech: nodejs]\n\nComponent: Cart and checkout\nDescription: Persistent cart, guest and registered checkout, address validation, shipping options and card payments with 3-D Secure through Stripe.\nTech stack: nodejs, stripe, redis\nComplexity: high\nEstimated hours: 120",
+      "distance": 0.3264668389280523,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-002",
+        "complexity": "high",
+        "tech_stack": [
+          "nodejs",
+          "stripe",
+          "redis"
+        ],
+        "component_id": "CART-001",
+        "client_sector": "ecommerce",
+        "estimated_hours": 120,
+        "main_technology": "nodejs"
+      }
+    },
+    {
+      "chunk_id": 11,
+      "document_id": 3,
+      "chunk_type": "budget_component",
+      "content": "[Project: Card payments gateway for small online merchants]\n[Client sector: finance | Year: 2022 | Main tech: nodejs]\n\nComponent: Merchant backoffice\nDescription: Web backoffice for merchants to see payments, issue refunds, download settlement reports and manage API keys and team members.\nTech stack: react, nodejs, postgresql\nComplexity: medium\nEstimated hours: 90",
+      "distance": 0.3338655233383131,
+      "metadata": {
+        "year": 2022,
+        "budget_id": "BUD-2022-021",
+        "complexity": "medium",
+        "tech_stack": [
+          "react",
+          "nodejs",
+          "postgresql"
+        ],
+        "component_id": "ADMIN-001",
+        "client_sector": "finance",
+        "estimated_hours": 90,
+        "main_technology": "nodejs"
+      }
+    },
+    {
+      "chunk_id": 51,
+      "document_id": 13,
+      "chunk_type": "budget_component",
+      "content": "[Project: Multi-vendor marketplace for consumer electronics]\n[Client sector: ecommerce | Year: 2025 | Main tech: java_spring]\n\nComponent: Reviews and ratings moderation\nDescription: Verified-purchase product reviews, star ratings, vendor replies and a moderation queue with profanity filtering.\nTech stack: java_spring, postgresql\nComplexity: low\nEstimated hours: 40",
+      "distance": 0.3354213633882175,
+      "metadata": {
+        "year": 2025,
+        "budget_id": "BUD-2025-009",
+        "complexity": "low",
+        "tech_stack": [
+          "java_spring",
+          "postgresql"
+        ],
+        "component_id": "REV-001",
+        "client_sector": "ecommerce",
+        "estimated_hours": 40,
+        "main_technology": "java_spring"
+      }
+    }
+  ]
+}
