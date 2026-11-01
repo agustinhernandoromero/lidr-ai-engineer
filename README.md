@@ -3,12 +3,45 @@
 Servicio FastAPI que convierte una descripción de proyecto en una estimación técnica,
 con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 
-> **Esta rama es la entrega del ejercicio previo a la sesión 08**: el pipeline de embeddings
-> de la sesión 07 pasa a persistir en PostgreSQL + pgvector y se añade un endpoint de
-> búsqueda semántica. Lo nuevo está justo debajo; instalación, ejecución, tests y lo
-> construido en sesiones anteriores, a continuación.
+> **Esta rama es la entrega del ejercicio previo a la sesión 09**: un diagnóstico de la
+> arquitectura al cierre de la sesión 08, con una traza real de una transcripción cruda por el
+> sistema. No cambia el servicio. Lo nuevo está justo debajo; instalación, ejecución, tests y
+> lo construido en sesiones anteriores, a continuación.
 
-## 🗄️ Sesión 08 — pgvector y búsqueda semántica
+## 🔎 Sesión 09 — Diagnóstico arquitectónico del flujo RAG
+
+[`arquitectura-actual.md`](arquitectura-actual.md) describe el servicio tal como quedó en la
+sesión 08, pasa por él la transcripción ambigua `02_ambiguous.txt`, identifica cinco fallos a
+partir de lo observado y propone cómo evolucionar hasta una estimación generada a partir de
+presupuestos recuperados.
+
+```bash
+docker compose up -d                                                    # api + postgres + redis
+uv run python scripts/ingest_budgets.py                                 # seed (409 si ya está)
+uv run python scripts/trace_s09.py examples/transcripts/02_ambiguous.txt
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `arquitectura-actual.md` | Diagrama actual, traza anotada, cinco fallos y diagrama propuesto (Mermaid) |
+| `scripts/trace_s09.py` | Cliente de la traza: embebe la transcripción con el embedder del servicio, busca el top-5 con `DocumentRepository.nearest_chunks` y llama a `POST /search` sin modificarlo |
+| `examples/transcripts/` | Las tres transcripciones del ejercicio: clara, ambigua y difícil |
+| `examples/trace/` | Salida real de la traza para las tres |
+
+**Lo más relevante de la traza** (Gemini, coste 0 $):
+
+- `POST /search` rechaza la transcripción entera con 422: tiene 2854 caracteres y el límite es
+  2000. Cortada a 2000, se pierden requisitos sin aviso.
+- Con la transcripción ambigua, los cinco primeros chunks caben en 0,0086 de distancia. Con la
+  clara, la diferencia es 5 veces mayor y el mejor resultado está más cerca (0,215 frente a 0,314).
+- De las cinco necesidades del cliente, dos tienen evidencia clara; la fidelización y el correo
+  de confirmación no tienen ninguna, y el sistema no lo indica.
+- `/search` y el estimador no están conectados: la generación sigue usando los ejemplos fijos de
+  `app/context/examples.py`.
+
+## 🕘 Sesiones anteriores
+
+### Sesión 08 — pgvector y búsqueda semántica
 
 Cada presupuesto ingestado se guarda como un `document` con sus `chunks` y embeddings, y
 `POST /search` devuelve los k chunks más cercanos a una query por distancia coseno.
@@ -35,7 +68,7 @@ docker compose run --rm api python query_examples.py          # 5 queries (salid
 | `scripts/ingest_budgets.py` · `data/budgets/` | Un JSON por presupuesto y el script que los envía; relanzarlo no duplica (409) |
 | `query_examples.py` · `output_examples.txt` | Cinco queries (directa, reformulada, otro dominio, ambigua, específica) y su salida real |
 
-### Decisiones de esquema
+#### Decisiones de esquema
 
 - **(a) Dos tablas, no una.** Un presupuesto produce N chunks. En una sola tabla su metadata
   (sector, cliente, año) se repetiría N veces y habría que mantenerla coherente a mano. Con
@@ -63,7 +96,7 @@ docker compose run --rm api python query_examples.py          # 5 queries (salid
   una migración nueva que borre el índice y lo cree sin `unique`. El endpoint sigue igual:
   el `SELECT` previo cubre el caso normal.
 
-### Adaptaciones al repositorio
+#### Adaptaciones al repositorio
 
 - **Embeddings con Gemini a 1536 dimensiones.** Se usa `gemini-embedding-001` con
   `output_dimensionality=1536`, no `text-embedding-3-small`. Gemini solo entrega norma 1 a su
@@ -93,12 +126,10 @@ docker compose run --rm api python query_examples.py          # 5 queries (salid
 - Casi toda la latencia es la llamada a Gemini (~270 ms; ~800 ms en la primera llamada),
   frente a ~5 ms en Postgres.
 
-## 🕘 Sesiones anteriores
-
 ### Sesión 07 — embeddings y chunking estructural
 
 Los presupuestos históricos en JSON se parten en chunks y se vectorizan. En la sesión 07 los
-vectores se devolvían por HTTP; desde la sesión 08 se persisten (contrato nuevo arriba).
+vectores se devolvían por HTTP; desde la sesión 08 se persisten (contrato en la sección de la sesión 08).
 
 ```
 JSONStructuralChunker  →  embedder (lotes de 100)  →  chunks + vectores
@@ -264,9 +295,14 @@ app/
     └── SANITY_CHECK.md      # tres parejas de validación + calibración
 alembic/                     # Sesión 08: migraciones (0001: extensión + documents + chunks)
 scripts/
-└── ingest_budgets.py        # carga data/budgets/ vía POST /embeddings/ingest (sesión 08)
+├── ingest_budgets.py        # carga data/budgets/ vía POST /embeddings/ingest (sesión 08)
+└── trace_s09.py             # traza de una transcripción por el sistema (sesión 09)
 query_examples.py            # cinco queries contra POST /search (sesión 08)
 output_examples.txt          # su salida contra el corpus
+arquitectura-actual.md       # diagnóstico arquitectónico (sesión 09)
+examples/
+├── transcripts/             # 01_clear · 02_ambiguous · 03_hard (sesión 09)
+└── trace/                   # salida real de trace_s09.py
 data/
 ├── budgets/                 # un JSON por presupuesto (sesión 08)
 └── budgets_sample.json      # los mismos 15 presupuestos en un fichero (sesión 07)
