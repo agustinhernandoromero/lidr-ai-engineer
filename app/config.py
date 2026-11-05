@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     # Dentro de compose el host es "postgres" (lo fija docker-compose.yml).
     DATABASE_URL: str = "postgresql+asyncpg://estimator:estimator@localhost:5432/estimator"
 
+    # Session 10: retrieval. "vector" keeps the session 08 behavior.
+    SEARCH_MODE: Literal["vector", "hybrid"] = "vector"
+    RETRIEVAL_CANDIDATE_POOL: int = 50  # wide net: candidates each branch returns
+    RRF_K: int = 60  # RRF smoothing constant (same default as fusion.RRF_SMOOTHING_K)
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
