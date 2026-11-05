@@ -83,6 +83,24 @@ def recall_at_k(retrieved: list[str], relevant: set[str], k: int) -> float:
     return sum(1 for budget_id in retrieved[:k] if budget_id in relevant) / len(relevant)
 
 
+def first_relevant_rank(retrieved: list[str], relevant: set[str]) -> int | None:
+    """1-based position of the first relevant budget in the ranking (None if absent)."""
+    for position, budget_id in enumerate(retrieved, start=1):
+        if budget_id in relevant:
+            return position
+    return None
+
+
+def reciprocal_rank(retrieved: list[str], relevant: set[str]) -> float:
+    """1 / position of the first relevant budget; 0 if none was retrieved.
+
+    Unlike precision@k it rewards order: a relevant budget moving from 3rd to
+    2nd place changes it, while the top-5 precision stays the same.
+    """
+    rank = first_relevant_rank(retrieved, relevant)
+    return 1 / rank if rank else 0.0
+
+
 def max_precision_at_k(relevant: set[str], k: int) -> float:
     """Best possible precision@k for a query with this many relevant budgets."""
     return min(len(relevant), k) / k
@@ -147,6 +165,9 @@ async def measure() -> str:
                 results[name][entry["id"]] = {
                     "precision": precision_at_k(retrieved, relevant, TOP_K),
                     "recall": recall_at_k(retrieved, relevant, TOP_K),
+                    # Over the whole ranking, not only the top-k.
+                    "first_rank": first_relevant_rank(retrieved, relevant),
+                    "reciprocal_rank": reciprocal_rank(retrieved, relevant),
                     "latencies": latencies,
                     "top": retrieved[:TOP_K],
                 }
@@ -164,8 +185,9 @@ def render(golden_set: dict, results: dict[str, dict[str, dict[str, Any]]], embe
         "",
         "## Summary",
         "",
-        f"| Config | Search | Reranking | precision@{TOP_K} | recall@{TOP_K} | Retrieval latency (median) |",
-        "|---|---|---|---|---|---|",
+        f"| Config | Search | Reranking | precision@{TOP_K} | recall@{TOP_K} | MRR "
+        "| Retrieval latency (median) |",
+        "|---|---|---|---|---|---|---|",
     ]
     for name, (mode, rerank) in CONFIGS.items():
         per_query = results[name].values()
@@ -174,10 +196,14 @@ def render(golden_set: dict, results: dict[str, dict[str, dict[str, Any]]], embe
             f"| {name} | {mode} | {'yes' if rerank else 'no'} "
             f"| {mean(i['precision'] for i in per_query):.2f} "
             f"| {mean(i['recall'] for i in per_query):.2f} "
+            f"| {mean(i['reciprocal_rank'] for i in per_query):.2f} "
             f"| {latency:.0f} ms |"
         )
     lines += [
         "",
+        "MRR (mean reciprocal rank): mean of 1 / position of the first relevant budget. "
+        "It rewards order, which precision@k does not; 1.00 means the first relevant "
+        "budget is always first.",
         f"Median latency of embedding the query: {median(embed_ms):.0f} ms "
         "(same for the four configurations, not included above).",
         f"Latency: median of {RUNS_PER_QUERY} timed runs per query after one warm-up run.",
@@ -194,6 +220,18 @@ def render(golden_set: dict, results: dict[str, dict[str, dict[str, Any]]], embe
             f"| {entry['id']} | {entry['type']} | {len(relevant)} "
             f"| {max_precision_at_k(relevant, TOP_K):.2f} | {cells} |"
         )
+    lines += [
+        "",
+        "## Position of the first relevant budget per query (1 = best)",
+        "",
+        f"| Query | {' | '.join(CONFIGS)} |",
+        "|---|" + "---|" * len(CONFIGS),
+    ]
+    for entry in queries:
+        cells = " | ".join(
+            str(results[name][entry["id"]]["first_rank"] or "none") for name in CONFIGS
+        )
+        lines.append(f"| {entry['id']} | {cells} |")
     lines += ["", f"## Top {TOP_K} budgets per query and configuration", ""]
     for entry in queries:
         lines.append(f"**{entry['id']}** relevant: {', '.join(entry['relevant_budget_ids'])}")

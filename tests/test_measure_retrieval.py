@@ -38,6 +38,24 @@ def test_recall_is_the_fraction_of_relevant_found_in_the_top_k():
     assert measure_retrieval.recall_at_k(retrieved, set(), 5) == 0.0
 
 
+def test_first_relevant_rank_is_one_based_and_none_when_absent():
+    assert measure_retrieval.first_relevant_rank(["x", "a", "b"], {"a", "b"}) == 2
+    assert measure_retrieval.first_relevant_rank(["x", "y"], {"a"}) is None
+
+
+def test_reciprocal_rank_rewards_order_where_precision_does_not():
+    relevant = {"a"}
+    third = ["x", "y", "a", "z", "w"]
+    second = ["x", "a", "y", "z", "w"]
+    # Same precision@5, different reciprocal rank.
+    assert measure_retrieval.precision_at_k(third, relevant, 5) == measure_retrieval.precision_at_k(
+        second, relevant, 5
+    )
+    assert measure_retrieval.reciprocal_rank(third, relevant) == pytest.approx(1 / 3)
+    assert measure_retrieval.reciprocal_rank(second, relevant) == pytest.approx(1 / 2)
+    assert measure_retrieval.reciprocal_rank(["x"], relevant) == 0.0
+
+
 def test_best_possible_precision_is_capped_by_the_number_of_relevant():
     assert measure_retrieval.max_precision_at_k({"a"}, 5) == pytest.approx(0.2)
     assert measure_retrieval.max_precision_at_k({"a", "b"}, 5) == pytest.approx(0.4)
