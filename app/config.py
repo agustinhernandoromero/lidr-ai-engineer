@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     SEARCH_MODE: Literal["vector", "hybrid"] = "vector"
     RETRIEVAL_CANDIDATE_POOL: int = 50  # wide net: candidates each branch returns
     RRF_K: int = 60  # RRF smoothing constant (same default as fusion.RRF_SMOOTHING_K)
+    RETRIEVAL_TOP_K: int = 5  # narrow output: chunks that reach the LLM
+    RERANKING_ENABLED: bool = False  # cross-encoder over the candidate pool
+    # Multilingual (Spanish budgets). The English-only MS MARCO models do not fit.
+    RERANKER_MODEL: str = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 
     model_config = SettingsConfigDict(
         env_file=".env",

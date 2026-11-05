@@ -1,44 +1,11 @@
 """vector_search and hybrid_search with an in-memory repository (no database)."""
 
-from types import SimpleNamespace
-
 import pytest
 
 from app.config import Settings
 from app.retrieval.candidates import hybrid_search, vector_search
-from app.retrieval.types import RetrievedChunk
 from tests.pgvector_fakes import search_row, unit_vector
-
-
-def lexical_row(chunk_id: int, rank: float, document_id: int = 1) -> SimpleNamespace:
-    """Row shaped like DocumentRepository.lexical_chunks (`rank`, no `distance`)."""
-    return SimpleNamespace(
-        id=chunk_id,
-        document_id=document_id,
-        chunk_type="budget_component",
-        content=f"chunk {chunk_id}",
-        metadata_={"component_id": f"C-{chunk_id}"},
-        rank=rank,
-    )
-
-
-class FakeBranchesRepository:
-    def __init__(self, vector_rows=(), lexical_rows=()):
-        self.vector_rows = list(vector_rows)
-        self.lexical_rows = list(lexical_rows)
-        self.calls: list[tuple] = []
-
-    async def nearest_chunks(self, query_vector, k):
-        self.calls.append(("vector", k))
-        return self.vector_rows[:k]
-
-    async def lexical_chunks(self, query_text, k):
-        self.calls.append(("lexical", query_text, k))
-        return self.lexical_rows[:k]
-
-
-def ids(chunks: list[RetrievedChunk]) -> list[int]:
-    return [chunk.id for chunk in chunks]
+from tests.retrieval_fakes import FakeBranchesRepository, ids, lexical_row
 
 
 @pytest.mark.asyncio
