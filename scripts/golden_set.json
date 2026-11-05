@@ -1,0 +1,40 @@
+{
+  "annotation_criterion": "A budget is relevant if at least two of its components would serve as an effort reference for parts of the requested project. Annotated from the budget content alone, without looking at what the system retrieves.",
+  "queries": [
+    {
+      "id": "q01",
+      "type": "direct, frequent",
+      "query": "E-commerce platform with product catalog, shopping cart, inventory management and an admin panel",
+      "relevant_budget_ids": ["BUD-2024-002", "BUD-2025-009"],
+      "notes": "2022-016 is a platform migration; 2023-011 has no catalog, cart or inventory."
+    },
+    {
+      "id": "q02",
+      "type": "hard, neighbouring domains (e-commerce vs payments)",
+      "query": "Online store checkout with card payments and order management",
+      "relevant_budget_ids": ["BUD-2024-002", "BUD-2025-009"],
+      "notes": "2022-021 (card payments gateway) is the distractor: close in the vector space, useless to estimate a store. 2023-011 uses Stripe for recurring billing, not checkout."
+    },
+    {
+      "id": "q03",
+      "type": "exact term (SAP)",
+      "query": "Integration with SAP S/4HANA for inventory and warehouse operations",
+      "relevant_budget_ids": ["BUD-2023-004", "BUD-2024-002"],
+      "notes": "2024-002 joins through its ERP inventory synchronisation, a reference for integration effort even if it is not SAP."
+    },
+    {
+      "id": "q04",
+      "type": "paraphrase, no shared words",
+      "query": "Dashboard to watch machines and warn about failures before they happen",
+      "relevant_budget_ids": ["BUD-2024-018"],
+      "notes": "2025-015 ingests and reports plant data but has no failure alerts; 2023-019 tracks hospital assets."
+    },
+    {
+      "id": "q05",
+      "type": "long and messy, like a meeting transcript",
+      "query": "The client sells weekly meal boxes, wants a mobile app, login with Google or Facebook, recurring payments every week and a back office where the ops team plans the delivery routes",
+      "relevant_budget_ids": ["BUD-2023-011"],
+      "notes": "Only 2023-011 covers subscription billing, delivery planning, social login and a mobile app."
+    }
+  ]
+}
