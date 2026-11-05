@@ -4,9 +4,12 @@ Revision ID: 0002
 Revises: 0001
 Create Date: 2026-11-05
 
-The budgets are written in Spanish, so the text search configuration is
-'spanish' (Spanish stemming and stopwords). The configuration name is passed
-explicitly, so the stored values do not depend on default_text_search_config.
+The budget texts are written in English, so the text search configuration is
+'english' (English stemming and stopwords): with 'spanish', plurals and verb
+forms such as "payments"/"payment" would not collapse into one root. If the
+corpus language changes, so must this configuration and TEXT_SEARCH_CONFIG in
+app/db/models.py. The name is passed explicitly, so the stored values do not
+depend on default_text_search_config.
 PostgreSQL keeps the column in sync with `content` on every write.
 """
 
@@ -25,7 +28,7 @@ def upgrade() -> None:
         """
         ALTER TABLE chunks
         ADD COLUMN content_tsv tsvector
-        GENERATED ALWAYS AS (to_tsvector('spanish', content)) STORED
+        GENERATED ALWAYS AS (to_tsvector('english', content)) STORED
         """
     )
     op.create_index("ix_chunks_content_tsv", "chunks", ["content_tsv"], postgresql_using="gin")

@@ -13,7 +13,7 @@ from sqlalchemy.dialects.postgresql import TSQUERY
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Chunk, Document
+from app.db.models import TEXT_SEARCH_CONFIG, Chunk, Document
 from app.db.session import get_session
 
 
@@ -77,8 +77,8 @@ class DocumentRepository:
     async def lexical_chunks(self, query_text: str, k: int) -> list[Row[Any]]:
         """The k chunks that best match the query words (full-text search).
 
-        Uses the generated content_tsv column (migration 0002). The 'spanish'
-        configuration must match the one the column was built with. Rows come
+        Uses the generated content_tsv column (migration 0002). The text search
+        configuration (TEXT_SEARCH_CONFIG) must match the one the column was built with. Rows come
         back ordered by ts_rank; same columns as nearest_chunks, with `rank`
         instead of `distance`.
 
@@ -89,7 +89,7 @@ class DocumentRepository:
         matches first. plainto_tsquery tolerates free text (it ignores syntax)
         and applies the same stemming and stopwords.
         """
-        and_query = func.plainto_tsquery(literal_column("'spanish'"), query_text)
+        and_query = func.plainto_tsquery(literal_column(f"'{TEXT_SEARCH_CONFIG}'"), query_text)
         tsquery = func.replace(cast(and_query, Text), "&", "|").cast(TSQUERY)
         rank = func.ts_rank(Chunk.content_tsv, tsquery)
         stmt = (

@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 
-from app.db.models import EMBEDDING_DIMENSION, Base, Document
+from app.db.models import EMBEDDING_DIMENSION, TEXT_SEARCH_CONFIG, Base, Document
 from app.db.repository import DocumentRepository, DuplicateSourcePath
 from tests.pgvector_fakes import unit_vector
 
@@ -107,15 +107,15 @@ async def test_nearest_chunks_orders_by_cosine_operator_and_limits_to_k():
 
 
 @pytest.mark.asyncio
-async def test_lexical_chunks_matches_tsvector_with_spanish_or_query():
+async def test_lexical_chunks_matches_tsvector_with_english_or_query():
     session = FakeSession()
-    rows = await DocumentRepository(session).lexical_chunks("integración con Stripe", k=50)
+    rows = await DocumentRepository(session).lexical_chunks("Stripe subscription billing", k=50)
 
     assert rows == []
     [stmt] = session.statements
     sql = str(stmt.compile(dialect=postgresql.dialect()))
     assert "FROM chunks" in sql
-    assert "chunks.content_tsv @@ CAST(replace(CAST(plainto_tsquery('spanish'" in sql
+    assert "chunks.content_tsv @@ CAST(replace(CAST(plainto_tsquery('english'" in sql
     assert "'&'" in sql or "%(replace_1)s" in sql  # AND turned into OR
     assert "ts_rank(chunks.content_tsv" in sql
     assert "ORDER BY ts_rank(" in sql and "DESC" in sql
@@ -160,5 +160,9 @@ def test_migration_matches_models():
         for index in Base.metadata.tables[table].indexes:
             assert f'"{index.name}"' in all_migrations, index.name
     assert '["source_path"], unique=True' in migration
+    # The text search configuration is the same in the model, the queries and migration 0002.
+    fulltext = (versions / "0002_chunks_fulltext_search.py").read_text(encoding="utf-8")
+    assert f"to_tsvector('{TEXT_SEARCH_CONFIG}', content)" in fulltext
+    assert TEXT_SEARCH_CONFIG == "english"
     assert f"Vector({EMBEDDING_DIMENSION})" in migration
     assert "DROP EXTENSION" not in migration.split("def downgrade")[1]
