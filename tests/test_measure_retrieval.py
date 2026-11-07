@@ -72,15 +72,28 @@ def test_chunks_collapse_to_budgets_keeping_the_best_chunk_rank():
     ]
 
 
-def test_golden_set_is_well_formed_and_points_to_real_budgets():
-    golden_set = json.loads((ROOT / "scripts" / "golden_set.json").read_text(encoding="utf-8"))
+@pytest.mark.parametrize(
+    ("golden_file", "budget_ids"),
+    [
+        ("golden_set.json", lambda: {p.stem for p in (ROOT / "data" / "budgets").glob("BUD-*.json")}),
+        (
+            "golden_set_course.json",
+            lambda: {
+                b["budget_id"]
+                for b in json.loads((ROOT / "data" / "course" / "budgets_sample.json").read_text(encoding="utf-8"))
+            },
+        ),
+    ],
+)
+def test_golden_set_is_well_formed_and_points_to_real_budgets(golden_file, budget_ids):
+    golden_set = json.loads((ROOT / "scripts" / golden_file).read_text(encoding="utf-8"))
     assert golden_set["annotation_criterion"]
     queries = golden_set["queries"]
     assert len(queries) == 5
     assert len({q["id"] for q in queries}) == len(queries)
 
-    budgets_on_disk = {path.stem for path in (ROOT / "data" / "budgets").glob("BUD-*.json")}
+    known = budget_ids()
     for entry in queries:
         assert entry["query"].strip()
         assert entry["relevant_budget_ids"], entry["id"]
-        assert set(entry["relevant_budget_ids"]) <= budgets_on_disk, entry["id"]
+        assert set(entry["relevant_budget_ids"]) <= known, entry["id"]

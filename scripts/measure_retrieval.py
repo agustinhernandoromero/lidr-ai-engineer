@@ -20,6 +20,7 @@ chunks, so the chunks are collapsed to the budgets they belong to, keeping the
 rank of the best chunk of each budget.
 """
 
+import argparse
 import asyncio
 import json
 import sys
@@ -42,7 +43,7 @@ from app.retrieval.pipeline import retrieve  # noqa: E402
 from app.retrieval.reranker import get_reranker  # noqa: E402
 from app.retrieval.types import RetrievedChunk  # noqa: E402
 
-GOLDEN_SET_PATH = Path(__file__).parent / "golden_set.json"
+GOLDEN_SET_PATH = Path(__file__).parent / "golden_set_course.json"
 RESULTS_PATH = ROOT / "docs" / "s10" / "medicion.md"
 
 TOP_K = 5  # budgets that reach the LLM: precision and recall are measured on these
@@ -112,8 +113,8 @@ async def load_budget_ids(session: Any) -> dict[int, str]:
     return {document_id: metadata["budget_id"] for document_id, metadata in rows}
 
 
-async def measure() -> str:
-    golden_set = json.loads(GOLDEN_SET_PATH.read_text(encoding="utf-8"))
+async def measure(golden_path: Path = GOLDEN_SET_PATH) -> str:
+    golden_set = json.loads(golden_path.read_text(encoding="utf-8"))
     queries = golden_set["queries"]
 
     embedder = get_cached_embedder()
@@ -245,12 +246,16 @@ def render(golden_set: dict, results: dict[str, dict[str, dict[str, Any]]], embe
 
 
 def main() -> None:
-    report = asyncio.run(measure())
-    RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    RESULTS_PATH.write_text(report, encoding="utf-8")
+    parser = argparse.ArgumentParser(description="Retrieval measurement over a golden set.")
+    parser.add_argument("--golden", type=Path, default=GOLDEN_SET_PATH, help="golden set JSON")
+    parser.add_argument("--output", type=Path, default=RESULTS_PATH, help="markdown report to write")
+    args = parser.parse_args()
+    report = asyncio.run(measure(args.golden))
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(report, encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
     print(report)
-    print(f"\nSaved to {RESULTS_PATH}")
+    print(f"\nSaved to {args.output}")
 
 
 if __name__ == "__main__":
