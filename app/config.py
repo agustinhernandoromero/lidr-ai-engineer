@@ -70,6 +70,15 @@ class Settings(BaseSettings):
     # Dentro de compose el host es "postgres" (lo fija docker-compose.yml).
     DATABASE_URL: str = "postgresql+asyncpg://estimator:estimator@localhost:5432/estimator"
 
+    # Session 10: retrieval. "vector" keeps the session 08 behavior.
+    SEARCH_MODE: Literal["vector", "hybrid"] = "vector"
+    RETRIEVAL_CANDIDATE_POOL: int = 50  # wide net: candidates each branch returns
+    RRF_K: int = 60  # RRF smoothing constant (same default as fusion.RRF_SMOOTHING_K)
+    RETRIEVAL_TOP_K: int = 5  # narrow output: chunks that reach the LLM
+    RERANKING_ENABLED: bool = False  # cross-encoder over the candidate pool
+    # Multilingual, so Spanish queries over the English budgets still work.
+    RERANKER_MODEL: str = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

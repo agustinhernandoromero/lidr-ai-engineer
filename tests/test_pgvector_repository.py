@@ -6,7 +6,7 @@ import pytest
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 
-from app.db.models import EMBEDDING_DIMENSION, Base, Document
+from app.db.models import EMBEDDING_DIMENSION, TEXT_SEARCH_CONFIG, Base, Document
 from app.db.repository import DocumentRepository, DuplicateSourcePath
 from tests.pgvector_fakes import unit_vector
 
@@ -106,6 +106,22 @@ async def test_nearest_chunks_orders_by_cosine_operator_and_limits_to_k():
     assert stmt._limit == 5
 
 
+@pytest.mark.asyncio
+async def test_lexical_chunks_matches_tsvector_with_english_or_query():
+    session = FakeSession()
+    rows = await DocumentRepository(session).lexical_chunks("Stripe subscription billing", k=50)
+
+    assert rows == []
+    [stmt] = session.statements
+    sql = str(stmt.compile(dialect=postgresql.dialect()))
+    assert "FROM chunks" in sql
+    assert "chunks.content_tsv @@ CAST(replace(CAST(plainto_tsquery('english'" in sql
+    assert "'&'" in sql or "%(replace_1)s" in sql  # AND turned into OR
+    assert "ts_rank(chunks.content_tsv" in sql
+    assert "ORDER BY ts_rank(" in sql and "DESC" in sql
+    assert stmt._limit == 50
+
+
 def test_source_path_is_unique_so_the_race_ends_in_409():
     [index] = [i for i in Document.__table__.indexes if i.name == "ix_documents_source_path"]
     assert index.unique
@@ -120,25 +136,33 @@ def test_chunks_cascade_and_vector_column_shape():
     assert chunks.c.embedding.nullable
 
 
-def test_no_vector_index_yet_only_relational_ones():
+def test_no_vector_index_yet_only_relational_and_text_ones():
     # La línea base es el sequential scan; HNSW se añadirá y se medirá después.
+    # content_tsv (sesión 10) es el índice GIN de la búsqueda por palabras, no vectorial.
     indexed_columns = {
         column.name for index in Base.metadata.tables["chunks"].indexes for column in index.columns
     }
-    assert indexed_columns == {"document_id", "chunk_type", "metadata"}
+    assert indexed_columns == {"document_id", "chunk_type", "metadata", "content_tsv"}
 
 
 def test_migration_matches_models():
     """Los mismos índices y columnas en la migración y en los modelos."""
     from pathlib import Path
 
-    migration = (
-        Path(__file__).resolve().parent.parent / "alembic" / "versions" / "0001_initial_schema.py"
-    ).read_text(encoding="utf-8")
+    versions = Path(__file__).resolve().parent.parent / "alembic" / "versions"
+    migration = (versions / "0001_initial_schema.py").read_text(encoding="utf-8")
+    all_migrations = "\n".join(
+        path.read_text(encoding="utf-8") for path in sorted(versions.glob("*.py"))
+    )
 
+    # Los índices pueden venir de cualquier migración (0002 añade el de content_tsv).
     for table in ("documents", "chunks"):
         for index in Base.metadata.tables[table].indexes:
-            assert f'"{index.name}"' in migration, index.name
+            assert f'"{index.name}"' in all_migrations, index.name
     assert '["source_path"], unique=True' in migration
+    # The text search configuration is the same in the model, the queries and migration 0002.
+    fulltext = (versions / "0002_chunks_fulltext_search.py").read_text(encoding="utf-8")
+    assert f"to_tsvector('{TEXT_SEARCH_CONFIG}', content)" in fulltext
+    assert TEXT_SEARCH_CONFIG == "english"
     assert f"Vector({EMBEDDING_DIMENSION})" in migration
     assert "DROP EXTENSION" not in migration.split("def downgrade")[1]

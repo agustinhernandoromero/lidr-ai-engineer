@@ -69,3 +69,6 @@ docs/
 
 # PDFs del estrés (se regeneran con evals/stress/fixtures/build_pdfs.py)
 evals/stress/fixtures/*.pdf
+
+# Instrucciones locales de Claude Code (solo para mí)
+CLAUDE.local.md
