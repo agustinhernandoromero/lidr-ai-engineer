@@ -3,10 +3,48 @@
 Servicio FastAPI que convierte una descripción de proyecto en una estimación técnica,
 con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 
-> **Esta rama es la entrega del ejercicio previo a la sesión 09**: un diagnóstico de la
-> arquitectura al cierre de la sesión 08, con una traza real de una transcripción cruda por el
-> sistema. No cambia el servicio. Lo nuevo está justo debajo; instalación, ejecución, tests y
-> lo construido en sesiones anteriores, a continuación.
+> **Esta rama es la entrega del ejercicio previo a la sesión 10**: búsqueda híbrida y reranking
+> sobre la recuperación de la sesión 08, con una medición contra un golden set anotado a mano.
+> Lo nuevo está justo debajo; el diagnóstico de la sesión 09, la instalación, la ejecución, los
+> tests y lo construido en sesiones anteriores, a continuación.
+
+## Sesión 10: búsqueda híbrida y reranking
+
+Añade una rama léxica (PostgreSQL full-text) que se fusiona con la búsqueda vectorial mediante
+Reciprocal Rank Fusion, y un cross-encoder que reordena los candidatos (recuperación amplia de 50
+y reordenación a 5). Ambas piezas se activan por configuración; con los valores por defecto el
+comportamiento es el de la sesión 08. El informe completo está en
+[`reports/s10_medicion.md`](reports/s10_medicion.md).
+
+```bash
+uv run alembic upgrade head                      # migración 0002: columna tsvector + índice GIN
+python -m app.retrieval.verify_reranker          # comprueba que el modelo carga y puntúa
+python scripts/measure_retrieval.py              # configuraciones A a D sobre el golden set
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `alembic/versions/0002_chunks_fulltext_search.py` | Columna `content_tsv` generada e índice GIN en `chunks`. Configuración de texto `english`, porque los presupuestos están en inglés |
+| `app/retrieval/` | `candidates.py` (ramas vectorial y léxica), `fusion.py` (RRF), `reranker.py` (cross-encoder), `pipeline.py` (`retrieve()` con las cuatro configuraciones) |
+| `scripts/measure_retrieval.py` | Mide precision@5, recall@5, MRR y latencia de A a D; admite `--golden` y `--output` |
+| `scripts/golden_set_course.json` | Golden set de 5 consultas sobre el dataset del curso (`data/course/`, 17 presupuestos) |
+| `scripts/golden_set.json` | Golden set de la primera medición, sobre el corpus propio de 15 presupuestos |
+
+Ajustes en `.env`: `SEARCH_MODE` (`vector` o `hybrid`), `RERANKING_ENABLED`,
+`RETRIEVAL_CANDIDATE_POOL` (50), `RETRIEVAL_TOP_K` (5), `RRF_K` (60) y `RERANKER_MODEL`.
+
+**Resultado** (dataset del curso, 5 consultas, k=5, mediana de 3 ejecuciones):
+
+| Config | Búsqueda | Reranking | precision@5 | recall@5 | MRR | Latencia |
+|---|---|---|---|---|---|---|
+| A | vectorial | no | 0.24 | 1.00 | 0.90 | 49 ms |
+| B | híbrida | no | 0.24 | 1.00 | 1.00 | 48 ms |
+| C | vectorial | sí | 0.24 | 1.00 | 0.90 | 3873 ms |
+| D | híbrida | sí | 0.24 | 1.00 | 0.90 | 3939 ms |
+
+0.24 es la precisión máxima posible en este golden set. Las cuatro configuraciones la alcanzan,
+así que solo cambia el orden. El reranking añade unos 3,9 s por consulta sin mejorar ninguna
+métrica; la híbrida mejora el MRR en una sola consulta. Conclusiones y salvedades en el informe.
 
 ## Sesión 09: diagnóstico arquitectónico del flujo RAG
 
