@@ -1,0 +1,233 @@
+# examples\transcripts\03_hard.txt — 2397 chars, ~736 tokens (cl100k_base)
+
+## Step 1 — embed full transcript
+{
+  "provider": "gemini",
+  "model": "gemini-embedding-001",
+  "dimensions": 1536,
+  "l2_norm": 1.0,
+  "first_component": -0.028440820396124476,
+  "last_component": 0.021273388498077004
+}
+
+## Step 2a — POST /search with the full transcript
+HTTP 422
+{
+  "detail": [
+    {
+      "type": "string_too_long",
+      "loc": [
+        "body",
+        "query"
+      ],
+      "msg": "String should have at most 2000 characters",
+      "ctx": {
+        "max_length": 2000
+      }
+    }
+  ]
+}
+
+## Step 2b — top-5 with the full-transcript vector (DocumentRepository.nearest_chunks)
+[
+  {
+    "chunk_id": 35,
+    "budget_id": "BUD-2024-005",
+    "component_id": "EHR-001",
+    "client_sector": "healthcare",
+    "distance": 0.2841,
+    "content_first_lines": [
+      "[Project: Telemedicine platform with video consultations and electronic health records integration]",
+      "[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 32,
+    "budget_id": "BUD-2024-005",
+    "component_id": "VIDEO-001",
+    "client_sector": "healthcare",
+    "distance": 0.2859,
+    "content_first_lines": [
+      "[Project: Telemedicine platform with video consultations and electronic health records integration]",
+      "[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 34,
+    "budget_id": "BUD-2024-005",
+    "component_id": "APPT-001",
+    "client_sector": "healthcare",
+    "distance": 0.286,
+    "content_first_lines": [
+      "[Project: Telemedicine platform with video consultations and electronic health records integration]",
+      "[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 52,
+    "budget_id": "BUD-2025-012",
+    "component_id": "PAT-001",
+    "client_sector": "healthcare",
+    "distance": 0.3098,
+    "content_first_lines": [
+      "[Project: Clinic management system with insurance billing and e-prescriptions]",
+      "[Client sector: healthcare | Year: 2025 | Main tech: ruby_on_rails]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 54,
+    "budget_id": "BUD-2025-012",
+    "component_id": "RX-001",
+    "client_sector": "healthcare",
+    "distance": 0.3104,
+    "content_first_lines": [
+      "[Project: Clinic management system with insurance billing and e-prescriptions]",
+      "[Client sector: healthcare | Year: 2025 | Main tech: ruby_on_rails]",
+      ""
+    ]
+  }
+]
+
+## Distance distribution over the whole corpus
+{
+  "chunks": 58,
+  "min": 0.2841,
+  "p50": 0.3634,
+  "max": 0.3966,
+  "spread_top1_to_top5": 0.0263,
+  "spread_min_to_max": 0.1124,
+  "best_distance_per_budget": {
+    "BUD-2024-005": 0.2841,
+    "BUD-2025-012": 0.3098,
+    "BUD-2024-014": 0.3333,
+    "BUD-2025-003": 0.3343,
+    "BUD-2022-008": 0.3392,
+    "BUD-2025-015": 0.3417,
+    "BUD-2023-019": 0.3448,
+    "BUD-2025-009": 0.3481,
+    "BUD-2022-021": 0.355,
+    "BUD-2024-002": 0.3626,
+    "BUD-2024-018": 0.3701,
+    "BUD-2023-007": 0.3708,
+    "BUD-2023-004": 0.3751,
+    "BUD-2023-011": 0.3765,
+    "BUD-2022-016": 0.3902
+  }
+}
+
+## Step 2c — POST /search with the transcript cut to 2000 chars
+HTTP 200
+{
+  "query": "<2000 chars, ends with: ...' qué\\nharías?\\n\\n[00:04:30] Consultor: Podemos plantear escenarios. ¿Hay fecha o pr'>",
+  "k": 5,
+  "search_time_ms": 454,
+  "results": [
+    {
+      "chunk_id": 35,
+      "document_id": 9,
+      "chunk_type": "budget_component",
+      "content": "[Project: Telemedicine platform with video consultations and electronic health records integration]\n[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]\n\nComponent: HL7 FHIR integration\nDescription: Read and write of patient summaries, encounters and prescriptions to the hospital electronic health record through an HL7 FHIR R4 API.\nTech stack: python_fastapi, fhir, postgresql\nComplexity: high\nEstimated hours: 130",
+      "distance": 0.28302792558157186,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-005",
+        "complexity": "high",
+        "tech_stack": [
+          "python_fastapi",
+          "fhir",
+          "postgresql"
+        ],
+        "component_id": "EHR-001",
+        "client_sector": "healthcare",
+        "estimated_hours": 130,
+        "main_technology": "python_fastapi"
+      }
+    },
+    {
+      "chunk_id": 32,
+      "document_id": 9,
+      "chunk_type": "budget_component",
+      "content": "[Project: Telemedicine platform with video consultations and electronic health records integration]\n[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]\n\nComponent: Video consultations\nDescription: Browser and mobile video calls between doctor and patient using WebRTC, waiting room, screen sharing and recording with patient consent.\nTech stack: python_fastapi, webrtc, redis\nComplexity: high\nEstimated hours: 150",
+      "distance": 0.28423549438926543,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-005",
+        "complexity": "high",
+        "tech_stack": [
+          "python_fastapi",
+          "webrtc",
+          "redis"
+        ],
+        "component_id": "VIDEO-001",
+        "client_sector": "healthcare",
+        "estimated_hours": 150,
+        "main_technology": "python_fastapi"
+      }
+    },
+    {
+      "chunk_id": 34,
+      "document_id": 9,
+      "chunk_type": "budget_component",
+      "content": "[Project: Telemedicine platform with video consultations and electronic health records integration]\n[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]\n\nComponent: Appointment scheduling\nDescription: Practitioner availability calendars, online booking, cancellation rules and email reminders.\nTech stack: python_fastapi, postgresql\nComplexity: medium\nEstimated hours: 70",
+      "distance": 0.2873937658902267,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-005",
+        "complexity": "medium",
+        "tech_stack": [
+          "python_fastapi",
+          "postgresql"
+        ],
+        "component_id": "APPT-001",
+        "client_sector": "healthcare",
+        "estimated_hours": 70,
+        "main_technology": "python_fastapi"
+      }
+    },
+    {
+      "chunk_id": 52,
+      "document_id": 14,
+      "chunk_type": "budget_component",
+      "content": "[Project: Clinic management system with insurance billing and e-prescriptions]\n[Client sector: healthcare | Year: 2025 | Main tech: ruby_on_rails]\n\nComponent: Patient records\nDescription: Patient demographics, medical history, allergies and visit notes with versioning and attachment upload.\nTech stack: ruby_on_rails, postgresql, s3\nComplexity: medium\nEstimated hours: 100",
+      "distance": 0.3051835869416818,
+      "metadata": {
+        "year": 2025,
+        "budget_id": "BUD-2025-012",
+        "complexity": "medium",
+        "tech_stack": [
+          "ruby_on_rails",
+          "postgresql",
+          "s3"
+        ],
+        "component_id": "PAT-001",
+        "client_sector": "healthcare",
+        "estimated_hours": 100,
+        "main_technology": "ruby_on_rails"
+      }
+    },
+    {
+      "chunk_id": 54,
+      "document_id": 14,
+      "chunk_type": "budget_component",
+      "content": "[Project: Clinic management system with insurance billing and e-prescriptions]\n[Client sector: healthcare | Year: 2025 | Main tech: ruby_on_rails]\n\nComponent: Electronic prescriptions\nDescription: Digitally signed prescriptions with drug catalogue lookup, interaction warnings and QR code for pharmacy validation.\nTech stack: ruby_on_rails, postgresql\nComplexity: medium\nEstimated hours: 70",
+      "distance": 0.3076938963854813,
+      "metadata": {
+        "year": 2025,
+        "budget_id": "BUD-2025-012",
+        "complexity": "medium",
+        "tech_stack": [
+          "ruby_on_rails",
+          "postgresql"
+        ],
+        "component_id": "RX-001",
+        "client_sector": "healthcare",
+        "estimated_hours": 70,
+        "main_technology": "ruby_on_rails"
+      }
+    }
+  ]
+}

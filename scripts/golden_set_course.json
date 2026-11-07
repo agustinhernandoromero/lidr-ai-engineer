@@ -1,0 +1,41 @@
+{
+  "annotation_criterion": "A budget is relevant if at least two of its components would serve as a credible effort reference for parts of the requested project (described in enough detail to estimate from). Annotated from the budget content alone, without looking at what the system retrieves.",
+  "dataset": "data/course/budgets_sample.json",
+  "queries": [
+    {
+      "id": "q01",
+      "type": "direct, frequent",
+      "query": "Loan application platform with automatic credit scoring, KYC checks and electronic contract signing",
+      "relevant_budget_ids": ["BUD-2024-002"],
+      "notes": "Only 2024-002 covers scoring, KYC origination workflow and e-signature. Other finance budgets (001, 003, 004, 016) share the sector but not the components."
+    },
+    {
+      "id": "q02",
+      "type": "hard, neighbouring domains (e-commerce vs payments)",
+      "query": "Online store checkout with card payments, order management and refunds",
+      "relevant_budget_ids": ["BUD-2024-005", "BUD-2024-006"],
+      "notes": "005 has the cart and checkout service and 006 the split orders and refund handling. 003 (payments gateway) is the distractor: close in the vector space, useless to estimate a store. 017 has cart and checkout, but as one-line tickets, too thin to be an effort reference."
+    },
+    {
+      "id": "q03",
+      "type": "exact term (FHIR)",
+      "query": "Integrate our patient records with the hospital EHR using HL7 FHIR R4, with patient consent and access audit",
+      "relevant_budget_ids": ["BUD-2024-009"],
+      "notes": "Only 2024-009 has the FHIR integration layer plus the consent and audit module. 012 (clinical trials) handles patient data but not FHIR."
+    },
+    {
+      "id": "q04",
+      "type": "paraphrase, no shared words",
+      "query": "A tool that tells the plant which machines are about to break down so repairs can be planned in advance",
+      "relevant_budget_ids": ["BUD-2024-013"],
+      "notes": "2024-013 covers sensor ingestion, predictive maintenance models and the SCADA dashboard overlay. 010 raises alerts on patient vitals, 015 forecasts grid load: different domains."
+    },
+    {
+      "id": "q05",
+      "type": "long and messy, like a meeting transcript",
+      "query": "So the client runs a few warehouses, they need to know what is in stock and where, pick orders with barcode scanners, they also have robots carrying pallets around and want the trucks to book a dock slot",
+      "relevant_budget_ids": ["BUD-2024-014"],
+      "notes": "Only 2024-014 covers warehouse core, AGV coordination and dock scheduling. 007 (grocery delivery) has inventory sync and routing but no warehouse operations."
+    }
+  ]
+}

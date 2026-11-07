@@ -1,14 +1,85 @@
-# 🧮 Estimador de Software — servicio IA + cliente
+# Estimador de Software: servicio IA + cliente
 
 Servicio FastAPI que convierte una descripción de proyecto en una estimación técnica,
 con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 
-> **Esta rama es la entrega del ejercicio previo a la sesión 08**: el pipeline de embeddings
-> de la sesión 07 pasa a persistir en PostgreSQL + pgvector y se añade un endpoint de
-> búsqueda semántica. Lo nuevo está justo debajo; instalación, ejecución, tests y lo
-> construido en sesiones anteriores, a continuación.
+> **Esta rama es la entrega del ejercicio previo a la sesión 10**: búsqueda híbrida y reranking
+> sobre la recuperación de la sesión 08, con una medición contra un golden set anotado a mano.
+> Lo nuevo está justo debajo; el diagnóstico de la sesión 09, la instalación, la ejecución, los
+> tests y lo construido en sesiones anteriores, a continuación.
 
-## 🗄️ Sesión 08 — pgvector y búsqueda semántica
+## Sesión 10: búsqueda híbrida y reranking
+
+Añade una rama léxica (PostgreSQL full-text) que se fusiona con la búsqueda vectorial mediante
+Reciprocal Rank Fusion, y un cross-encoder que reordena los candidatos (recuperación amplia de 50
+y reordenación a 5). Ambas piezas se activan por configuración; con los valores por defecto el
+comportamiento es el de la sesión 08. El informe completo está en
+[`reports/s10_medicion.md`](reports/s10_medicion.md).
+
+```bash
+uv run alembic upgrade head                      # migración 0002: columna tsvector + índice GIN
+python -m app.retrieval.verify_reranker          # comprueba que el modelo carga y puntúa
+python scripts/measure_retrieval.py              # configuraciones A a D sobre el golden set
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `alembic/versions/0002_chunks_fulltext_search.py` | Columna `content_tsv` generada e índice GIN en `chunks`. Configuración de texto `english`, porque los presupuestos están en inglés |
+| `app/retrieval/` | `candidates.py` (ramas vectorial y léxica), `fusion.py` (RRF), `reranker.py` (cross-encoder), `pipeline.py` (`retrieve()` con las cuatro configuraciones) |
+| `scripts/measure_retrieval.py` | Mide precision@5, recall@5, MRR y latencia de A a D; admite `--golden` y `--output` |
+| `scripts/golden_set_course.json` | Golden set de 5 consultas sobre el dataset del curso (`data/course/`, 17 presupuestos) |
+| `scripts/golden_set.json` | Golden set de la primera medición, sobre el corpus propio de 15 presupuestos |
+
+Ajustes en `.env`: `SEARCH_MODE` (`vector` o `hybrid`), `RERANKING_ENABLED`,
+`RETRIEVAL_CANDIDATE_POOL` (50), `RETRIEVAL_TOP_K` (5), `RRF_K` (60) y `RERANKER_MODEL`.
+
+**Resultado** (dataset del curso, 5 consultas, k=5, mediana de 3 ejecuciones):
+
+| Config | Búsqueda | Reranking | precision@5 | recall@5 | MRR | Latencia |
+|---|---|---|---|---|---|---|
+| A | vectorial | no | 0.24 | 1.00 | 0.90 | 49 ms |
+| B | híbrida | no | 0.24 | 1.00 | 1.00 | 48 ms |
+| C | vectorial | sí | 0.24 | 1.00 | 0.90 | 3873 ms |
+| D | híbrida | sí | 0.24 | 1.00 | 0.90 | 3939 ms |
+
+0.24 es la precisión máxima posible en este golden set. Las cuatro configuraciones la alcanzan,
+así que solo cambia el orden. El reranking añade unos 3,9 s por consulta sin mejorar ninguna
+métrica; la híbrida mejora el MRR en una sola consulta. Conclusiones y salvedades en el informe.
+
+## Sesión 09: diagnóstico arquitectónico del flujo RAG
+
+[`arquitectura-actual.md`](arquitectura-actual.md) describe el servicio tal como quedó en la
+sesión 08, pasa por él la transcripción ambigua `02_ambiguous.txt`, identifica cinco fallos a
+partir de lo observado y propone cómo evolucionar hasta una estimación generada a partir de
+presupuestos recuperados.
+
+```bash
+docker compose up -d                                                    # api + postgres + redis
+uv run python scripts/ingest_budgets.py                                 # seed (409 si ya está)
+uv run python scripts/trace_s09.py examples/transcripts/02_ambiguous.txt
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `arquitectura-actual.md` | Diagrama actual, traza anotada, cinco fallos y diagrama propuesto (Mermaid) |
+| `scripts/trace_s09.py` | Cliente de la traza: embebe la transcripción con el embedder del servicio, busca el top-5 con `DocumentRepository.nearest_chunks` y llama a `POST /search` sin modificarlo |
+| `examples/transcripts/` | Las tres transcripciones del ejercicio: clara, ambigua y difícil |
+| `examples/trace/` | Salida real de la traza para las tres |
+
+**Lo más relevante de la traza** (Gemini, coste 0 $):
+
+- `POST /search` rechaza la transcripción entera con 422: tiene 2854 caracteres y el límite es
+  2000. Cortada a 2000, se pierden requisitos sin aviso.
+- Con la transcripción ambigua, los cinco primeros chunks caben en 0,0086 de distancia. Con la
+  clara, la diferencia es 5 veces mayor y el mejor resultado está más cerca (0,215 frente a 0,314).
+- De las cinco necesidades del cliente, dos tienen evidencia clara; la fidelización y el correo
+  de confirmación no tienen ninguna, y el sistema no lo indica.
+- `/search` y el estimador no están conectados: la generación sigue usando los ejemplos fijos de
+  `app/context/examples.py`.
+
+## Sesiones anteriores
+
+### Sesión 08: pgvector y búsqueda semántica
 
 Cada presupuesto ingestado se guarda como un `document` con sus `chunks` y embeddings, y
 `POST /search` devuelve los k chunks más cercanos a una query por distancia coseno.
@@ -35,11 +106,11 @@ docker compose run --rm api python query_examples.py          # 5 queries (salid
 | `scripts/ingest_budgets.py` · `data/budgets/` | Un JSON por presupuesto y el script que los envía; relanzarlo no duplica (409) |
 | `query_examples.py` · `output_examples.txt` | Cinco queries (directa, reformulada, otro dominio, ambigua, específica) y su salida real |
 
-### Decisiones de esquema
+#### Decisiones de esquema
 
 - **(a) Dos tablas, no una.** Un presupuesto produce N chunks. En una sola tabla su metadata
   (sector, cliente, año) se repetiría N veces y habría que mantenerla coherente a mano. Con
-  `documents` 1—N `chunks` y `ON DELETE CASCADE`, borrar un presupuesto borra sus chunks
+  `documents` 1:N `chunks` y `ON DELETE CASCADE`, borrar un presupuesto borra sus chunks
   sin código de aplicación.
 - **(b) Metadata en JSONB.** Lo estable y que se consulta siempre va en columnas tipadas
   (`document_type`, `chunk_type`, fechas). Lo que el chunker puede enriquecer (tecnologías,
@@ -63,7 +134,7 @@ docker compose run --rm api python query_examples.py          # 5 queries (salid
   una migración nueva que borre el índice y lo cree sin `unique`. El endpoint sigue igual:
   el `SELECT` previo cubre el caso normal.
 
-### Adaptaciones al repositorio
+#### Adaptaciones al repositorio
 
 - **Embeddings con Gemini a 1536 dimensiones.** Se usa `gemini-embedding-001` con
   `output_dimensionality=1536`, no `text-embedding-3-small`. Gemini solo entrega norma 1 a su
@@ -93,12 +164,10 @@ docker compose run --rm api python query_examples.py          # 5 queries (salid
 - Casi toda la latencia es la llamada a Gemini (~270 ms; ~800 ms en la primera llamada),
   frente a ~5 ms en Postgres.
 
-## 🕘 Sesiones anteriores
-
-### Sesión 07 — embeddings y chunking estructural
+### Sesión 07: embeddings y chunking estructural
 
 Los presupuestos históricos en JSON se parten en chunks y se vectorizan. En la sesión 07 los
-vectores se devolvían por HTTP; desde la sesión 08 se persisten (contrato nuevo arriba).
+vectores se devolvían por HTTP; desde la sesión 08 se persisten (contrato en la sección de la sesión 08).
 
 ```
 JSONStructuralChunker  →  embedder (lotes de 100)  →  chunks + vectores
@@ -130,7 +199,7 @@ la escala de Gemini es más alta que los umbrales orientativos del enunciado (pe
 OpenAI). Sobre el corpus, la cabecera del presupuesto pesa casi tanto como el componente:
 los vecinos más cercanos de un componente suelen ser sus hermanos del mismo presupuesto.
 
-### Sesión 06 — estrés del CAG
+### Sesión 06: estrés del CAG
 
 Antes de pasar a RAG, se mide dónde empieza a romperse este CAG. Resultado y lectura en
 [`evals/stress/REPORT.md`](evals/stress/REPORT.md); datos en `evals/stress/results.csv`.
@@ -191,7 +260,7 @@ estimación sale. Esta rama lo convierte en **conversacional**:
 | Sin memoria | Historial con ventana deslizante + `project_metadata` en el system prompt |
 | Formulario de una sola estimación | Pestaña "Estimación conversacional" con panel de memoria |
 
-Detalle en [💬 Sesión 05](#-sesión-05--conversación-con-memoria-y-adjuntos). Lo que
+Detalle en [Sesión 05](#sesión-05-conversación-con-memoria-y-adjuntos). Lo que
 cambió en sesiones anteriores sigue debajo.
 
 #### Sesión 04
@@ -210,7 +279,7 @@ wrapper. Esta rama sustituye ambas cosas:
 El chat libre **no se elimina**: convive con el formulario en una segunda pestaña del
 cliente, para que la entrega de la sesión 03 siga siendo verificable.
 
-## 🏗️ Estructura
+## Estructura
 
 ```
 app/
@@ -264,9 +333,14 @@ app/
     └── SANITY_CHECK.md      # tres parejas de validación + calibración
 alembic/                     # Sesión 08: migraciones (0001: extensión + documents + chunks)
 scripts/
-└── ingest_budgets.py        # carga data/budgets/ vía POST /embeddings/ingest (sesión 08)
+├── ingest_budgets.py        # carga data/budgets/ vía POST /embeddings/ingest (sesión 08)
+└── trace_s09.py             # traza de una transcripción por el sistema (sesión 09)
 query_examples.py            # cinco queries contra POST /search (sesión 08)
 output_examples.txt          # su salida contra el corpus
+arquitectura-actual.md       # diagnóstico arquitectónico (sesión 09)
+examples/
+├── transcripts/             # 01_clear · 02_ambiguous · 03_hard (sesión 09)
+└── trace/                   # salida real de trace_s09.py
 data/
 ├── budgets/                 # un JSON por presupuesto (sesión 08)
 └── budgets_sample.json      # los mismos 15 presupuestos en un fichero (sesión 07)
@@ -289,7 +363,7 @@ tests/                       # Tests de template, sesiones, adjuntos, memoria y 
 Dockerfile · docker-compose.yml # Servicio IA + Redis + Postgres en contenedores
 ```
 
-## ⚙️ Instalación
+## Instalación
 
 ```bash
 uv sync --extra dev
@@ -314,15 +388,15 @@ la fija al contenedor `postgres`.
 Sin comillas ni espacios alrededor del `=`: `python-dotenv` no parsea la línea y la
 variable queda a `None`.
 
-## 🚀 Ejecución
+## Ejecución
 
 El cliente llama al servicio por HTTP, así que hacen falta dos procesos:
 
 ```bash
-# Terminal 1 — servicio IA
+# Terminal 1: servicio IA
 uv run uvicorn app.main:app --reload
 
-# Terminal 2 — cliente
+# Terminal 2: cliente
 uv run streamlit run streamlit_app.py
 ```
 
@@ -340,7 +414,7 @@ healthcheck en `/health`). El compose lee tu `.env`, apunta `REDIS_URL` y `DATAB
 sus contenedores y pone `APP_ENV=production` (logs en JSON). El `.env` no entra en la imagen.
 Los datos de Postgres viven en el volumen `postgres_data` (`docker compose down -v` los borra).
 
-## ✅ Tests
+## Tests
 
 ```bash
 uv run pytest -v                       # suite completa, sin red (LLM falso)
@@ -415,7 +489,7 @@ Cubren tres cosas:
 Lo que **no** cubren: si el modelo obedece esas instrucciones. Eso es evaluación del
 modelo, no del template, y requiere otra clase de suite.
 
-## 🔀 Versionado de prompts
+## Versionado de prompts
 
 Cada versión es un directorio completo bajo `app/prompts/estimation/`. Cambiar de
 versión no toca código:
@@ -444,7 +518,7 @@ de calibración con su desviación real frente a lo estimado.
 `GET /prompt-versions` lista las disponibles. El `Environment` usa `StrictUndefined`,
 así que una variable ausente rompe en el render y la recoge el test, no producción.
 
-## 📊 Observabilidad
+## Observabilidad
 
 `structlog` emite consola legible en `development` y JSON en cualquier otro entorno.
 Cada petición HTTP lleva un `request_id` en contextvars y en la cabecera
@@ -454,7 +528,7 @@ contenido renderizado), `llm_call_completed`, `cache_hit` / `cache_miss`.
 El hash del prompt renderizado es lo que permite responder a "¿qué texto exacto vio
 el modelo en esta petición?" sin guardar el prompt entero en los logs.
 
-## 🗃️ Caché y fallback
+## Caché y fallback
 
 Coincidencia exacta sobre `sha256(provider + model + system + user)`, respaldada por
 Redis (`REDIS_URL`, `CACHE_TTL`). Sobrevive a reinicios y se comparte entre workers; si
@@ -468,7 +542,7 @@ El endpoint de streaming no cachea ni hace fallback: el cuerpo se consume una so
 y no hay forma limpia de reintentar a mitad de una respuesta sin mezclar texto de dos
 modelos.
 
-## 🛡️ Sesión 04 — Guardrails
+## Sesión 04: guardrails
 
 **Entrada** (`app/guardrails/input.py`). Antes de llamar al LLM y antes de la caché se
 revisan la transcripción **y el texto de los adjuntos**, de lo gratis a lo de pago:
@@ -488,7 +562,7 @@ por "Fuera de alcance:", se añade el prefijo antes de validar en vez de gastar 
 reintento, que reenviaría todo el contexto. La regla del esquema sigue como última
 defensa.
 
-## 💬 Sesión 05 — Conversación con memoria y adjuntos
+## Sesión 05: conversación con memoria y adjuntos
 
 | Endpoint | Qué hace |
 |---|---|
@@ -507,7 +581,7 @@ defensa.
 Todo vive en un diccionario en memoria del proceso: reiniciar el servicio borra las
 sesiones (el cliente crea una nueva y avisa). Es aceptable en esta fase.
 
-**Adjuntos — camino B (extracción local).** `pypdf` para PDF y `python-docx` para Word
+**Adjuntos: camino B (extracción local).** `pypdf` para PDF y `python-docx` para Word
 (párrafos y tablas). El texto se concatena al mensaje con `--- attachment: nombre ---`.
 Elegido frente a enviar el PDF al LLM multimodal porque:
 
@@ -521,7 +595,7 @@ Coste: se pierden imágenes y diagramas, y un PDF escaneado no aporta texto (se 
 aviso); otros formatos → 415. En el historial solo queda una marca
 `[adjuntos: x.pdf (N caracteres)]`: el texto completo se envía en el turno en que se sube.
 
-**Extracción de `project_metadata` — extractor LLM.** Tras cada respuesta, una segunda
+**Extracción de `project_metadata` con un extractor LLM.** Tras cada respuesta, una segunda
 llamada (`max_tokens=500`, prompt en `app/prompts/extraction/v1/`) devuelve un JSON
 validado con Pydantic y fusionado con lo anterior: un dato no mencionado no se borra y
 las tecnologías se acumulan. Elegido frente a regex porque los hechos llegan en prosa
@@ -534,7 +608,7 @@ Los prompts conversacionales viven en `app/prompts/session5/v1/`, separados de
 de sesiones no usa la caché de Redis: con historial, la clave no se repetiría nunca
 (salvo el turno 1, ver abajo).
 
-## 🧠 Sesión 05 — directo: estructura, memoria comprimida, tier y caché
+## Sesión 05 (directo): estructura, memoria comprimida, tier y caché
 
 Sobre la conversación anterior, `POST /api/v1/sessions/{id}/estimate` (prompt
 `session5/v2`, por defecto) añade cuatro piezas, y `POST /api/v1/sessions/{id}/estimate-acb`
@@ -627,7 +701,7 @@ La respuesta del endpoint añade `result`, `cost_min_eur`/`cost_max_eur`, `tier`
 `anchors_count`, `summary_chars`, `structured_attempts` y `cache_hit_kind`; y
 `GET /sessions/{id}` expone resumen, anclas y último tier.
 
-## 📝 Notas
+## Notas
 
 - El SDK de `anthropic` fijado en este proyecto no acepta `temperature` en
   `messages.stream()`. Ninguna llamada a Anthropic (bloqueante ni streaming) lo usa

@@ -1,0 +1,330 @@
+# examples\transcripts\01_clear.txt — 1975 chars, ~599 tokens (cl100k_base)
+
+## Step 1 — embed full transcript
+{
+  "provider": "gemini",
+  "model": "gemini-embedding-001",
+  "dimensions": 1536,
+  "l2_norm": 1.0,
+  "first_component": -0.0025515851920652746,
+  "last_component": -0.0008630225473219505
+}
+
+## Step 2a — POST /search with the full transcript
+HTTP 200
+{
+  "query": "Reunión de descubrimiento — Proyecto \"App de banca móvil\"\nCliente: Marta Ledesma (CTO, NeoPagos)\nConsultor: equipo de estimación\nFecha: reunión inicial\n\n[00:00:12] Consultor: Gracias por el tiempo, Marta. Cuéntanos qué tenéis en mente y para cuándo.\n\n[00:00:25] Marta: Sí, vamos al grano que tengo otra a y media. Somos una fintech, NeoPagos. Lo que\nqueremos construir es el backend de una aplicación de banca móvil. El foco para esta primera fase\nes la autenticación y el cumplimiento normativo, que es lo que nos está bloqueando con el regulador.\n\n[00:01:03] Consultor: Perfecto. Cuando dices autenticación, ¿a qué nivel?\n\n[00:01:10] Marta: Necesitamos OAuth 2.0 hecho bien. Authorization code flow y refresh tokens, con\nsesiones gestionadas por JWT. Somos multi-tenant, así que el aislamiento de tokens por cliente es\ncrítico, y queremos rate limiting por cliente desde el día uno. No es negociable.\n\n[00:01:48] Consultor: Entendido. ¿Y la parte de cumplimiento?\n\n[00:01:55] Marta: PSD2. Open banking. Necesitamos los endpoints de información de cuenta y de\niniciación de pagos conformes con PSD2 y con el estándar del Berlin Group. Eso incluye SCA,\nautenticación reforzada de cliente, y un módulo de gestión de consentimientos. Sin esto no salimos.\n\n[00:02:40] Consultor: ¿Qué tecnología tenéis en casa? Para no ir contracorriente.\n\n[00:02:47] Marta: El equipo es de Ruby on Rails, base de datos PostgreSQL, y Redis para cachés y\ncolas. Preferimos seguir con eso. Más adelante habrá un libro mayor de transacciones con escritura\nidempotente y conciliación diaria, pero eso es fase dos; ahora céntrate en autenticación y PSD2.\n\n[00:03:30] Consultor: Clarísimo. Sector financiero, Rails sobre Postgres y Redis, OAuth 2.0 con JWT\ny PSD2 con SCA y consentimientos como alcance de la fase uno.\n\n[00:03:42] Marta: Exacto. Si me pasáis una estimación con fases y coste de aquí a una semana,\npodemos arrancar a final de mes. Cualquier duda me escribís. Me tengo que ir, gracias.\n",
+  "k": 5,
+  "search_time_ms": 978,
+  "results": [
+    {
+      "chunk_id": 36,
+      "document_id": 10,
+      "chunk_type": "budget_component",
+      "content": "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]\n[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]\n\nComponent: OAuth 2.0 authentication backend\nDescription: Implementation of OAuth 2.0 flows (authorization code, refresh token) with JWT-based session management, multi-tenant token isolation, and rate limiting per client.\nTech stack: ruby_on_rails, postgresql, redis\nComplexity: high\nEstimated hours: 120",
+      "distance": 0.21533098403584205,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-014",
+        "complexity": "high",
+        "tech_stack": [
+          "ruby_on_rails",
+          "postgresql",
+          "redis"
+        ],
+        "component_id": "AUTH-001",
+        "client_sector": "finance",
+        "estimated_hours": 120,
+        "main_technology": "ruby_on_rails"
+      }
+    },
+    {
+      "chunk_id": 38,
+      "document_id": 10,
+      "chunk_type": "budget_component",
+      "content": "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]\n[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]\n\nComponent: PSD2 consent and open banking connectors\nDescription: Consent lifecycle management for third-party providers, strong customer authentication challenges, and connectors to the Berlin Group NextGenPSD2 interface.\nTech stack: ruby_on_rails, postgresql, sidekiq\nComplexity: high\nEstimated hours: 130",
+      "distance": 0.2153385877609253,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-014",
+        "complexity": "high",
+        "tech_stack": [
+          "ruby_on_rails",
+          "postgresql",
+          "sidekiq"
+        ],
+        "component_id": "PSD2-001",
+        "client_sector": "finance",
+        "estimated_hours": 130,
+        "main_technology": "ruby_on_rails"
+      }
+    },
+    {
+      "chunk_id": 37,
+      "document_id": 10,
+      "chunk_type": "budget_component",
+      "content": "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]\n[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]\n\nComponent: Accounts and transactions API\nDescription: REST endpoints to list accounts, balances and paginated transaction history, with filtering by date range and category and idempotent transfer requests.\nTech stack: ruby_on_rails, postgresql\nComplexity: medium\nEstimated hours: 140",
+      "distance": 0.23264670372009277,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-014",
+        "complexity": "medium",
+        "tech_stack": [
+          "ruby_on_rails",
+          "postgresql"
+        ],
+        "component_id": "ACC-001",
+        "client_sector": "finance",
+        "estimated_hours": 140,
+        "main_technology": "ruby_on_rails"
+      }
+    },
+    {
+      "chunk_id": 40,
+      "document_id": 10,
+      "chunk_type": "budget_component",
+      "content": "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]\n[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]\n\nComponent: Audit logging and monitoring\nDescription: Immutable audit log of sensitive operations, structured application logs and dashboards with alerting on authentication failures and latency.\nTech stack: ruby_on_rails, elasticsearch, grafana\nComplexity: medium\nEstimated hours: 50",
+      "distance": 0.2516067997099992,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-014",
+        "complexity": "medium",
+        "tech_stack": [
+          "ruby_on_rails",
+          "elasticsearch",
+          "grafana"
+        ],
+        "component_id": "OPS-001",
+        "client_sector": "finance",
+        "estimated_hours": 50,
+        "main_technology": "ruby_on_rails"
+      }
+    },
+    {
+      "chunk_id": 33,
+      "document_id": 9,
+      "chunk_type": "budget_component",
+      "content": "[Project: Telemedicine platform with video consultations and electronic health records integration]\n[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]\n\nComponent: Patient authentication with OpenID Connect\nDescription: Patient and practitioner login through OpenID Connect with two-factor authentication, short-lived access tokens and role-based access to clinical data.\nTech stack: python_fastapi, keycloak, postgresql\nComplexity: high\nEstimated hours: 90",
+      "distance": 0.26076946439652005,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-005",
+        "complexity": "high",
+        "tech_stack": [
+          "python_fastapi",
+          "keycloak",
+          "postgresql"
+        ],
+        "component_id": "AUTH-001",
+        "client_sector": "healthcare",
+        "estimated_hours": 90,
+        "main_technology": "python_fastapi"
+      }
+    }
+  ]
+}
+
+## Step 2b — top-5 with the full-transcript vector (DocumentRepository.nearest_chunks)
+[
+  {
+    "chunk_id": 36,
+    "budget_id": "BUD-2024-014",
+    "component_id": "AUTH-001",
+    "client_sector": "finance",
+    "distance": 0.2153,
+    "content_first_lines": [
+      "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]",
+      "[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 38,
+    "budget_id": "BUD-2024-014",
+    "component_id": "PSD2-001",
+    "client_sector": "finance",
+    "distance": 0.2153,
+    "content_first_lines": [
+      "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]",
+      "[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 37,
+    "budget_id": "BUD-2024-014",
+    "component_id": "ACC-001",
+    "client_sector": "finance",
+    "distance": 0.2326,
+    "content_first_lines": [
+      "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]",
+      "[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 40,
+    "budget_id": "BUD-2024-014",
+    "component_id": "OPS-001",
+    "client_sector": "finance",
+    "distance": 0.2516,
+    "content_first_lines": [
+      "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]",
+      "[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]",
+      ""
+    ]
+  },
+  {
+    "chunk_id": 33,
+    "budget_id": "BUD-2024-005",
+    "component_id": "AUTH-001",
+    "client_sector": "healthcare",
+    "distance": 0.2608,
+    "content_first_lines": [
+      "[Project: Telemedicine platform with video consultations and electronic health records integration]",
+      "[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]",
+      ""
+    ]
+  }
+]
+
+## Distance distribution over the whole corpus
+{
+  "chunks": 58,
+  "min": 0.2153,
+  "p50": 0.3205,
+  "max": 0.3678,
+  "spread_top1_to_top5": 0.0454,
+  "spread_min_to_max": 0.1525,
+  "best_distance_per_budget": {
+    "BUD-2024-014": 0.2153,
+    "BUD-2024-005": 0.2608,
+    "BUD-2022-021": 0.2891,
+    "BUD-2025-012": 0.2918,
+    "BUD-2025-003": 0.2943,
+    "BUD-2023-007": 0.308,
+    "BUD-2022-008": 0.3087,
+    "BUD-2025-009": 0.3112,
+    "BUD-2023-011": 0.316,
+    "BUD-2025-015": 0.3167,
+    "BUD-2023-019": 0.3279,
+    "BUD-2024-002": 0.329,
+    "BUD-2023-004": 0.3383,
+    "BUD-2024-018": 0.3398,
+    "BUD-2022-016": 0.3401
+  }
+}
+
+## Step 2c — POST /search with the transcript cut to 2000 chars
+HTTP 200
+{
+  "query": "<1975 chars, ends with: ...' arrancar a final de mes. Cualquier duda me escribís. Me tengo que ir, gracias.\\n'>",
+  "k": 5,
+  "search_time_ms": 425,
+  "results": [
+    {
+      "chunk_id": 36,
+      "document_id": 10,
+      "chunk_type": "budget_component",
+      "content": "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]\n[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]\n\nComponent: OAuth 2.0 authentication backend\nDescription: Implementation of OAuth 2.0 flows (authorization code, refresh token) with JWT-based session management, multi-tenant token isolation, and rate limiting per client.\nTech stack: ruby_on_rails, postgresql, redis\nComplexity: high\nEstimated hours: 120",
+      "distance": 0.21533098403584205,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-014",
+        "complexity": "high",
+        "tech_stack": [
+          "ruby_on_rails",
+          "postgresql",
+          "redis"
+        ],
+        "component_id": "AUTH-001",
+        "client_sector": "finance",
+        "estimated_hours": 120,
+        "main_technology": "ruby_on_rails"
+      }
+    },
+    {
+      "chunk_id": 38,
+      "document_id": 10,
+      "chunk_type": "budget_component",
+      "content": "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]\n[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]\n\nComponent: PSD2 consent and open banking connectors\nDescription: Consent lifecycle management for third-party providers, strong customer authentication challenges, and connectors to the Berlin Group NextGenPSD2 interface.\nTech stack: ruby_on_rails, postgresql, sidekiq\nComplexity: high\nEstimated hours: 130",
+      "distance": 0.2153385877609253,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-014",
+        "complexity": "high",
+        "tech_stack": [
+          "ruby_on_rails",
+          "postgresql",
+          "sidekiq"
+        ],
+        "component_id": "PSD2-001",
+        "client_sector": "finance",
+        "estimated_hours": 130,
+        "main_technology": "ruby_on_rails"
+      }
+    },
+    {
+      "chunk_id": 37,
+      "document_id": 10,
+      "chunk_type": "budget_component",
+      "content": "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]\n[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]\n\nComponent: Accounts and transactions API\nDescription: REST endpoints to list accounts, balances and paginated transaction history, with filtering by date range and category and idempotent transfer requests.\nTech stack: ruby_on_rails, postgresql\nComplexity: medium\nEstimated hours: 140",
+      "distance": 0.23264670372009277,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-014",
+        "complexity": "medium",
+        "tech_stack": [
+          "ruby_on_rails",
+          "postgresql"
+        ],
+        "component_id": "ACC-001",
+        "client_sector": "finance",
+        "estimated_hours": 140,
+        "main_technology": "ruby_on_rails"
+      }
+    },
+    {
+      "chunk_id": 40,
+      "document_id": 10,
+      "chunk_type": "budget_component",
+      "content": "[Project: Mobile banking API with OAuth 2.0 authentication and PSD2 compliance]\n[Client sector: finance | Year: 2024 | Main tech: ruby_on_rails]\n\nComponent: Audit logging and monitoring\nDescription: Immutable audit log of sensitive operations, structured application logs and dashboards with alerting on authentication failures and latency.\nTech stack: ruby_on_rails, elasticsearch, grafana\nComplexity: medium\nEstimated hours: 50",
+      "distance": 0.2516067997099992,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-014",
+        "complexity": "medium",
+        "tech_stack": [
+          "ruby_on_rails",
+          "elasticsearch",
+          "grafana"
+        ],
+        "component_id": "OPS-001",
+        "client_sector": "finance",
+        "estimated_hours": 50,
+        "main_technology": "ruby_on_rails"
+      }
+    },
+    {
+      "chunk_id": 33,
+      "document_id": 9,
+      "chunk_type": "budget_component",
+      "content": "[Project: Telemedicine platform with video consultations and electronic health records integration]\n[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]\n\nComponent: Patient authentication with OpenID Connect\nDescription: Patient and practitioner login through OpenID Connect with two-factor authentication, short-lived access tokens and role-based access to clinical data.\nTech stack: python_fastapi, keycloak, postgresql\nComplexity: high\nEstimated hours: 90",
+      "distance": 0.26076946439652005,
+      "metadata": {
+        "year": 2024,
+        "budget_id": "BUD-2024-005",
+        "complexity": "high",
+        "tech_stack": [
+          "python_fastapi",
+          "keycloak",
+          "postgresql"
+        ],
+        "component_id": "AUTH-001",
+        "client_sector": "healthcare",
+        "estimated_hours": 90,
+        "main_technology": "python_fastapi"
+      }
+    }
+  ]
+}
