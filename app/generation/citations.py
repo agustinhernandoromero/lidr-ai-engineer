@@ -5,6 +5,7 @@ when the chunk texts are given, that the quoted evidence is really in that chunk
 does not prove that the source supports the figure: that is a semantic check.
 """
 
+import re
 from typing import Literal
 
 import structlog
@@ -74,6 +75,26 @@ def _normalize(text: str) -> str:
     return " ".join(text.split()).casefold()
 
 
+# A quote may join several verbatim fragments of the chunk ("<description>. Estimated
+# hours: 180") or elide the text between them with an ellipsis.
+_FRAGMENT_BOUNDARY = re.compile(r"(?<=[.;])\s+|\n|\.\.\.|…")
+_FRAGMENT_EDGES = " \t\"'.;,"
+
+
+def _quote_is_in(evidence: str, chunk_text: str) -> bool:
+    """True if every fragment of the quote appears verbatim in the chunk.
+
+    Joining real fragments is accepted; a real fragment joined to an invented one
+    (a figure the chunk does not contain) is not.
+    """
+    haystack = _normalize(chunk_text)
+    fragments = [
+        _normalize(part).strip(_FRAGMENT_EDGES) for part in _FRAGMENT_BOUNDARY.split(evidence)
+    ]
+    fragments = [fragment for fragment in fragments if fragment]
+    return bool(fragments) and all(fragment in haystack for fragment in fragments)
+
+
 def verify_citations(
     estimate: GroundedEstimate,
     retrieved_chunk_ids: set[str],
@@ -93,8 +114,8 @@ def verify_citations(
             if source.chunk_id in dangling:
                 continue
             wrong_document = source.chunk_id.split(CHUNK_ID_SEPARATOR)[0] != source.document_id
-            missing_quote = retrieved_texts is not None and _normalize(source.evidence) not in _normalize(
-                retrieved_texts.get(source.chunk_id, "")
+            missing_quote = retrieved_texts is not None and not _quote_is_in(
+                source.evidence, retrieved_texts.get(source.chunk_id, "")
             )
             if wrong_document or missing_quote:
                 mismatched.append(source.chunk_id)

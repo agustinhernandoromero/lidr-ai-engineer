@@ -117,6 +117,34 @@ def test_evidence_match_ignores_whitespace_and_case():
     assert report.grounded == ["KYC"]
 
 
+LONG_CHUNK = (
+    "Component: Loan origination workflow\n"
+    "Description: Configurable application workflow with KYC checks.\n"
+    "Tech stack: python_django\n"
+    "Complexity: medium\n"
+    "Estimated hours: 180"
+)
+
+
+def test_evidence_joining_verbatim_fragments_of_the_chunk_is_accepted():
+    """Seen in a real run: description and hours quoted together, lines between them skipped."""
+    joined = source(KYC, "Configurable application workflow with KYC checks. Estimated hours: 180")
+    report = verify_citations(estimate(grounded_line("KYC", joined)), {KYC}, {KYC: LONG_CHUNK})
+    assert report.grounded == ["KYC"]
+
+
+def test_real_fragment_joined_to_an_invented_figure_is_a_mismatch():
+    forged = source(KYC, "Configurable application workflow with KYC checks. Estimated hours: 75")
+    report = verify_citations(estimate(grounded_line("KYC", forged)), {KYC}, {KYC: LONG_CHUNK})
+    assert report.evidence_mismatch == ["KYC"]
+
+
+def test_fragments_split_by_ellipsis_are_checked_one_by_one():
+    elided = source(KYC, "Component: Loan origination workflow ... Estimated hours: 180")
+    report = verify_citations(estimate(grounded_line("KYC", elided)), {KYC}, {KYC: LONG_CHUNK})
+    assert report.grounded == ["KYC"]
+
+
 def test_document_id_must_match_the_chunk_id():
     wrong_document = SourceReference(chunk_id=KYC, document_id="BUD-2023-004", evidence="Estimated hours: 90")
     report = verify_citations(estimate(grounded_line("KYC", wrong_document)), {KYC})
