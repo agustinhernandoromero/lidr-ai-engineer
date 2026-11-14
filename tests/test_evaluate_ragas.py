@@ -90,14 +90,59 @@ def test_average_skips_missing_scores():
     assert avg["context_recall"] == pytest.approx(0.75)
 
 
-def test_report_has_one_row_per_query_and_an_average_row():
+def full_results(judge: str = "gemini-test") -> dict:
     scores = {
         "q01": {"faithfulness": 0.8, "answer_relevancy": 0.9, "context_precision": 1.0, "context_recall": 0.5},
         "q02": {"faithfulness": None, "answer_relevancy": 0.7, "context_precision": 0.5, "context_recall": 1.0},
     }
-    report = evaluate_ragas.render([sample("q01"), sample("q02")], scores, "gemini-test")
+    return evaluate_ragas.merge_scores({"scores": {}, "judges": {}}, scores, judge)
+
+
+def test_report_has_one_row_per_query_and_an_average_row():
+    report = evaluate_ragas.render([sample("q01"), sample("q02")], full_results())
     assert "| q01 | 0.80 | 0.90 | 1.00 | 0.50 |" in report
     assert "| q02 | error | 0.70 | 0.50 | 1.00 |" in report
     assert "| **Average** | **0.80** | **0.80** | **0.75** | **0.75** |" in report
     assert "Metric calls that failed: 1" in report
-    assert "gemini-test" in report
+    assert "Cells still pending: 0" in report
+    assert "  - context_recall: gemini-test" in report
+
+
+def test_merge_overwrites_only_the_scored_cells_and_records_the_judge():
+    results = full_results("judge-a")
+    evaluate_ragas.merge_scores(results, {"q02": {"context_precision": 0.25}}, "judge-b")
+    assert results["scores"]["q02"]["context_precision"] == 0.25
+    assert results["judges"]["q02"]["context_precision"] == "judge-b"
+    assert results["scores"]["q01"]["context_precision"] == 1.0
+    assert results["judges"]["q02"]["faithfulness"] == "judge-a"
+
+
+def test_unscored_cells_are_pending_not_errors():
+    results = evaluate_ragas.merge_scores(
+        {"scores": {}, "judges": {}}, {"q01": {"faithfulness": 0.8}, "q02": {"faithfulness": 0.6}}, "judge-a"
+    )
+    report = evaluate_ragas.render([sample("q01"), sample("q02")], results)
+    assert "| q01 | 0.80 | pending | pending | pending |" in report
+    assert "| **Average** | **0.70** | **pending** | **pending** | **pending** |" in report
+    assert "Cells still pending: 6" in report
+    assert "  - context_precision: pending" in report
+
+
+def test_average_waits_until_every_query_is_scored():
+    results = evaluate_ragas.merge_scores({"scores": {}, "judges": {}}, {"q01": {"faithfulness": 0.8}}, "judge-a")
+    report = evaluate_ragas.render([sample("q01"), sample("q02")], results)
+    assert "| **Average** | **pending** |" in report
+
+
+def test_a_metric_judged_by_two_models_is_flagged_as_mixed():
+    results = full_results("judge-a")
+    evaluate_ragas.merge_scores(results, {"q02": {"context_precision": 0.25}}, "judge-b")
+    report = evaluate_ragas.render([sample("q01"), sample("q02")], results)
+    assert "  - context_precision: judge-a + judge-b (mixed)" in report
+
+
+def test_saved_results_round_trip(tmp_path):
+    path = tmp_path / "scores.json"
+    assert evaluate_ragas.load_results(path) == {"scores": {}, "judges": {}}
+    path.write_text('{"scores": {"q01": {"faithfulness": 0.5}}, "judges": {"q01": {"faithfulness": "j"}}, "average": {}}')
+    assert evaluate_ragas.load_results(path)["judges"] == {"q01": {"faithfulness": "j"}}

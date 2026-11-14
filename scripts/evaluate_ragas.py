@@ -18,6 +18,14 @@ Two stages, so the judge can be re-run without paying the generation again:
 
 The judge is Gemini through its OpenAI-compatible endpoint (the workaround the RAGAS
 docs give for an instructor bug with the google-genai SDK); embeddings use google-genai.
+The free tier allows 20 requests per day per model, fewer than one full run needs, so
+scoring can be split: `--metrics` and `--queries` score a subset, and the result is
+merged into the saved scores with the judge of every cell. `--render-only` rewrites the
+report from the saved scores without calling anything.
+
+    # e.g. context_precision for four queries with another judge, merged into the rest
+    .venv/Scripts/python scripts/evaluate_ragas.py --skip-generation \
+        --metrics context_precision --queries q02 q03 q04 q05 --judge-model gemini-3.5-flash
 """
 
 import os
@@ -104,8 +112,8 @@ async def generate_samples(golden: dict) -> list[dict[str, Any]]:
 # --- stage 2: scoring -----------------------------------------------------------
 
 
-def build_metrics(judge_model: str) -> dict[str, Any]:
-    """The four RAGAS metrics, judged by Gemini."""
+def build_metrics(judge_model: str, names: list[str]) -> dict[str, Any]:
+    """The requested RAGAS metrics, judged by a Gemini model."""
     from google import genai
     from openai import AsyncOpenAI
     from ragas.embeddings import GoogleEmbeddings
@@ -126,12 +134,13 @@ def build_metrics(judge_model: str) -> dict[str, Any]:
     client = AsyncOpenAI(api_key=api_key, base_url=GEMINI_OPENAI_BASE_URL, max_retries=8, timeout=180)
     llm = llm_factory(judge_model, provider="openai", client=client, max_tokens=JUDGE_MAX_TOKENS)
     embeddings = GoogleEmbeddings(client=genai.Client(api_key=api_key), model=EMBEDDING_MODEL)
-    return {
-        "faithfulness": Faithfulness(llm=llm),
-        "answer_relevancy": AnswerRelevancy(llm=llm, embeddings=embeddings),
-        "context_precision": ContextPrecisionWithReference(llm=llm),
-        "context_recall": ContextRecall(llm=llm),
+    factories = {
+        "faithfulness": lambda: Faithfulness(llm=llm),
+        "answer_relevancy": lambda: AnswerRelevancy(llm=llm, embeddings=embeddings),
+        "context_precision": lambda: ContextPrecisionWithReference(llm=llm),
+        "context_recall": lambda: ContextRecall(llm=llm),
     }
+    return {name: factories[name]() for name in METRICS if name in names}
 
 
 def metric_inputs(name: str, sample: dict) -> dict[str, Any]:
@@ -169,6 +178,27 @@ async def score_samples(samples: list[dict], metrics: dict[str, Any]) -> dict[st
     return scores
 
 
+# --- saved results ----------------------------------------------------------------
+# {"scores": {query: {metric: value}}, "judges": {query: {metric: judge model}}}
+# A cell with a judge and no value failed; a cell without a judge is still pending.
+
+
+def load_results(path: Path) -> dict[str, dict]:
+    if path.exists():
+        saved = json.loads(path.read_text(encoding="utf-8"))
+        return {"scores": saved.get("scores", {}), "judges": saved.get("judges", {})}
+    return {"scores": {}, "judges": {}}
+
+
+def merge_scores(results: dict[str, dict], new_scores: dict[str, dict], judge_model: str) -> dict[str, dict]:
+    """Overwrite only the cells just scored, and record who judged them."""
+    for query_id, row in new_scores.items():
+        for metric, value in row.items():
+            results["scores"].setdefault(query_id, {})[metric] = value
+            results["judges"].setdefault(query_id, {})[metric] = judge_model
+    return results
+
+
 # --- report -------------------------------------------------------------------
 
 
@@ -181,13 +211,26 @@ def averages(scores: dict[str, dict[str, float | None]]) -> dict[str, float | No
     return out
 
 
-def _cell(value: float | None) -> str:
-    return "error" if value is None else f"{value:.2f}"
+def _cell(value: float | None, judged: bool = True) -> str:
+    if value is not None:
+        return f"{value:.2f}"
+    return "error" if judged else "pending"
 
 
-def render(samples: list[dict], scores: dict, judge_model: str) -> str:
-    avg = averages(scores)
-    failed = sum(1 for row in scores.values() for name in METRICS if row.get(name) is None)
+def render(samples: list[dict], results: dict[str, dict]) -> str:
+    scores, judges = results["scores"], results["judges"]
+    ids = [sample["id"] for sample in samples]
+    avg = averages({qid: scores.get(qid, {}) for qid in ids})
+
+    def judged(qid: str, name: str) -> bool:
+        return name in judges.get(qid, {})
+
+    failed = sum(1 for qid in ids for name in METRICS if judged(qid, name) and scores[qid].get(name) is None)
+    pending = sum(1 for qid in ids for name in METRICS if not judged(qid, name))
+    judge_lines = []
+    for name in METRICS:
+        used = sorted({judges[qid][name] for qid in ids if judged(qid, name)})
+        judge_lines.append(f"  - {name}: {' + '.join(used) if used else 'pending'}" + (" (mixed)" if len(used) > 1 else ""))
     generation = samples[0]["generation"] if samples else {}
     out = [
         "# RAGAS: grounded estimator over the course golden set",
@@ -196,16 +239,26 @@ def render(samples: list[dict], scores: dict, judge_model: str) -> str:
         f"- Generation: {generation.get('model', '?')} ({generation.get('provider', '?')}), "
         f"prompt grounded_estimation/{generation.get('prompt_version', '?')}, hybrid retrieval without "
         "reranking, top 5 chunks",
-        f"- Judge: {judge_model} (OpenAI-compatible endpoint), embeddings: {EMBEDDING_MODEL}, ragas 0.4.3",
+        f"- ragas 0.4.3, Gemini judges through the OpenAI-compatible endpoint, embeddings {EMBEDDING_MODEL}",
+        "- Judge per metric:",
+        *judge_lines,
         f"- Metric calls that failed: {failed}" + (" (shown as `error`, left out of the average)" if failed else ""),
+        f"- Cells still pending: {pending}",
         "",
         "| Query | Faithfulness | Answer relevancy | Context precision | Context recall |",
         "|---|---|---|---|---|",
     ]
-    for sample in samples:
-        row = scores[sample["id"]]
-        out.append(f"| {sample['id']} | " + " | ".join(_cell(row.get(name)) for name in METRICS) + " |")
-    out.append("| **Average** | " + " | ".join(f"**{_cell(avg[name])}**" for name in METRICS) + " |")
+    for qid in ids:
+        row = scores.get(qid, {})
+        out.append(f"| {qid} | " + " | ".join(_cell(row.get(name), judged(qid, name)) for name in METRICS) + " |")
+    # An average over part of the queries would read as the full one: wait for every cell.
+    out.append(
+        "| **Average** | "
+        + " | ".join(
+            f"**{_cell(avg[name]) if all(judged(qid, name) for qid in ids) else 'pending'}**" for name in METRICS
+        )
+        + " |"
+    )
     out += [
         "",
         "## Citations and totals per query",
@@ -232,21 +285,29 @@ async def main_async(args: argparse.Namespace) -> str:
     if missing:
         raise SystemExit(f"Queries without ground_truth: {missing}")
 
-    if args.skip_generation:
+    results_path = args.output.with_suffix(".json")
+    if args.skip_generation or args.render_only:
         samples = json.loads(args.samples.read_text(encoding="utf-8"))
+        results = load_results(results_path)
     else:
         samples = await generate_samples(golden)
         args.samples.parent.mkdir(parents=True, exist_ok=True)
         args.samples.write_text(json.dumps(samples, indent=2, ensure_ascii=False), encoding="utf-8")
+        results = {"scores": {}, "judges": {}}  # new answers: scores of the old ones no longer apply
 
-    scores = await score_samples(samples, build_metrics(args.judge_model))
-    report = render(samples, scores, args.judge_model)
+    if not args.render_only:
+        selected = [s for s in samples if not args.queries or s["id"] in args.queries]
+        unknown = set(args.queries or []) - {s["id"] for s in samples}
+        if unknown:
+            raise SystemExit(f"Unknown query ids: {sorted(unknown)}")
+        new_scores = await score_samples(selected, build_metrics(args.judge_model, args.metrics))
+        merge_scores(results, new_scores, args.judge_model)
+
+    report = render(samples, results)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(report, encoding="utf-8")
-    args.output.with_suffix(".json").write_text(
-        json.dumps({"judge_model": args.judge_model, "scores": scores, "average": averages(scores)}, indent=2),
-        encoding="utf-8",
-    )
+    average = averages({s["id"]: results["scores"].get(s["id"], {}) for s in samples})
+    results_path.write_text(json.dumps({**results, "average": average}, indent=2), encoding="utf-8")
     return report
 
 
@@ -258,7 +319,10 @@ def main() -> None:
     parser.add_argument("--samples", type=Path, default=SAMPLES_PATH, help="generated samples (JSON)")
     parser.add_argument("--output", type=Path, default=OUTPUT_PATH, help="markdown report to write")
     parser.add_argument("--judge-model", default=JUDGE_MODEL)
+    parser.add_argument("--metrics", nargs="+", choices=METRICS, default=list(METRICS), help="metrics to score")
+    parser.add_argument("--queries", nargs="+", default=None, help="query ids to score (default: all)")
     parser.add_argument("--skip-generation", action="store_true", help="reuse --samples, score only")
+    parser.add_argument("--render-only", action="store_true", help="rewrite the report from saved scores")
     args = parser.parse_args()
 
     configure_logging("development")
