@@ -82,4 +82,7 @@ constraint-dependencies = [
     "langsmith==0.14.16",
     "ormsgpack==1.13.0",
     "xxhash==4.0.2",
+    # ragas 0.4.3 imports langchain_community.chat_models.vertexai, removed in 0.4.2.
+    "langchain-community==0.4.1",
+    "mypy-extensions==1.1.0",
 ]
