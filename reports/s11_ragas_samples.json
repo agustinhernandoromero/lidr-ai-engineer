@@ -1,0 +1,182 @@
+[
+  {
+    "id": "q01",
+    "request_id": "74821dbc",
+    "user_input": "Loan application platform with automatic credit scoring, KYC checks and electronic contract signing",
+    "response": "This estimate covers the core components of a loan application platform: automatic credit scoring, KYC checks integrated into the origination workflow, and electronic contract signing. All components are grounded in a highly similar 2024 financial services project. Regulatory reporting is excluded as it was not requested.\n\n- Loan origination workflow with KYC checks: 180 hours. Matches the source component directly, which includes configurable application workflow, KYC checks, document upload, underwriting queue and automatic decisioning thresholds.\n- Automatic credit scoring engine: 200 hours. Drawn from a rules-and-model based credit scoring service component that ingests bureau data and bank statements with full explainability logs, matching the request's requirement for automatic credit scoring.\n- Electronic contract signing integration: 80 hours. Covers integration with a qualified e-signature provider for legally binding loan contracts, including webhook handling and signed-document archival, as required.\n\nTotal of the estimated components: 460 hours.",
+    "retrieved_contexts": [
+      "[Project: Automated loan origination platform with credit scoring and e-signature]\n[Client sector: finance | Year: 2024 | Main tech: python_django]\n\nComponent: Loan origination workflow\nDescription: Configurable application workflow with KYC checks, document upload, underwriting queue and automatic decisioning thresholds.\nTech stack: python_django, postgresql\nComplexity: medium\nEstimated hours: 180",
+      "[Project: Automated loan origination platform with credit scoring and e-signature]\n[Client sector: finance | Year: 2024 | Main tech: python_django]\n\nComponent: Credit scoring engine\nDescription: Rules-and-model based credit scoring service that ingests bureau data and bank statements, returning a risk band and recommended limit with full explainability logs.\nTech stack: python_django, celery, postgresql\nComplexity: high\nEstimated hours: 200",
+      "[Project: Automated loan origination platform with credit scoring and e-signature]\n[Client sector: finance | Year: 2024 | Main tech: python_django]\n\nComponent: E-signature integration\nDescription: Integration with a qualified e-signature provider for legally binding loan contracts, including webhook handling and signed-document archival.\nTech stack: python_django\nComplexity: low\nEstimated hours: 80",
+      "[Project: Automated loan origination platform with credit scoring and e-signature]\n[Client sector: finance | Year: 2024 | Main tech: python_django]\n\nComponent: Regulatory reporting export\nDescription: Scheduled export of portfolio metrics and delinquency reports in regulator-mandated formats.\nTech stack: python_django, pandas\nComplexity: low\nEstimated hours: 60",
+      "[Project: Clinical trial data capture and anonymization platform]\n[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]\n\nComponent: Electronic data capture forms\nDescription: Configurable eCRF builder with validation rules, query management and per-site access control for trial data entry.\nTech stack: python_fastapi, postgresql\nComplexity: high\nEstimated hours: 180"
+    ],
+    "retrieved_ids": [
+      "BUD-2024-002::ORIG-002",
+      "BUD-2024-002::SCORE-001",
+      "BUD-2024-002::SIGN-003",
+      "BUD-2024-002::REPORT-004",
+      "BUD-2024-012::EDC-001"
+    ],
+    "reference": "About 460 hours in three components. Credit scoring engine that ingests bureau data and bank statements and returns a risk band and limit: 200 hours. Loan application workflow with KYC checks, document upload and automatic decisioning: 180 hours. Electronic contract signing through a qualified e-signature provider, with webhooks and archival of signed documents: 80 hours. Regulatory reporting is not requested and is left out.",
+    "total_hours": 460.0,
+    "citations": {
+      "passed": true,
+      "grounded": 3,
+      "dangling": 0,
+      "evidence_mismatch": 0,
+      "insufficient": 0
+    },
+    "generation": {
+      "model": "claude-haiku-4-5-20251001",
+      "provider": "anthropic",
+      "fallback_used": false,
+      "attempts": 1,
+      "prompt_version": "v1"
+    }
+  },
+  {
+    "id": "q02",
+    "request_id": "f9477429",
+    "user_input": "Online store checkout with card payments, order management and refunds",
+    "response": "This estimate covers three core components for an online store: checkout with card payment processing, order management for tracking and fulfillment, and refund handling including dispute workflows. All components are grounded in ecommerce project history; the estimate combines figures from single-vendor and multi-vendor contexts, adjusted for scope differences.\n\n- Card payment checkout: 90 hours. BUD-2024-017::MVP-004 provides 40 hours for basic card checkout; BUD-2024-005::CART-002 cites 140 hours for a full checkout orchestration with promotion engine and tax calculation. For a standard online store without multi-vendor complexity, we use 90 hours as a middle ground: more than bare MVP but less than enterprise orchestration.\n- Order management: 120 hours. BUD-2024-006::ORDER-002 estimates 170 hours for split order management across multiple vendors with per-vendor fulfillment state machines. A single-vendor online store requires order tracking and fulfillment state management but not vendor splitting logic, so we reduce to 120 hours.\n- Refunds and dispute handling: 100 hours. BUD-2024-006::DISP-004 directly covers buyer-seller dispute workflow with evidence upload, SLA timers and partial refund support, estimated at 100 hours. This aligns well with online store refund requirements.\n\nTotal of the estimated components: 310 hours.",
+    "retrieved_contexts": [
+      "[Project: Headless e-commerce storefront with personalized recommendations]\n[Client sector: ecommerce | Year: 2024 | Main tech: node]\n\nComponent: Cart and checkout service\nDescription: Stateless cart service with promotion engine, tax calculation and a checkout orchestration that integrates the payment provider.\nTech stack: node, redis, postgresql\nComplexity: high\nEstimated hours: 140",
+      "[Project: Multi-vendor marketplace with vendor payouts and dispute handling]\n[Client sector: ecommerce | Year: 2023 | Main tech: ruby_on_rails]\n\nComponent: Split order management\nDescription: Order splitting across vendors, per-vendor fulfillment state machines and customer-facing consolidated order tracking.\nTech stack: ruby_on_rails, sidekiq, postgresql\nComplexity: high\nEstimated hours: 170",
+      "[Project: Bare-bones e-commerce MVP scoped in one-line tickets]\n[Client sector: ecommerce | Year: 2024 | Main tech: node]\n\nComponent: Checkout\nDescription: Pay with card.\nTech stack: node\nComplexity: medium\nEstimated hours: 40",
+      "[Project: Real-time payments gateway with fraud detection and reconciliation]\n[Client sector: finance | Year: 2023 | Main tech: java_spring]\n\nComponent: Merchant dashboard\nDescription: Merchant-facing dashboard for transaction search, refunds and payout tracking.\nTech stack: react, java_spring\nComplexity: low\nEstimated hours: 60",
+      "[Project: Multi-vendor marketplace with vendor payouts and dispute handling]\n[Client sector: ecommerce | Year: 2023 | Main tech: ruby_on_rails]\n\nComponent: Dispute and refund handling\nDescription: Buyer-seller dispute workflow with evidence upload, SLA timers and partial refund support.\nTech stack: ruby_on_rails\nComplexity: medium\nEstimated hours: 100"
+    ],
+    "retrieved_ids": [
+      "BUD-2024-005::CART-002",
+      "BUD-2024-006::ORDER-002",
+      "BUD-2024-017::MVP-004",
+      "BUD-2024-003::DASH-004",
+      "BUD-2024-006::DISP-004"
+    ],
+    "reference": "About 410 hours in three components. Cart and checkout with the card payment provider integration, promotions and tax calculation: 140 hours. Order management: 170 hours, taken from a multi-vendor marketplace with split orders, so a single store may need less. Refunds, with a dispute workflow and partial refunds: 100 hours. A full payments gateway is not needed for a store that uses a payment provider.",
+    "total_hours": 310.0,
+    "citations": {
+      "passed": true,
+      "grounded": 3,
+      "dangling": 0,
+      "evidence_mismatch": 0,
+      "insufficient": 0
+    },
+    "generation": {
+      "model": "claude-haiku-4-5-20251001",
+      "provider": "anthropic",
+      "fallback_used": false,
+      "attempts": 1,
+      "prompt_version": "v1"
+    }
+  },
+  {
+    "id": "q03",
+    "request_id": "d9ebca1d",
+    "user_input": "Integrate our patient records with the hospital EHR using HL7 FHIR R4, with patient consent and access audit",
+    "response": "This estimate covers HL7 FHIR R4 integration of patient records with the hospital EHR, including patient consent capture and access audit trail. The estimate is fully grounded in historical data from a similar 2024 healthcare project that implemented FHIR integration with consent and audit modules. No components lack historical data.\n\n- HL7 FHIR R4 integration with hospital EHR: 190 hours. Direct match from historical FHIR integration component that mapped internal patient and encounter records to hospital EHR with terminology mapping and audit logging.\n- Patient consent and access audit: 60 hours. Direct match from historical consent and audit module component with GDPR-aligned consent capture and immutable access audit trail for protected health information.\n\nTotal of the estimated components: 250 hours.",
+    "retrieved_contexts": [
+      "[Project: Patient appointment and telemedicine platform with HL7/FHIR integration]\n[Client sector: healthcare | Year: 2024 | Main tech: python_django]\n\nComponent: FHIR integration layer\nDescription: HL7 FHIR R4 integration that maps internal patient and encounter records to the hospital EHR, with terminology mapping and audit logging.\nTech stack: python_django, postgresql\nComplexity: high\nEstimated hours: 190",
+      "[Project: Patient appointment and telemedicine platform with HL7/FHIR integration]\n[Client sector: healthcare | Year: 2024 | Main tech: python_django]\n\nComponent: Consent and audit module\nDescription: GDPR-aligned consent capture and immutable access audit trail for protected health information.\nTech stack: python_django, postgresql\nComplexity: low\nEstimated hours: 60",
+      "[Project: Patient appointment and telemedicine platform with HL7/FHIR integration]\n[Client sector: healthcare | Year: 2024 | Main tech: python_django]\n\nComponent: Telemedicine video sessions\nDescription: WebRTC-based video consultation with waiting room, in-call notes and secure recording consent handling.\nTech stack: python_django, webrtc\nComplexity: high\nEstimated hours: 160",
+      "[Project: Patient appointment and telemedicine platform with HL7/FHIR integration]\n[Client sector: healthcare | Year: 2024 | Main tech: python_django]\n\nComponent: Appointment scheduling\nDescription: Scheduling engine with clinician availability, resource booking, reminders and a waitlist for cancellations.\nTech stack: python_django, celery\nComplexity: medium\nEstimated hours: 150",
+      "[Project: Remote patient monitoring with wearable data ingestion and alerts]\n[Client sector: healthcare | Year: 2024 | Main tech: node]\n\nComponent: Care team dashboard\nDescription: Dashboard for clinicians to triage alerts, view patient trends and acknowledge interventions.\nTech stack: react, node\nComplexity: medium\nEstimated hours: 150"
+    ],
+    "retrieved_ids": [
+      "BUD-2024-009::FHIR-001",
+      "BUD-2024-009::CONSENT-004",
+      "BUD-2024-009::VIDEO-003",
+      "BUD-2024-009::APPT-002",
+      "BUD-2024-010::CARE-003"
+    ],
+    "reference": "About 250 hours in two components. HL7 FHIR R4 integration that maps patient and encounter records to the hospital EHR, with terminology mapping and audit logging: 190 hours. Patient consent capture and an immutable access audit trail: 60 hours. Appointments and telemedicine are not requested and are left out.",
+    "total_hours": 250.0,
+    "citations": {
+      "passed": true,
+      "grounded": 2,
+      "dangling": 0,
+      "evidence_mismatch": 0,
+      "insufficient": 0
+    },
+    "generation": {
+      "model": "claude-haiku-4-5-20251001",
+      "provider": "anthropic",
+      "fallback_used": false,
+      "attempts": 1,
+      "prompt_version": "v1"
+    }
+  },
+  {
+    "id": "q04",
+    "request_id": "07448487",
+    "user_input": "A tool that tells the plant which machines are about to break down so repairs can be planned in advance",
+    "response": "This estimate covers a predictive maintenance tool for industrial plants that ingests machine sensor data, detects anomalies to flag machines at risk of failure, and integrates alerts into operator dashboards. All three core components are grounded in a directly comparable 2024 factory IoT predictive maintenance project. No historical data exists for post-launch operations, monitoring, or training.\n\n- Sensor telemetry ingestion from plant machines: 170 hours. Directly comparable MQTT-based telemetry ingestion component from the same predictive maintenance project.\n- Anomaly detection and predictive maintenance models: 200 hours. Directly applicable models for remaining-useful-life estimation and failure flagging from the same industrial predictive maintenance project.\n- Integration of alerts into plant operator dashboards: 130 hours. Directly comparable SCADA dashboard integration for overlaying predictive alerts on existing plant systems from the same project.\n\nTotal of the estimated components: 500 hours.",
+    "retrieved_contexts": [
+      "[Project: Factory IoT telemetry and predictive maintenance system]\n[Client sector: industrial | Year: 2024 | Main tech: python_fastapi]\n\nComponent: Predictive maintenance models\nDescription: Anomaly detection and remaining-useful-life models that flag machines at risk of failure and schedule maintenance windows.\nTech stack: python_fastapi, scikit_learn\nComplexity: high\nEstimated hours: 200",
+      "[Project: Factory IoT telemetry and predictive maintenance system]\n[Client sector: industrial | Year: 2024 | Main tech: python_fastapi]\n\nComponent: SCADA dashboard integration\nDescription: Read-only integration with the plant SCADA system to overlay predictive alerts on existing operator dashboards.\nTech stack: python_fastapi\nComplexity: medium\nEstimated hours: 130",
+      "[Project: Factory IoT telemetry and predictive maintenance system]\n[Client sector: industrial | Year: 2024 | Main tech: python_fastapi]\n\nComponent: Sensor telemetry ingestion\nDescription: MQTT-based ingestion of machine sensor telemetry into a time-series store, with edge buffering and out-of-order handling.\nTech stack: python_fastapi, mqtt, timescaledb\nComplexity: high\nEstimated hours: 170",
+      "[Project: Decomposition of a monolithic core banking platform into domain services]\n[Client sector: finance | Year: 2024 | Main tech: java_spring]\n\nComponent: Core banking ledger extraction and strangler migration\nDescription: This component covers the full extraction of the general ledger, posting engine, and balance computation logic out of the existing thirty-year-old COBOL and PL/SQL monolith into a new event-sourced Java service, executed under a strangler-fig pattern so that the legacy system and the new service run side by side for the entire duration of the migration without any downtime for the retail and corporate banking channels. The work begins with a complete reverse-engineering exercise: the team must read and document the approximately four hundred stored procedures that currently implement double-entry bookkeeping, interest accrual, fee calculation, end-of-day batch settlement, and regulatory provisioning, because none of this logic is documented anywhere except in the code itself and in the heads of two engineers who are scheduled to retire within the year. Each stored procedure is catalogued, its inputs and outputs are characterised, its side effects on the forty-seven tables of the ledger schema are mapped, and a golden-master test harness is built that captures the exact byte-level output of the legacy system for a representative sample of one hundred thousand historical transactions spanning fifteen years, including leap-year edge cases, currency redenomination events, negative-interest-rate periods, and the migration from peseta to euro that still leaves residual rounding artefacts in some long-lived accounts. Once the golden master is in place, the new service is built incrementally: first the read path, exposing balances and statements through a versioned REST and gRPC API backed by a read model projected from an append-only event store, validated continuously against the legacy system through a shadow-traffic comparison layer that replays every production read against both systems and alerts on any divergence beyond a configurable tolerance of one cent. Then the write path is migrated account-product by account-product, starting with the simplest demand-deposit accounts and progressing through savings products, term deposits, revolving credit lines, mortgages with complex amortisation schedules, and finally the syndicated corporate facilities that involve multiple currencies, participation tranches, and bespoke fee structures negotiated per client. Every write is dual-written to both systems during a bake-in period, with the legacy system remaining the system of record until the new service has demonstrated bit-for-bit equivalence over a full quarterly close including the statutory regulatory reporting run that feeds the central bank. The component also includes the design and implementation of the event schema and its evolution strategy, since financial events are immutable and must be replayable decades into the future for audit and dispute resolution: this means a carefully versioned Avro schema registry, upcasting functions for every schema change, and a documented compatibility policy. Idempotency is mandatory throughout, because the upstream channels retry aggressively and a duplicated posting in a banking ledger is a regulatory incident, so every command carries a client-generated idempotency key that is deduplicated at the boundary and the deduplication window is sized to survive the longest plausible network partition. Observability is treated as a first-class deliverable: distributed tracing across the strangler boundary, business-level metrics for posting latency and end-of-day completion time, and a reconciliation dashboard that the finance operations team uses every morning to confirm that the two systems agreed overnight. The component further includes a comprehensive data migration plan for the historical balances, a cutover runbook with explicit rollback gates at each stage, a parallel-run sign-off protocol requiring the chief financial officer and the head of regulatory reporting to approve before the legacy write path is finally disabled, and a decommissioning plan for the COBOL programs that includes archival of the source code and the batch job control language for the seven-year retention period mandated by the regulator. Finally, the estimate accounts for the substantial coordination overhead of working against a live banking system: change windows are restricted to weekend nights, every deployment requires a separate approval from the operational risk committee, penetration testing must be repeated after each major milestone, and the team must maintain a frozen replica of the production environment for forensic replay in case any discrepancy is detected after cutover. Beyond the ledger itself, the component absorbs a long tail of cross-cutting concerns that a naive estimate would miss entirely. Currency handling must support the full ISO 4217 set with per-currency rounding rules, half-even versus half-up banker's rounding depending on the product, and a pluggable foreign-exchange rate source with intraday revaluation for multi-currency corporate accounts; every rounding decision is logged so that a treasury auditor can reconstruct exactly why a given cent landed where it did. Interest accrual is its own subsystem: daily accrual with multiple day-count conventions, tiered and stepped rates, promotional introductory rates that expire on calendar boundaries, retroactive rate corrections that must be reposted without rewriting history, and the negative-rate handling that European banks had to retrofit and that breaks many off-the-shelf engines. Fee logic is similarly intricate, spanning maintenance fees with balance-based waivers, transaction fees with monthly free-allowance buckets, overdraft fees with cooling-off windows mandated by consumer-protection regulation, and bespoke fee waivers negotiated for private-banking clients that must be encoded as data, not as code, so that a product manager can change them without a release. The posting engine must enforce the bank's chart of accounts and its hierarchy of control accounts, guaranteeing that every business transaction nets to zero across debit and credit legs even when a single customer action fans out into a dozen internal postings across suspense, clearing, interest-payable, and tax-withholding accounts. End-of-day processing is a hard real-time deadline: the entire book must be closed, revalued, and reconciled before the regulatory reporting window opens, which means the new service has to beat the legacy batch on wall-clock time while producing identical figures, and the team must build a performance test that replays a peak-volume day at two-times speed to prove headroom. Security and segregation of duties are pervasive: maker-checker workflows on any manual adjustment, immutable audit logging of every privileged action, field-level encryption of account identifiers at rest, and a key-rotation procedure that does not require re-encrypting the entire historical store. The component also includes onboarding and knowledge-transfer sessions with the two retiring engineers, recorded and transcribed, because their tacit knowledge is the single largest project risk; a glossary of the bank's idiosyncratic terminology; and a decision log capturing every place where the new system deliberately diverges from a legacy behaviour that was itself a bug, each such divergence signed off by the business owner so that nobody later mistakes an intentional fix for a regression.\nTech stack: java_spring, kafka, postgresql, oracle, cobol\nComplexity: high\nEstimated hours: 520",
+      "[Project: Warehouse management system with automated guided vehicle coordination]\n[Client sector: industrial | Year: 2023 | Main tech: go]\n\nComponent: Warehouse management core\nDescription: Inventory, putaway and picking management with wave planning and barcode/RFID scanning support.\nTech stack: go, postgresql\nComplexity: high\nEstimated hours: 220"
+    ],
+    "retrieved_ids": [
+      "BUD-2024-013::PRED-002",
+      "BUD-2024-013::SCADA-003",
+      "BUD-2024-013::TELE-001",
+      "BUD-2024-016::MONO-001",
+      "BUD-2024-014::WMS-001"
+    ],
+    "reference": "About 500 hours in three components. Machine sensor telemetry ingestion into a time-series store: 170 hours. Predictive maintenance models that flag machines at risk of failure and schedule maintenance windows: 200 hours. Showing the alerts to the plant operators through an integration with their existing SCADA dashboards: 130 hours.",
+    "total_hours": 500.0,
+    "citations": {
+      "passed": true,
+      "grounded": 3,
+      "dangling": 0,
+      "evidence_mismatch": 0,
+      "insufficient": 0
+    },
+    "generation": {
+      "model": "claude-haiku-4-5-20251001",
+      "provider": "anthropic",
+      "fallback_used": false,
+      "attempts": 1,
+      "prompt_version": "v1"
+    }
+  },
+  {
+    "id": "q05",
+    "request_id": "16d5b59c",
+    "user_input": "So the client runs a few warehouses, they need to know what is in stock and where, pick orders with barcode scanners, they also have robots carrying pallets around and want the trucks to book a dock slot",
+    "response": "This estimate covers a warehouse management system with inventory tracking, barcode scanning, picking operations, automated guided vehicle (AGV) coordination, and dock slot booking. The core warehouse operations and dock scheduling are grounded in a directly comparable 2023 industrial project. Inventory visibility across multiple warehouses is estimated from recent ecommerce sources with similar real-time synchronization needs. Robot movement coordination lacks sufficient historical data and is not estimated.\n\n- Warehouse management core (inventory, putaway, picking, wave planning, barcode scanning): 220 hours. Direct match from comparable industrial warehouse system with identical scope and technology stack.\n- Multi-warehouse inventory visibility and synchronization: 120 hours. Based on real-time inventory sync component from grocery delivery platform. Scope is similar: synchronizing inventory across multiple locations with visibility into what is in stock and where.\n- Dock slot booking and yard management: 110 hours. Direct match from 2023 warehouse project covering dock-door appointment scheduling and truck slot management to reduce dwell time.\n- Automated guided vehicle coordination and robot movement management: not estimated, insufficient historical data. No sufficient historical data available. The sources cover warehouse management and dock scheduling but do not include details on AGV fleet coordination, robot path planning, or integration with warehouse systems for autonomous pallet movement.\n\nTotal of the estimated components: 450 hours.",
+    "retrieved_contexts": [
+      "[Project: Warehouse management system with automated guided vehicle coordination]\n[Client sector: industrial | Year: 2023 | Main tech: go]\n\nComponent: Warehouse management core\nDescription: Inventory, putaway and picking management with wave planning and barcode/RFID scanning support.\nTech stack: go, postgresql\nComplexity: high\nEstimated hours: 220",
+      "[Project: Warehouse management system with automated guided vehicle coordination]\n[Client sector: industrial | Year: 2023 | Main tech: go]\n\nComponent: Yard and dock scheduling\nDescription: Dock-door appointment scheduling and yard movement tracking to reduce trailer dwell time.\nTech stack: go, postgresql\nComplexity: medium\nEstimated hours: 110",
+      "[Project: Grocery delivery app with slot booking and route optimization]\n[Client sector: ecommerce | Year: 2024 | Main tech: go]\n\nComponent: Real-time inventory sync\nDescription: Near-real-time inventory synchronization from store systems with out-of-stock substitution suggestions.\nTech stack: go, kafka\nComplexity: medium\nEstimated hours: 120",
+      "[Project: Grocery delivery app with slot booking and route optimization]\n[Client sector: ecommerce | Year: 2024 | Main tech: go]\n\nComponent: Delivery slot booking\nDescription: Capacity-aware delivery slot service with optimistic locking to prevent overbooking and dynamic pricing for peak windows.\nTech stack: go, postgresql, redis\nComplexity: medium\nEstimated hours: 120",
+      "[Project: Grocery delivery app with slot booking and route optimization]\n[Client sector: ecommerce | Year: 2024 | Main tech: go]\n\nComponent: Route optimization service\nDescription: Vehicle routing optimization that batches orders into delivery runs minimizing distance under time-window and capacity constraints.\nTech stack: go\nComplexity: high\nEstimated hours: 180"
+    ],
+    "retrieved_ids": [
+      "BUD-2024-014::WMS-001",
+      "BUD-2024-014::YARD-003",
+      "BUD-2024-007::INV-003",
+      "BUD-2024-007::SLOT-001",
+      "BUD-2024-007::ROUTE-002"
+    ],
+    "reference": "About 570 hours in three components. Warehouse management core with inventory by location, putaway and picking with barcode scanning: 220 hours. Coordination of the automated guided vehicles that carry pallets, with traffic management on shared aisles: 240 hours. Dock appointment scheduling for trucks and yard tracking: 110 hours. KPI reporting is not requested and is left out.",
+    "total_hours": 450.0,
+    "citations": {
+      "passed": true,
+      "grounded": 3,
+      "dangling": 0,
+      "evidence_mismatch": 0,
+      "insufficient": 1
+    },
+    "generation": {
+      "model": "claude-haiku-4-5-20251001",
+      "provider": "anthropic",
+      "fallback_used": false,
+      "attempts": 1,
+      "prompt_version": "v1"
+    }
+  }
+]

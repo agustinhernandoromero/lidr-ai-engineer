@@ -1,0 +1,155 @@
+{
+  "query_id": "q01",
+  "query": "Loan application platform with automatic credit scoring, KYC checks and electronic contract signing",
+  "request_id": "c6c4648a",
+  "meta": {
+    "model": "claude-haiku-4-5-20251001",
+    "provider": "anthropic",
+    "fallback_used": false,
+    "attempts": 1,
+    "prompt_version": "v1"
+  },
+  "retrieved": {
+    "BUD-2024-002::ORIG-002": "[Project: Automated loan origination platform with credit scoring and e-signature]\n[Client sector: finance | Year: 2024 | Main tech: python_django]\n\nComponent: Loan origination workflow\nDescription: Configurable application workflow with KYC checks, document upload, underwriting queue and automatic decisioning thresholds.\nTech stack: python_django, postgresql\nComplexity: medium\nEstimated hours: 180",
+    "BUD-2024-002::SCORE-001": "[Project: Automated loan origination platform with credit scoring and e-signature]\n[Client sector: finance | Year: 2024 | Main tech: python_django]\n\nComponent: Credit scoring engine\nDescription: Rules-and-model based credit scoring service that ingests bureau data and bank statements, returning a risk band and recommended limit with full explainability logs.\nTech stack: python_django, celery, postgresql\nComplexity: high\nEstimated hours: 200",
+    "BUD-2024-002::SIGN-003": "[Project: Automated loan origination platform with credit scoring and e-signature]\n[Client sector: finance | Year: 2024 | Main tech: python_django]\n\nComponent: E-signature integration\nDescription: Integration with a qualified e-signature provider for legally binding loan contracts, including webhook handling and signed-document archival.\nTech stack: python_django\nComplexity: low\nEstimated hours: 80",
+    "BUD-2024-002::REPORT-004": "[Project: Automated loan origination platform with credit scoring and e-signature]\n[Client sector: finance | Year: 2024 | Main tech: python_django]\n\nComponent: Regulatory reporting export\nDescription: Scheduled export of portfolio metrics and delinquency reports in regulator-mandated formats.\nTech stack: python_django, pandas\nComplexity: low\nEstimated hours: 60",
+    "BUD-2024-012::EDC-001": "[Project: Clinical trial data capture and anonymization platform]\n[Client sector: healthcare | Year: 2024 | Main tech: python_fastapi]\n\nComponent: Electronic data capture forms\nDescription: Configurable eCRF builder with validation rules, query management and per-site access control for trial data entry.\nTech stack: python_fastapi, postgresql\nComplexity: high\nEstimated hours: 180"
+  },
+  "estimate": {
+    "summary": "This estimate covers the core components of a loan application platform: automatic credit scoring, KYC checks integrated into the origination workflow, and electronic contract signing. All three primary components are grounded in a directly comparable 2024 project. Regulatory reporting is not included as it was not requested.",
+    "line_items": [
+      {
+        "component": "Loan origination workflow with KYC checks",
+        "hours": 180.0,
+        "rationale": "Direct match to source: configurable application workflow with KYC checks, document upload, underwriting queue and automatic decisioning thresholds.",
+        "grounded": true,
+        "sources": [
+          {
+            "chunk_id": "BUD-2024-002::ORIG-002",
+            "document_id": "BUD-2024-002",
+            "evidence": "Configurable application workflow with KYC checks, document upload, underwriting queue and automatic decisioning thresholds. Estimated hours: 180"
+          }
+        ]
+      },
+      {
+        "component": "Automatic credit scoring engine",
+        "hours": 200.0,
+        "rationale": "Direct match to source: rules-and-model based credit scoring service that ingests bureau data and returns risk band and recommended limit.",
+        "grounded": true,
+        "sources": [
+          {
+            "chunk_id": "BUD-2024-002::SCORE-001",
+            "document_id": "BUD-2024-002",
+            "evidence": "Rules-and-model based credit scoring service that ingests bureau data and bank statements, returning a risk band and recommended limit with full explainability logs. Estimated hours: 200"
+          }
+        ]
+      },
+      {
+        "component": "Electronic contract signing integration",
+        "hours": 80.0,
+        "rationale": "Direct match to source: integration with qualified e-signature provider for legally binding loan contracts with webhook handling and document archival.",
+        "grounded": true,
+        "sources": [
+          {
+            "chunk_id": "BUD-2024-002::SIGN-003",
+            "document_id": "BUD-2024-002",
+            "evidence": "Integration with a qualified e-signature provider for legally binding loan contracts, including webhook handling and signed-document archival. Estimated hours: 80"
+          }
+        ]
+      }
+    ]
+  },
+  "report": {
+    "lines": [
+      {
+        "component": "Loan origination workflow with KYC checks",
+        "status": "grounded",
+        "hours": 180.0,
+        "cited_ids": [
+          "BUD-2024-002::ORIG-002"
+        ],
+        "dangling_ids": [],
+        "mismatched_ids": []
+      },
+      {
+        "component": "Automatic credit scoring engine",
+        "status": "grounded",
+        "hours": 200.0,
+        "cited_ids": [
+          "BUD-2024-002::SCORE-001"
+        ],
+        "dangling_ids": [],
+        "mismatched_ids": []
+      },
+      {
+        "component": "Electronic contract signing integration",
+        "status": "grounded",
+        "hours": 80.0,
+        "cited_ids": [
+          "BUD-2024-002::SIGN-003"
+        ],
+        "dangling_ids": [],
+        "mismatched_ids": []
+      }
+    ],
+    "evidence_checked": true,
+    "grounded": [
+      "Loan origination workflow with KYC checks",
+      "Automatic credit scoring engine",
+      "Electronic contract signing integration"
+    ],
+    "dangling": [],
+    "evidence_mismatch": [],
+    "insufficient": [],
+    "passed": true
+  },
+  "planted_check": {
+    "lines": [
+      {
+        "component": "Loan origination workflow with KYC checks",
+        "status": "dangling",
+        "hours": 180.0,
+        "cited_ids": [
+          "BUD-2024-002::ORIG-002",
+          "BUD-2023-099::PAY-001"
+        ],
+        "dangling_ids": [
+          "BUD-2023-099::PAY-001"
+        ],
+        "mismatched_ids": []
+      },
+      {
+        "component": "Automatic credit scoring engine",
+        "status": "grounded",
+        "hours": 200.0,
+        "cited_ids": [
+          "BUD-2024-002::SCORE-001"
+        ],
+        "dangling_ids": [],
+        "mismatched_ids": []
+      },
+      {
+        "component": "Electronic contract signing integration",
+        "status": "grounded",
+        "hours": 80.0,
+        "cited_ids": [
+          "BUD-2024-002::SIGN-003"
+        ],
+        "dangling_ids": [],
+        "mismatched_ids": []
+      }
+    ],
+    "evidence_checked": true,
+    "grounded": [
+      "Automatic credit scoring engine",
+      "Electronic contract signing integration"
+    ],
+    "dangling": [
+      "Loan origination workflow with KYC checks"
+    ],
+    "evidence_mismatch": [],
+    "insufficient": [],
+    "passed": false
+  }
+}

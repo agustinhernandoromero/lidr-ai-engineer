@@ -1,0 +1,72 @@
+{
+  "scores": {
+    "q01": {
+      "faithfulness": 0.8,
+      "answer_relevancy": 0.7217192704213886,
+      "context_recall": 0.8,
+      "context_precision": 0.9999999999666667
+    },
+    "q02": {
+      "faithfulness": 0.058823529411764705,
+      "answer_relevancy": 0.6475713630726667,
+      "context_recall": 0.8,
+      "context_precision": 0.8666666666377778
+    },
+    "q03": {
+      "faithfulness": 0.5,
+      "answer_relevancy": 0.7636033212939775,
+      "context_recall": 0.75,
+      "context_precision": 0.99999999995
+    },
+    "q04": {
+      "faithfulness": 0.9230769230769231,
+      "answer_relevancy": 0.7340312927685496,
+      "context_recall": 1.0,
+      "context_precision": 0.9999999999666667
+    },
+    "q05": {
+      "faithfulness": 0.5555555555555556,
+      "answer_relevancy": 0.6832095569492207,
+      "context_recall": 0.4,
+      "context_precision": 0.99999999995
+    }
+  },
+  "judges": {
+    "q01": {
+      "faithfulness": "gemini-3.5-flash-lite",
+      "answer_relevancy": "gemini-3.5-flash-lite",
+      "context_recall": "gemini-3.5-flash-lite",
+      "context_precision": "gemini-3.5-flash"
+    },
+    "q02": {
+      "faithfulness": "gemini-3.5-flash-lite",
+      "answer_relevancy": "gemini-3.5-flash-lite",
+      "context_recall": "gemini-3.5-flash-lite",
+      "context_precision": "gemini-3.5-flash"
+    },
+    "q03": {
+      "faithfulness": "gemini-3.5-flash-lite",
+      "answer_relevancy": "gemini-3.5-flash-lite",
+      "context_recall": "gemini-3.5-flash-lite",
+      "context_precision": "gemini-3.5-flash"
+    },
+    "q04": {
+      "faithfulness": "gemini-3.5-flash-lite",
+      "answer_relevancy": "gemini-3.5-flash-lite",
+      "context_recall": "gemini-3.5-flash-lite",
+      "context_precision": "gemini-3.5-flash"
+    },
+    "q05": {
+      "faithfulness": "gemini-3.5-flash-lite",
+      "answer_relevancy": "gemini-3.5-flash-lite",
+      "context_recall": "gemini-3.5-flash-lite",
+      "context_precision": "gemini-3.5-flash"
+    }
+  },
+  "average": {
+    "faithfulness": 0.5674912016088487,
+    "answer_relevancy": 0.7100269609011606,
+    "context_precision": 0.9733333332942222,
+    "context_recall": 0.75
+  }
+}
