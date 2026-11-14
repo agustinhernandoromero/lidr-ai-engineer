@@ -1,0 +1,11 @@
+REQUEST:
+{{ query }}
+
+SOURCES:
+{% for source in sources %}
+<source id="{{ source.id }}">
+{{ source.content }}
+</source>
+{% else %}
+(no sources were retrieved)
+{% endfor %}

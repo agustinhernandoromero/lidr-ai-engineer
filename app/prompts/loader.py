@@ -187,6 +187,26 @@ def render_summary_prompt(
     )
 
 
+def render_grounded_estimation_prompt(
+    *, query: str, sources: list[dict], version: str = "v1"
+) -> tuple[str, str]:
+    """(system, user) pair of the grounded estimator (session 11).
+
+    `sources` are {"id", "content"} dicts: the retrieved chunks, tagged with the id
+    the model has to cite.
+    """
+    system, user = _render_pair("grounded_estimation", version, {"query": query, "sources": sources})
+    logger.info(
+        "grounded_prompt_rendered",
+        prompt_version=version,
+        sources=len(sources),
+        system_hash=_fingerprint(system),
+        user_hash=_fingerprint(user),
+        user_chars=len(user),
+    )
+    return system, user
+
+
 def render_critic_prompt(
     *,
     transcript: str,
