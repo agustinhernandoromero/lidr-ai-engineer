@@ -157,6 +157,20 @@ def test_without_texts_only_ids_are_checked():
     assert report.evidence_checked is False
 
 
+def test_lines_that_fail_the_check_are_left_out_of_the_accepted_hours():
+    report = verify_citations(
+        estimate(
+            grounded_line("KYC", source(KYC), hours=90),
+            grounded_line("Payments", source("BUD-2023-099::PAY-001"), hours=60),  # dangling
+            grounded_line("Scoring", source(SCORING, "Estimated hours: 75"), hours=150),  # misquoted
+            insufficient_line("Chatbot"),
+        ),
+        {KYC, SCORING},
+        RETRIEVED_TEXTS,
+    )
+    assert report.accepted_hours == 90
+
+
 def test_report_serializes_the_summary_lists():
     report = verify_citations(estimate(insufficient_line("Chatbot")), set())
     dumped = report.model_dump()

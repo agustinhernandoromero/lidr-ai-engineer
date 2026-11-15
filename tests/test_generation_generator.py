@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from app.generation.citations import verify_citations
 from app.generation.generator import (
     GroundedOutputError,
     generate_grounded_estimate,
@@ -103,8 +104,9 @@ def test_prompt_tags_every_source_with_its_id():
 
 def test_valid_output_is_returned_on_the_first_attempt():
     llm = ScriptedLLM(payload(line("KYC", 90, True, "BUD-2024-002::KYC-002")))
-    estimate, meta = generate_grounded_estimate(llm, "q", CHUNKS, max_retries=2)
+    estimate, report, meta = generate_grounded_estimate(llm, "q", CHUNKS, max_retries=2)
     assert isinstance(estimate, GroundedEstimate)
+    assert report.passed is True
     assert meta["attempts"] == 1
     assert meta["prompt_version"] == "v1"
 
@@ -113,7 +115,7 @@ def test_rule_violation_is_sent_back_and_retried():
     broken = payload(line("KYC", 90, True))  # grounded without sources
     fixed = payload(line("KYC", 90, True, "BUD-2024-002::KYC-002"))
     llm = ScriptedLLM(broken, fixed)
-    _, meta = generate_grounded_estimate(llm, "q", CHUNKS, max_retries=2)
+    _, _, meta = generate_grounded_estimate(llm, "q", CHUNKS, max_retries=2)
     assert meta["attempts"] == 2
     retry_message = llm.calls[1][-1]["content"]
     assert "at least one source" in retry_message
@@ -124,6 +126,43 @@ def test_gives_up_after_the_last_retry():
     llm = ScriptedLLM(broken, broken)
     with pytest.raises(GroundedOutputError, match="2 attempts"):
         generate_grounded_estimate(llm, "q", CHUNKS, max_retries=1)
+
+
+def test_dangling_citation_is_sent_back_and_retried():
+    dangling = payload(line("KYC", 90, True, "BUD-2023-099::PAY-001"))  # never retrieved
+    fixed = payload(line("KYC", 90, True, "BUD-2024-002::KYC-002"))
+    llm = ScriptedLLM(dangling, fixed)
+    _, report, meta = generate_grounded_estimate(llm, "q", CHUNKS, max_retries=2)
+    assert meta["attempts"] == 2
+    assert report.passed is True
+    retry_message = llm.calls[1][-1]["content"]
+    assert "KYC" in retry_message
+    assert "BUD-2023-099::PAY-001" in retry_message
+
+
+def test_misquoted_evidence_is_sent_back_and_retried():
+    misquoted = payload(line("KYC", 90, True, "BUD-2024-002::KYC-002", evidence="Estimated hours: 75"))
+    fixed = payload(line("KYC", 90, True, "BUD-2024-002::KYC-002"))
+    llm = ScriptedLLM(misquoted, fixed)
+    _, report, meta = generate_grounded_estimate(llm, "q", CHUNKS, max_retries=2)
+    assert meta["attempts"] == 2
+    assert report.passed is True
+    assert "BUD-2024-002::KYC-002" in llm.calls[1][-1]["content"]
+
+
+def test_lines_still_failing_after_the_last_retry_are_rejected_from_the_total():
+    still_dangling = payload(
+        line("KYC", 90, True, "BUD-2024-002::KYC-002"),
+        line("Payments", 60, True, "BUD-2023-099::PAY-001"),
+    )
+    llm = ScriptedLLM(still_dangling, still_dangling)
+    estimate, report, meta = generate_grounded_estimate(llm, "q", CHUNKS, max_retries=1)
+    assert len(llm.calls) == 2
+    assert meta["attempts"] == 2
+    assert report.passed is False
+    assert report.dangling == ["Payments"]
+    assert estimate.total_hours == 150  # what the model claimed
+    assert report.accepted_hours == 90  # what survives the check
 
 
 @pytest.mark.asyncio
@@ -139,7 +178,9 @@ async def test_run_uses_hybrid_search_and_verifies_citations():
             line("Chatbot", None, False),
         )
     )
-    result = await run_grounded_estimation("Loan platform", repository, FakeEmbedder(), llm, top_k=5)
+    result = await run_grounded_estimation(
+        "Loan platform", repository, FakeEmbedder(), llm, top_k=5, max_retries=0
+    )
 
     assert {call[0] for call in repository.calls} == {"vector", "lexical"}
     assert set(result.source_texts) == {"BUD-2024-002::KYC-002", "BUD-2024-002::SCORE-003"}
@@ -147,14 +188,43 @@ async def test_run_uses_hybrid_search_and_verifies_citations():
     assert result.report.dangling == ["Payments"]
     assert result.report.insufficient == ["Chatbot"]
     assert result.report.evidence_checked is True
+    assert result.report.accepted_hours == 90
+
+
+def answer_text(*lines) -> str:
+    estimate = GroundedEstimate.model_validate_json(payload(*lines))
+    report = verify_citations(estimate, set(NAMED_TEXTS), NAMED_TEXTS)
+    return render_answer_text(estimate, report, NAMED_TEXTS)
+
+
+NAMED_TEXTS = {
+    "BUD-2024-002::KYC-002": "[Project: Digital lending platform]\nComponent: KYC verification\nEstimated hours: 90",
+}
 
 
 def test_answer_text_has_figures_but_no_source_ids():
-    estimate = GroundedEstimate.model_validate_json(
-        payload(line("KYC", 90, True, "BUD-2024-002::KYC-002"), line("Chatbot", None, False))
-    )
-    text = render_answer_text(estimate)
+    text = answer_text(line("KYC", 90, True, "BUD-2024-002::KYC-002"), line("Chatbot", None, False))
     assert "- KYC: 90 hours." in text
     assert "Chatbot: not estimated, insufficient historical data" in text
     assert "Total of the estimated components: 90 hours." in text
     assert "BUD-" not in text
+
+
+def test_ids_written_in_the_rationale_become_the_project_name():
+    """Seen in q02: the model wrote chunk ids in the prose, which no context contains."""
+    kyc = line("KYC", 90, True, "BUD-2024-002::KYC-002")
+    kyc["rationale"] = "BUD-2024-002::KYC-002 gives 90 hours; BUD-2023-099::PAY-001 is not used."
+    text = answer_text(kyc)
+    assert 'the "Digital lending platform" budget gives 90 hours' in text
+    assert "a past budget is not used" in text
+    assert "::" not in text
+
+
+def test_rejected_lines_are_not_presented_as_estimated():
+    text = answer_text(
+        line("KYC", 90, True, "BUD-2024-002::KYC-002"),
+        line("Payments", 60, True, "BUD-2023-099::PAY-001"),  # dangling
+    )
+    assert "- Payments: not estimated, its sources failed the citation check." in text
+    assert "60 hours" not in text
+    assert "Total of the estimated components: 90 hours." in text

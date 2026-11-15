@@ -69,6 +69,12 @@ class CitationReport(BaseModel):
         """False as soon as one line cites an unretrieved source or misquotes one."""
         return not self.dangling and not self.evidence_mismatch
 
+    @computed_field
+    @property
+    def accepted_hours(self) -> float:
+        """Hours of the grounded lines: a line whose citation fails is rejected from the total."""
+        return sum(line.hours for line in self.lines if line.status == "grounded" and line.hours)
+
 
 def _normalize(text: str) -> str:
     """Whitespace and case do not make a quote different."""

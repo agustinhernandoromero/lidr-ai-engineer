@@ -85,7 +85,7 @@ def render(query_id: str, result: GroundedGeneration, planted: CitationReport, r
         out.append(f"| {line.component} | {hours} | {check.status} | {cited} | {evidence} |")
     out += [
         "",
-        f"Total of the grounded lines: {result.estimate.total_hours:g} h",
+        f"Total of the lines that pass the check: {report.accepted_hours:g} h",
         "",
         "## Summary",
         "",
@@ -98,7 +98,8 @@ def render(query_id: str, result: GroundedGeneration, planted: CitationReport, r
         "## Planted dangling citation",
         "",
         f"`{PLANTED_ID}` added to the first grounded line, then the same check run again:",
-        f"dangling lines {planted.dangling}, check passed: {planted.passed}.",
+        f"dangling lines {planted.dangling}, check passed: {planted.passed}. The tainted line is rejected:",
+        f"the accepted total drops from {report.accepted_hours:g} h to {planted.accepted_hours:g} h.",
         "",
         "## Generated summary",
         "",

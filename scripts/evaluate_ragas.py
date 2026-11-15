@@ -88,11 +88,11 @@ async def generate_samples(golden: dict) -> list[dict[str, Any]]:
                         "id": entry["id"],
                         "request_id": request_id,
                         "user_input": entry["query"],
-                        "response": render_answer_text(result.estimate),
+                        "response": render_answer_text(result.estimate, result.report, result.source_texts),
                         "retrieved_contexts": [chunk.content for chunk in result.chunks],
                         "retrieved_ids": list(result.source_texts),
                         "reference": entry["ground_truth"],
-                        "total_hours": result.estimate.total_hours,
+                        "total_hours": result.report.accepted_hours,
                         "citations": {
                             "passed": result.report.passed,
                             "grounded": len(result.report.grounded),
