@@ -7,8 +7,8 @@
       "context_precision": 0.9999999999666667
     },
     "q02": {
-      "faithfulness": 0.058823529411764705,
-      "answer_relevancy": 0.6475713630726667,
+      "faithfulness": 0.47368421052631576,
+      "answer_relevancy": 0.665840333092884,
       "context_recall": 0.8,
       "context_precision": 0.8666666666377778
     },
@@ -64,8 +64,8 @@
     }
   },
   "average": {
-    "faithfulness": 0.5674912016088487,
-    "answer_relevancy": 0.7100269609011606,
+    "faithfulness": 0.6504633378317589,
+    "answer_relevancy": 0.7136807549052041,
     "context_precision": 0.9733333332942222,
     "context_recall": 0.75
   }

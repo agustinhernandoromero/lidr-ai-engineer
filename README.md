@@ -13,8 +13,10 @@ con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 Conecta la recuperación de la sesión 10 (híbrida, sin reranking) con el LLM. El estimador recibe
 los 5 chunks recuperados, cada uno con su id (`<presupuesto>::<componente>`), y devuelve un JSON en
 el que cada línea lleva sus fuentes y el fragmento literal del que sale la cifra. Después,
-`verify_citations` comprueba que ninguna línea cite un chunk que el LLM no vio. RAGAS puntúa el
-resultado sobre el golden set del curso, que ahora incluye `ground_truth`.
+`verify_citations` comprueba que ninguna línea cite un chunk que el LLM no vio. Si una cita falla,
+se reintenta enseñando al modelo qué ids o qué evidencias fallan; si sigue fallando en el último
+intento, esa línea queda rechazada y no cuenta en el total. RAGAS puntúa el resultado sobre el
+golden set del curso, que ahora incluye `ground_truth`.
 
 Con Postgres de `docker compose` y el corpus del curso cargado:
 
@@ -28,7 +30,7 @@ python scripts/evaluate_ragas.py --skip-generation --metrics context_precision \
 | Pieza | Qué hace |
 |---|---|
 | `app/generation/schemas.py` | Cada línea lleva `chunk_id`, `document_id` y `evidence` literal, o se marca como insuficiente |
-| `app/generation/generator.py` | Recupera, etiqueta las fuentes, fuerza el JSON (reintenta con el error) y verifica las citas |
+| `app/generation/generator.py` | Recupera, etiqueta las fuentes, fuerza el JSON y verifica las citas; los errores de esquema y de citas comparten los reintentos (`STRUCTURED_MAX_RETRIES`). Para RAGAS, escribe el nombre del proyecto donde el modelo puso un id de chunk |
 | `app/generation/citations.py` | `verify_citations`: `grounded`, `dangling`, `evidence_mismatch` o `insufficient` por línea |
 | `app/prompts/grounded_estimation/v1/` | Prompt del estimador con fuentes |
 | `scripts/estimate_grounded.py` | Una estimación real; después planta una cita a un chunk no recuperado y comprueba que se detecta (sin llamada extra) |
@@ -40,17 +42,20 @@ python scripts/evaluate_ragas.py --skip-generation --metrics context_precision \
 | Consulta | Faithfulness | Answer relevancy | Context precision | Context recall |
 |---|---|---|---|---|
 | q01 | 0.80 | 0.72 | 1.00 | 0.80 |
-| q02 | 0.06 | 0.65 | 0.87 | 0.80 |
+| q02 | 0.47 | 0.67 | 0.87 | 0.80 |
 | q03 | 0.50 | 0.76 | 1.00 | 0.75 |
 | q04 | 0.92 | 0.73 | 1.00 | 1.00 |
 | q05 | 0.56 | 0.68 | 1.00 | 0.40 |
-| **Media** | **0.57** | **0.71** | **0.97** | **0.75** |
+| **Media** | **0.65** | **0.71** | **0.97** | **0.75** |
 
-Juez `gemini-3.5-flash-lite`, salvo context precision (`gemini-3.5-flash`).
+Juez `gemini-3.5-flash-lite`, salvo context precision (`gemini-3.5-flash`). El enunciado propone
+OpenAI (Responses API y `text-embedding-3-small`); sin saldo en OpenAI, la generación usa el
+wrapper de Anthropic del servicio y RAGAS usa Gemini como juez y para los embeddings.
 
 Las 5 estimaciones pasan el control de citas, que solo prueba que cada id se recuperó: q02 lo pasa
-con faithfulness 0,06 (1 de 17 afirmaciones), porque ajusta cifras sin fuente, como 90 h "a middle
-ground" entre 40 y 140, y cita ids que no figuran en el texto de los contextos. En q05 el chunk de
+con faithfulness 0,47 (9 de 19 afirmaciones) porque ajusta cifras sin fuente, como 90 h "a middle
+ground" entre 40 y 140; con los ids de chunk escritos en el texto, que ningún contexto contiene,
+bajaba a 0,06 (1 de 17). En q05 el chunk de
 los AGV no entra en el top 5 (lo desplazan tres de la app de reparto), el modelo marca esa línea
 como insuficiente y el recall cae a 0,40. Context precision depende del juez (`gemini-3.5-flash-lite`
 y Haiku dan 0 a chunks que cubren un solo componente; `gemini-3.5-flash`, 1) y mide el orden, no
