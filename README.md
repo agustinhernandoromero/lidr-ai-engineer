@@ -22,4 +22,4 @@ Cada entrega se revisa desde el enlace de su propia rama.
 | 08 | pgvector y búsqueda semántica | [session-08-pgvector-busqueda](https://github.com/agustinhernandoromero/lidr-ai-engineer/tree/session-08-pgvector-busqueda) | Entregada |
 | 09 | Diagnóstico arquitectónico del flujo RAG | [session-09/pre-work](https://github.com/agustinhernandoromero/lidr-ai-engineer/tree/session-09/pre-work) | Entregada |
 | 10 | Búsqueda híbrida y reranking | [session-10/pre-work](https://github.com/agustinhernandoromero/lidr-ai-engineer/tree/session-10/pre-work) | Entregada |
-| 11 | Generación con citas y evaluación con RAGAS | [session-11/pre-work](https://github.com/agustinhernandoromero/lidr-ai-engineer/tree/session-11/pre-work) | Entregada |
+| 11 | Generación - calidad - evaluación con RAGAS | [session-11/pre-work](https://github.com/agustinhernandoromero/lidr-ai-engineer/tree/session-11/pre-work) | Entregada |
