@@ -8,7 +8,7 @@ con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 > Lo nuevo está justo debajo; la búsqueda híbrida de la sesión 10, la instalación, la ejecución,
 > los tests y lo construido en sesiones anteriores, a continuación.
 
-## Sesión 11: generación -calidad - evaluación con RAGAS
+## Sesión 11: generación - calidad - evaluación con RAGAS
 
 Conecta la recuperación de la sesión 10 (híbrida, sin reranking) con el LLM. El estimador recibe
 los 5 chunks recuperados, cada uno con su id (`<presupuesto>::<componente>`), y devuelve un JSON en
