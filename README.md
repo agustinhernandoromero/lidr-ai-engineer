@@ -3,10 +3,63 @@
 Servicio FastAPI que convierte una descripción de proyecto en una estimación técnica,
 con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 
-> **Esta rama es la entrega del ejercicio previo a la sesión 10**: búsqueda híbrida y reranking
-> sobre la recuperación de la sesión 08, con una medición contra un golden set anotado a mano.
-> Lo nuevo está justo debajo; el diagnóstico de la sesión 09, la instalación, la ejecución, los
-> tests y lo construido en sesiones anteriores, a continuación.
+> **Esta rama es la entrega del ejercicio previo a la sesión 11**: estimación generada a partir de
+> los presupuestos recuperados, con la fuente de cada línea, y evaluación de calidad con RAGAS.
+> Lo nuevo está justo debajo; la búsqueda híbrida de la sesión 10, la instalación, la ejecución,
+> los tests y lo construido en sesiones anteriores, a continuación.
+
+## Sesión 11: generación - calidad - evaluación con RAGAS
+
+Conecta la recuperación de la sesión 10 (híbrida, sin reranking) con el LLM. El estimador recibe
+los 5 chunks recuperados, cada uno con su id (`<presupuesto>::<componente>`), y devuelve un JSON en
+el que cada línea lleva sus fuentes y el fragmento literal del que sale la cifra. Después,
+`verify_citations` comprueba que ninguna línea cite un chunk que el LLM no vio. Si una cita falla,
+se reintenta enseñando al modelo qué ids o qué evidencias fallan; si sigue fallando en el último
+intento, esa línea queda rechazada y no cuenta en el total. RAGAS puntúa el resultado sobre el
+golden set del curso, que ahora incluye `ground_truth`.
+
+Con Postgres de `docker compose` y el corpus del curso cargado:
+
+```bash
+python scripts/estimate_grounded.py --query-id q01   # una estimación real y su informe de citas
+python scripts/evaluate_ragas.py                     # genera las 5 consultas y las puntúa
+python scripts/evaluate_ragas.py --skip-generation --metrics context_precision \
+    --queries q02 --judge-model gemini-3.5-flash    # vuelve a puntuar un subconjunto
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `app/generation/schemas.py` | Cada línea lleva `chunk_id`, `document_id` y `evidence` literal, o se marca como insuficiente |
+| `app/generation/generator.py` | Recupera, etiqueta las fuentes, fuerza el JSON y verifica las citas; los errores de esquema y de citas comparten los reintentos (`STRUCTURED_MAX_RETRIES`). Para RAGAS, escribe el nombre del proyecto donde el modelo puso un id de chunk |
+| `app/generation/citations.py` | `verify_citations`: `grounded`, `dangling`, `evidence_mismatch` o `insufficient` por línea |
+| `app/prompts/grounded_estimation/v1/` | Prompt del estimador con fuentes |
+| `scripts/estimate_grounded.py` | Una estimación real; después planta una cita a un chunk no recuperado y comprueba que se detecta (sin llamada extra) |
+| `scripts/evaluate_ragas.py` | Cuatro métricas con juez Gemini; guarda el juez de cada celda y puntúa por métricas y consultas (cuota gratuita: 20 peticiones/día) |
+| `reports/s11_citations_q01.md`, `reports/s11_ragas.md` | Informes |
+
+**Resultado** (dataset del curso, 5 consultas, generación con Haiku 4.5, unos 0,02 $):
+
+| Consulta | Faithfulness | Answer relevancy | Context precision | Context recall |
+|---|---|---|---|---|
+| q01 | 0.80 | 0.72 | 1.00 | 0.80 |
+| q02 | 0.47 | 0.67 | 0.87 | 0.80 |
+| q03 | 0.50 | 0.76 | 1.00 | 0.75 |
+| q04 | 0.92 | 0.73 | 1.00 | 1.00 |
+| q05 | 0.56 | 0.68 | 1.00 | 0.40 |
+| **Media** | **0.65** | **0.71** | **0.97** | **0.75** |
+
+Juez `gemini-3.5-flash-lite`, salvo context precision (`gemini-3.5-flash`). El enunciado propone
+OpenAI (Responses API y `text-embedding-3-small`); sin saldo en OpenAI, la generación usa el
+wrapper de Anthropic del servicio y RAGAS usa Gemini como juez y para los embeddings.
+
+Las 5 estimaciones pasan el control de citas, que solo prueba que cada id se recuperó: q02 lo pasa
+con faithfulness 0,47 (9 de 19 afirmaciones) porque ajusta cifras sin fuente, como 90 h "a middle
+ground" entre 40 y 140; con los ids de chunk escritos en el texto, que ningún contexto contiene,
+bajaba a 0,06 (1 de 17). En q05 el chunk de
+los AGV no entra en el top 5 (lo desplazan tres de la app de reparto), el modelo marca esa línea
+como insuficiente y el recall cae a 0,40. Context precision depende del juez (`gemini-3.5-flash-lite`
+y Haiku dan 0 a chunks que cubren un solo componente; `gemini-3.5-flash`, 1) y mide el orden, no
+la proporción: q05 saca 1,00 con 3 de sus 5 chunks irrelevantes.
 
 ## Sesión 10: búsqueda híbrida y reranking
 
@@ -46,7 +99,9 @@ Ajustes en `.env`: `SEARCH_MODE` (`vector` o `hybrid`), `RERANKING_ENABLED`,
 así que solo cambia el orden. El reranking añade unos 3,9 s por consulta sin mejorar ninguna
 métrica; la híbrida mejora el MRR en una sola consulta. Conclusiones y salvedades en el informe.
 
-## Sesión 09: diagnóstico arquitectónico del flujo RAG
+## Sesiones anteriores
+
+### Sesión 09: diagnóstico arquitectónico del flujo RAG
 
 [`arquitectura-actual.md`](arquitectura-actual.md) describe el servicio tal como quedó en la
 sesión 08, pasa por él la transcripción ambigua `02_ambiguous.txt`, identifica cinco fallos a
@@ -76,8 +131,6 @@ uv run python scripts/trace_s09.py examples/transcripts/02_ambiguous.txt
   de confirmación no tienen ninguna, y el sistema no lo indica.
 - `/search` y el estimador no están conectados: la generación sigue usando los ejemplos fijos de
   `app/context/examples.py`.
-
-## Sesiones anteriores
 
 ### Sesión 08: pgvector y búsqueda semántica
 

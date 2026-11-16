@@ -1,5 +1,6 @@
 {
   "annotation_criterion": "A budget is relevant if at least two of its components would serve as a credible effort reference for parts of the requested project (described in enough detail to estimate from). Annotated from the budget content alone, without looking at what the system retrieves.",
+  "ground_truth_criterion": "Session 11. The estimate an expert would give for the request: one line per requested component, with the hours of the closest component in the relevant budgets, and the total. Components the request does not ask for are left out. Drafted from the relevant budgets and reviewed by the author.",
   "dataset": "data/course/budgets_sample.json",
   "queries": [
     {
@@ -7,35 +8,40 @@
       "type": "direct, frequent",
       "query": "Loan application platform with automatic credit scoring, KYC checks and electronic contract signing",
       "relevant_budget_ids": ["BUD-2024-002"],
-      "notes": "Only 2024-002 covers scoring, KYC origination workflow and e-signature. Other finance budgets (001, 003, 004, 016) share the sector but not the components."
+      "notes": "Only 2024-002 covers scoring, KYC origination workflow and e-signature. Other finance budgets (001, 003, 004, 016) share the sector but not the components.",
+      "ground_truth": "About 460 hours in three components. Credit scoring engine that ingests bureau data and bank statements and returns a risk band and limit: 200 hours. Loan application workflow with KYC checks, document upload and automatic decisioning: 180 hours. Electronic contract signing through a qualified e-signature provider, with webhooks and archival of signed documents: 80 hours. Regulatory reporting is not requested and is left out."
     },
     {
       "id": "q02",
       "type": "hard, neighbouring domains (e-commerce vs payments)",
       "query": "Online store checkout with card payments, order management and refunds",
       "relevant_budget_ids": ["BUD-2024-005", "BUD-2024-006"],
-      "notes": "005 has the cart and checkout service and 006 the split orders and refund handling. 003 (payments gateway) is the distractor: close in the vector space, useless to estimate a store. 017 has cart and checkout, but as one-line tickets, too thin to be an effort reference."
+      "notes": "005 has the cart and checkout service and 006 the split orders and refund handling. 003 (payments gateway) is the distractor: close in the vector space, useless to estimate a store. 017 has cart and checkout, but as one-line tickets, too thin to be an effort reference.",
+      "ground_truth": "About 410 hours in three components. Cart and checkout with the card payment provider integration, promotions and tax calculation: 140 hours. Order management: 170 hours, taken from a multi-vendor marketplace with split orders, so a single store may need less. Refunds, with a dispute workflow and partial refunds: 100 hours. A full payments gateway is not needed for a store that uses a payment provider."
     },
     {
       "id": "q03",
       "type": "exact term (FHIR)",
       "query": "Integrate our patient records with the hospital EHR using HL7 FHIR R4, with patient consent and access audit",
       "relevant_budget_ids": ["BUD-2024-009"],
-      "notes": "Only 2024-009 has the FHIR integration layer plus the consent and audit module. 012 (clinical trials) handles patient data but not FHIR."
+      "notes": "Only 2024-009 has the FHIR integration layer plus the consent and audit module. 012 (clinical trials) handles patient data but not FHIR.",
+      "ground_truth": "About 250 hours in two components. HL7 FHIR R4 integration that maps patient and encounter records to the hospital EHR, with terminology mapping and audit logging: 190 hours. Patient consent capture and an immutable access audit trail: 60 hours. Appointments and telemedicine are not requested and are left out."
     },
     {
       "id": "q04",
       "type": "paraphrase, no shared words",
       "query": "A tool that tells the plant which machines are about to break down so repairs can be planned in advance",
       "relevant_budget_ids": ["BUD-2024-013"],
-      "notes": "2024-013 covers sensor ingestion, predictive maintenance models and the SCADA dashboard overlay. 010 raises alerts on patient vitals, 015 forecasts grid load: different domains."
+      "notes": "2024-013 covers sensor ingestion, predictive maintenance models and the SCADA dashboard overlay. 010 raises alerts on patient vitals, 015 forecasts grid load: different domains.",
+      "ground_truth": "About 500 hours in three components. Machine sensor telemetry ingestion into a time-series store: 170 hours. Predictive maintenance models that flag machines at risk of failure and schedule maintenance windows: 200 hours. Showing the alerts to the plant operators through an integration with their existing SCADA dashboards: 130 hours."
     },
     {
       "id": "q05",
       "type": "long and messy, like a meeting transcript",
       "query": "So the client runs a few warehouses, they need to know what is in stock and where, pick orders with barcode scanners, they also have robots carrying pallets around and want the trucks to book a dock slot",
       "relevant_budget_ids": ["BUD-2024-014"],
-      "notes": "Only 2024-014 covers warehouse core, AGV coordination and dock scheduling. 007 (grocery delivery) has inventory sync and routing but no warehouse operations."
+      "notes": "Only 2024-014 covers warehouse core, AGV coordination and dock scheduling. 007 (grocery delivery) has inventory sync and routing but no warehouse operations.",
+      "ground_truth": "About 570 hours in three components. Warehouse management core with inventory by location, putaway and picking with barcode scanning: 220 hours. Coordination of the automated guided vehicles that carry pallets, with traffic management on shared aisles: 240 hours. Dock appointment scheduling for trucks and yard tracking: 110 hours. KPI reporting is not requested and is left out."
     }
   ]
 }

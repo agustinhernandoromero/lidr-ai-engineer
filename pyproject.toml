@@ -29,6 +29,8 @@ dependencies = [
     "alembic>=1.13",
     # Sesión 10: reranker cross-encoder (arrastra PyTorch).
     "sentence-transformers==6.2.0",
+    # Session 11: generation quality evaluation (4 RAGAS metrics).
+    "ragas==0.4.3",
 ]
 
 [project.optional-dependencies]
@@ -64,4 +66,23 @@ constraint-dependencies = [
     "hf-xet==1.7.0",
     "filelock==4.2.4",
     "threadpoolctl==3.7.0",
+    # Session 11: ragas indirect dependencies published less than two weeks before
+    # 2026-11-14, pinned to the previous release (resolution capped at 2026-10-31).
+    "datasets==5.1.0",
+    "jsonpatch==1.38",
+    "jsonpointer==3.6",
+    "langchain==1.4.7",
+    "langchain-core==1.7.3",
+    "langchain-openai==1.7.3",
+    "langchain-protocol==0.0.20",
+    "langgraph==1.2.19",
+    "langgraph-checkpoint==4.3.1",
+    "langgraph-prebuilt==1.1.1",
+    "langgraph-sdk==0.4.11",
+    "langsmith==0.14.16",
+    "ormsgpack==1.13.0",
+    "xxhash==4.0.2",
+    # ragas 0.4.3 imports langchain_community.chat_models.vertexai, removed in 0.4.2.
+    "langchain-community==0.4.1",
+    "mypy-extensions==1.1.0",
 ]
