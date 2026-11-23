@@ -79,6 +79,11 @@ class Settings(BaseSettings):
     # Multilingual, so Spanish queries over the English budgets still work.
     RERANKER_MODEL: str = "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
 
+    # Session 12: estimation agent (manual tool-use loop on Anthropic).
+    AGENT_MODEL: str = "claude-sonnet-5-5"
+    AGENT_EFFORT: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
+    AGENT_MAX_STEPS: int = 10  # model calls per run; a safety net on top of the natural exit
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

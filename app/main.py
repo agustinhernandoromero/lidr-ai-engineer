@@ -14,6 +14,7 @@ from app.db.session import dispose_engine
 from app.embedding_pipeline.router import router as embeddings_router
 from app.embedding_pipeline.search import router as search_router
 from app.observability import configure_logging
+from app.routers.agent import router as agent_router
 from app.routers.estimations import router as estimations_router
 from app.routers.sessions import router as sessions_router
 
@@ -78,6 +79,7 @@ async def log_requests(request: Request, call_next):
 
 # Include API Routers
 app.include_router(estimations_router, prefix="/api/v1")
+app.include_router(agent_router, prefix="/api/v1")
 app.include_router(sessions_router, prefix="/api/v1")
 app.include_router(embeddings_router, prefix="/embeddings")
 app.include_router(search_router, prefix="/search")
