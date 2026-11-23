@@ -3,10 +3,81 @@
 Servicio FastAPI que convierte una descripción de proyecto en una estimación técnica,
 con prompts versionados en Jinja2 y un contrato tipado con el cliente.
 
-> **Esta rama es la entrega del ejercicio previo a la sesión 11**: estimación generada a partir de
-> los presupuestos recuperados, con la fuente de cada línea, y evaluación de calidad con RAGAS.
-> Lo nuevo está justo debajo; la búsqueda híbrida de la sesión 10, la instalación, la ejecución,
-> los tests y lo construido en sesiones anteriores, a continuación.
+> **Esta rama es la entrega del ejercicio previo a la sesión 12**: un agente de estimación
+> construido a mano, sin framework, que descompone la transcripción en componentes, busca
+> presupuestos para cada uno y calcula la estimación con dos herramientas.
+> Lo nuevo está justo debajo; la generación con citas de la sesión 11, la instalación, la
+> ejecución, los tests y lo construido en sesiones anteriores, a continuación.
+
+## Sesión 12: agente de estimación construido a mano
+
+El pipeline fijo (reformular, recuperar, generar) hace una sola búsqueda. Una transcripción con
+varios componentes que no tienen nada que ver entre sí necesita una búsqueda por componente, y
+cuántas hacen falta depende de lo que diga la transcripción. El agente decide eso en tiempo de
+ejecución: es un bucle escrito a mano (sin framework ni el tool runner del SDK) sobre la Messages
+API de Anthropic, con dos herramientas.
+
+| Herramienta | Qué hace |
+|---|---|
+| `search_budgets(query, filters)` | Envuelve `retrieve()` de la sesión 10 (híbrida, sin reranking). Devuelve hasta 5 componentes históricos con `estimated_hours`, sector, año, stack y distancia coseno. Filtros opcionales por sector, años y tecnología sobre los metadatos |
+| `calculate_estimate(components)` | Python determinista, sin LLM: mediana de las horas de referencia más un 15 % de contingencia por componente, con horas y euros por componente y total (`HOURLY_RATE_EUR`). Un componente sin referencias vale 0 h y sale marcado `unbudgeted` |
+
+En cada vuelta, `app/agent/loop.py` llama al modelo con razonamiento adaptativo (resúmenes
+visibles, `display: "summarized"`) y el `effort` configurado. Si el modelo devuelve `tool_use`, el
+bucle valida cada entrada con pydantic, ejecuta la herramienta y devuelve el resultado como
+`tool_result` con el mismo `tool_use_id` (los fallos, con `is_error`). El turno del asistente se
+reenvía sin tocar. El bucle termina cuando el modelo responde sin pedir herramientas (`end_turn`),
+cuando rechaza o corta la respuesta, o al llegar a `AGENT_MAX_STEPS` llamadas. La traza guarda en
+cada paso el razonamiento, cada acción con sus argumentos y la observación.
+
+Con Postgres de `docker compose` y el corpus del curso cargado:
+
+```bash
+python scripts/run_agent_s12.py data/course/session-12/sample_transcript_complex.txt   # traza en reports/
+curl -X POST localhost:8000/api/v1/estimate/agent \
+     -H "Content-Type: application/json" -d '{"transcript": "..."}'                  # estimación + traza
+```
+
+| Pieza | Qué hace |
+|---|---|
+| `app/agent/tools.py` | Esquemas JSON de las herramientas (`strict: true`), validación de entradas y ejecución |
+| `app/agent/loop.py` | Bucle manual, prompt de sistema (`agent-v3`), tope de pasos, tokens y coste por llamada |
+| `app/agent/trace.py` | Traza en texto: `STEP n` con `reasoning`, `action` y `observation` |
+| `app/routers/agent.py` | `POST /api/v1/estimate/agent`: recibe la transcripción y devuelve la estimación, la traza y el uso |
+| `scripts/run_agent_s12.py` | Ejecuta el agente sobre un fichero y guarda en `reports/` la traza (`.txt`) y el resultado completo (`.json`) |
+| `data/course/session-12/` | Transcripciones de prueba del curso (simple y compleja) |
+
+Ajustes en `.env`: `AGENT_MODEL` (`claude-sonnet-5-5`), `AGENT_EFFORT` (`medium`) y
+`AGENT_MAX_STEPS` (10).
+
+**Resultado** con `sample_transcript_complex.txt` (Sonnet 5.5, effort medium): 4 llamadas, 28.972
+tokens de entrada y 2.002 de salida, 0,078 $. Traza completa en
+[`reports/s12_agent_trace_sample_transcript_complex_claude-sonnet-5-5.txt`](reports/s12_agent_trace_sample_transcript_complex_claude-sonnet-5-5.txt).
+
+| Paso | Qué decide el agente |
+|---|---|
+| 1 | Cuatro componentes; lanza las cuatro búsquedas a la vez porque no dependen entre sí |
+| 2 | Para SAP y la app móvil solo aparecen componentes de otro tipo: repite esas dos búsquedas con otra redacción, y una tercera para el backend centrada en pedidos y seguimiento de envíos |
+| 3 | Sigue sin nada comparable para SAP ni para la app; calcula con 2 referencias para el backend y 1 para el panel |
+| 4 | Responde sin más herramientas |
+
+| Componente | Referencias | Horas | Euros |
+|---|---|---|---|
+| Backend de negocio y API | 2 (mediana 175 h) | 201,2 | 10.060 |
+| Integración con SAP | 0 | sin presupuesto | sin presupuesto |
+| App móvil de repartidores | 0 | sin presupuesto | sin presupuesto |
+| Panel de analítica | 1 (150 h) | 172,5 | 8.625 |
+| **Total (parcial)** | | **373,7** | **18.685** |
+
+El corpus del curso (17 presupuestos, 60 componentes) no tiene ninguna integración con un ERP ni
+ninguna app móvil. Para SAP, lo más cercano son sincronizaciones genéricas (inventario, anuncios)
+y la capa FHIR, todas a distancia 0,358 o más. El agente lo dice,
+deja esos dos componentes a 0 h marcados en vez de inventar una cifra y avisa de que el total se
+queda corto.
+
+El enunciado pide la Responses API de OpenAI con `gpt-5`. Sin saldo en OpenAI, el bucle usa la
+Messages API de Anthropic: `tool_use` y `tool_result` en lugar de `function_call` y
+`function_call_output`, y el razonamiento sale de los bloques `thinking` resumidos.
 
 ## Sesión 11: generación - calidad - evaluación con RAGAS
 
@@ -61,7 +132,9 @@ como insuficiente y el recall cae a 0,40. Context precision depende del juez (`g
 y Haiku dan 0 a chunks que cubren un solo componente; `gemini-3.5-flash`, 1) y mide el orden, no
 la proporción: q05 saca 1,00 con 3 de sus 5 chunks irrelevantes.
 
-## Sesión 10: búsqueda híbrida y reranking
+## Sesiones anteriores
+
+### Sesión 10: búsqueda híbrida y reranking
 
 Añade una rama léxica (PostgreSQL full-text) que se fusiona con la búsqueda vectorial mediante
 Reciprocal Rank Fusion, y un cross-encoder que reordena los candidatos (recuperación amplia de 50
@@ -98,8 +171,6 @@ Ajustes en `.env`: `SEARCH_MODE` (`vector` o `hybrid`), `RERANKING_ENABLED`,
 0.24 es la precisión máxima posible en este golden set. Las cuatro configuraciones la alcanzan,
 así que solo cambia el orden. El reranking añade unos 3,9 s por consulta sin mejorar ninguna
 métrica; la híbrida mejora el MRR en una sola consulta. Conclusiones y salvedades en el informe.
-
-## Sesiones anteriores
 
 ### Sesión 09: diagnóstico arquitectónico del flujo RAG
 
